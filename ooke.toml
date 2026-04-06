@@ -1,0 +1,17 @@
+[site]
+name = "my-site"
+url = "https://example.com"
+language = "en"
+
+[build]
+output = "build/"
+minify = true
+inline_css = true
+image_optimize = true
+
+[server]
+port = 3000
+admin = false
+
+[store]
+backend = "flat"
