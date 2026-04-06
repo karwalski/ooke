@@ -160,7 +160,7 @@ static int cmd_new(const char *name) {
             "    {! yield(\"content\") !}\n"
             "  </main>\n"
             "  <footer>\n"
-            "    <p>Built with ooke on toke.</p>\n"
+            "    <p>Built with toke on ooke.</p>\n"
             "  </footer>\n"
             "</body>\n"
             "</html>\n";

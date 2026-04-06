@@ -787,11 +787,11 @@ static const char *resolve_path(const TplContext *ctx, const char *path) {
  * Build path to layout or partial file.
  * ---------------------------------------------------------------------- */
 static char *make_layout_path(const char *templates_dir, const char *name) {
-    /* Try templates_dir/layouts/<name>.tkt */
-    size_t len = strlen(templates_dir) + strlen(name) + 32;
+    /* templates_dir/<name>.tkt  (layouts live directly in templates/) */
+    size_t len = strlen(templates_dir) + strlen(name) + 16;
     char *path = malloc(len);
     if (!path) return NULL;
-    snprintf(path, len, "%s/layouts/%s.tkt", templates_dir, name);
+    snprintf(path, len, "%s/%s.tkt", templates_dir, name);
     return path;
 }
 
