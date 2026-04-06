@@ -14,11 +14,13 @@ ifeq ($(UNAME), Darwin)
 endif
 
 OOKE_SRCS := src/main.c \
+             src/build.c \
              src/config.c \
              src/template.c \
              src/md.c \
              src/store.c \
-             src/ooke_router.c
+             src/ooke_router.c \
+             src/serve.c
 
 # toke stdlib sources required by ooke
 STDLIB_SRCS := $(TOKE_STDLIB)/str.c \

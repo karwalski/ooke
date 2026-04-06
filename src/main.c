@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include "config.h"
+#include "build.h"
+#include "serve.h"
 
 #define OOKE_VERSION "0.1.0"
 #define CONFIG_FILE  "ooke.toml"
@@ -182,8 +184,7 @@ static int cmd_build(void) {
         return 1;
     }
     printf("Building site '%s' → %s\n", cfg.site_name, cfg.build_output);
-    printf("ooke build: not yet implemented, see Epic 49.5\n");
-    return 0;
+    return ooke_build(".", &cfg);
 }
 
 /* ---------------------------------------------------------------------------
@@ -196,14 +197,7 @@ static int cmd_serve(const char *cert, const char *key) {
         fprintf(stderr, "ooke serve: cannot open '%s'\n", CONFIG_FILE);
         return 1;
     }
-    if (cert && key) {
-        printf("Starting HTTPS server on port %d (cert=%s key=%s)\n",
-               cfg.server_port, cert, key);
-    } else {
-        printf("Starting HTTP server on port %d\n", cfg.server_port);
-    }
-    printf("ooke serve: not yet implemented, see Epic 49.6\n");
-    return 0;
+    return ooke_serve(".", &cfg, cert, key);
 }
 
 /* ---------------------------------------------------------------------------
