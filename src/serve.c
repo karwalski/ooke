@@ -92,25 +92,21 @@ static void extract_content_type(const char *file_path, char *out, size_t outsz)
 {
     out[0] = '\0';
 
-    /* Work on a copy so we can tokenise safely */
-    char tmp[OOKE_ROUTE_PATH_MAX];
-    strncpy(tmp, file_path, sizeof(tmp) - 1);
-    tmp[sizeof(tmp) - 1] = '\0';
+    /* Strip "pages/" prefix */
+    const char *pages_prefix = "pages/";
+    size_t prefix_len = strlen(pages_prefix);
+    if (strncmp(file_path, pages_prefix, prefix_len) != 0) return;
+    const char *rel = file_path + prefix_len;
 
     /* Strip trailing filename (e.g. "[slug].tk") */
-    char *slash = strrchr(tmp, '/');
-    if (!slash) return;
-    *slash = '\0';
+    const char *slash = strrchr(rel, '/');
+    if (!slash) return; /* file directly under pages/ — no content type */
 
-    /* The directory name is now the last component */
-    char *dir = strrchr(tmp, '/');
-    const char *type = dir ? dir + 1 : tmp;
-
-    /* Skip "pages" itself */
-    if (strcmp(type, "pages") == 0) return;
-
-    strncpy(out, type, outsz - 1);
-    out[outsz - 1] = '\0';
+    /* Return full path from pages/ to parent dir (e.g. "docs/reference") */
+    size_t dirlen = (size_t)(slash - rel);
+    if (dirlen == 0 || dirlen >= outsz) return;
+    memcpy(out, rel, dirlen);
+    out[dirlen] = '\0';
 }
 
 /* ---------------------------------------------------------------------------
@@ -256,6 +252,20 @@ static char *render_dynamic_page(const OokeRoute *route,
     char tpl_path[OOKE_ROUTE_PATH_MAX * 2];
     snprintf(tpl_path, sizeof(tpl_path), "templates/%s.tkt", stem);
 
+    /* Fallback: if exact template not found, try parent directory template.
+     * e.g. "templates/docs/reference/[slug].tkt" → "templates/docs/reference.tkt" */
+    struct stat st_check;
+    if (stat(tpl_path, &st_check) != 0) {
+        char stem_parent[OOKE_ROUTE_PATH_MAX];
+        strncpy(stem_parent, stem, sizeof(stem_parent) - 1);
+        stem_parent[sizeof(stem_parent) - 1] = '\0';
+        char *last_slash = strrchr(stem_parent, '/');
+        if (last_slash) {
+            *last_slash = '\0';
+            snprintf(tpl_path, sizeof(tpl_path), "templates/%s.tkt", stem_parent);
+        }
+    }
+
     /* Build context and render */
     TplContext *ctx = build_ctx(cfg, cf);
     char *html = NULL;
@@ -270,15 +280,15 @@ static char *render_dynamic_page(const OokeRoute *route,
         if (stat(tpl_path, &st) == 0) {
             html = tpl_renderfile(tpl_path, ctx, "templates");
         } else {
-            /* Fallback: simple HTML showing the slug */
-            html = malloc(512);
+            /* No template found — return a plain 404 page */
+            html = malloc(256);
             if (html) {
-                snprintf(html, 512,
+                snprintf(html, 256,
                          "<!DOCTYPE html><html><body>"
-                         "<p>Content: %s / %s</p>"
+                         "<h1>404 Not Found</h1>"
+                         "<p>No page for %s.</p>"
                          "</body></html>",
-                         content_type[0] ? content_type : "unknown",
-                         slug ? slug : "(no slug)");
+                         slug ? slug : "(unknown)");
             }
         }
         tpl_ctx_free(ctx);
@@ -340,13 +350,11 @@ static TkRouteResp ooke_dispatch(TkRouteCtx ctx)
             "</body></html>");
     }
 
-    /* Build response; router_resp_ok copies nothing — we must keep html alive.
-     * For dynamic pages we return the pointer directly; the stdlib copies the
-     * body before handler returns (per the toke router contract).
-     * We free after composing the response struct. */
-    TkRouteResp resp = router_resp_ok(html, "text/html; charset=utf-8");
-    free(html);
-    return resp;
+    /* router_resp_ok stores the pointer directly (no copy).
+     * router_send_response reads resp.body after this handler returns,
+     * so we must NOT free html here. The small leak per dynamic request
+     * is acceptable; a future refactor can add body ownership tracking. */
+    return router_resp_ok(html, "text/html; charset=utf-8");
 }
 
 /* ---------------------------------------------------------------------------
@@ -453,7 +461,7 @@ int ooke_serve(const char *project_dir, const OokeConfig *cfg,
     router_static(router, "/static/", static_dir);
 
     /* Catch-all GET handler — ooke_dispatch handles all page routing */
-    router_get(router, "/:path*", ooke_dispatch);
+    router_get(router, "/*", ooke_dispatch);
     /* Also handle bare "/" */
     router_get(router, "/", ooke_dispatch);
 

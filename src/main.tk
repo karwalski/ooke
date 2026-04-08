@@ -1,0 +1,178 @@
+m=ooke.cli;
+i=args:std.args;
+i=str:std.str;
+i=file:std.file;
+i=log:std.log;
+i=path:std.path;
+i=config:ooke.config;
+i=serve:ooke.serve;
+i=build:ooke.build;
+
+t=$ookecfg{
+  sitename:$str;siteurl:$str;sitelanguage:$str;
+  buildoutput:$str;buildminify:bool;buildinlinecss:bool;
+  serverport:i64;serverworkers:i64;storebackend:$str;
+  logaccess:$str;logmaxlines:i64;logmaxagedays:i64
+};
+
+t=$serveerr{msg:$str};
+
+t=$builderr{msg:$str};
+
+t=$buildreport{pagesbuilt:i64;assetscopy:i64};
+
+f=cliprintusage():void{
+  (log.info("ooke - toke CMS and web framework";@()));
+  (log.info("";@()));
+  (log.info("Usage:";@()));
+  (log.info("  ooke new <name>       scaffold a new project";@()));
+  (log.info("  ooke serve [options]  start development server";@()));
+  (log.info("  ooke build            build static HTML";@()));
+  (log.info("  ooke gen <type> <name>  scaffold component";@()));
+  (log.info("";@()));
+  (log.info("Options:";@()));
+  (log.info("  --help       show this help";@()));
+  (log.info("  --version    print version";@()))
+};
+
+f=cliprintversion():void{
+  (log.info("ooke 0.1.0";@()))
+};
+
+f=clinew(name:$str):i64{
+  let d1=file.mkdir(name)|{Ok:v v;Err:e false};
+  let d2=file.mkdir(path.join(name;"pages"))|{Ok:v v;Err:e false};
+  let d3=file.mkdir(path.join(name;"templates"))|{Ok:v v;Err:e false};
+  let d4=file.mkdir(path.join(name;"content"))|{Ok:v v;Err:e false};
+  let d5=file.mkdir(path.join(name;"static"))|{Ok:v v;Err:e false};
+  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninline_css = true\n\n[server]\nport = 3000\nworkers = 4\n\n[store]\nbackend = \"flat\"\n\n[log]\naccess = \"logs/access.log\"\nmax_lines = 10000\nmax_age_days = 30\n"));
+  let w1=file.write(path.join(name;"ooke.toml");tomlcontent)|{Ok:v v;Err:e false};
+  let indexcontent="m=pages.index;\n";
+  let w2=file.write(path.join(path.join(name;"pages");"index.tk");indexcontent)|{Ok:v v;Err:e false};
+  let basecontent="<!DOCTYPE html>\n<html lang=\"en\">\n<head><meta charset=\"UTF-8\"><title>{{title}}</title></head>\n<body>\n{{content}}\n</body>\n</html>\n";
+  let w3=file.write(path.join(path.join(name;"templates");"base.tkt");basecontent)|{Ok:v v;Err:e false};
+  (log.info(str.concat("Created project: ";name);@()));
+  <0
+};
+
+f=cligen(gentype:$str;genname:$str):i64{
+  if(gentype="page"){
+    let pagepath=path.join("pages";str.concat(genname;".tk"));
+    let pagecontent=str.concat("m=pages.";str.concat(genname;";\n"));
+    let pw=file.write(pagepath;pagecontent)|{Ok:v v;Err:e false};
+    (log.info(str.concat("Created page: ";pagepath);@()));
+    <0
+  }el{
+    if(gentype="type"){
+      let dm=file.mkdir("models")|{Ok:v v;Err:e false};
+      let typepath=path.join("models";str.concat(genname;".tk"));
+      let typecontent=str.concat("m=models.";str.concat(genname;";\n"));
+      let tw=file.write(typepath;typecontent)|{Ok:v v;Err:e false};
+      (log.info(str.concat("Created type: ";typepath);@()));
+      <0
+    }el{
+      if(gentype="api"){
+        let da=file.mkdir(path.join("pages";"api"))|{Ok:v v;Err:e false};
+        let apipath=path.join(path.join("pages";"api");str.concat(genname;".tk"));
+        let apicontent=str.concat("m=pages.api.";str.concat(genname;";\n"));
+        let aw=file.write(apipath;apicontent)|{Ok:v v;Err:e false};
+        (log.info(str.concat("Created api: ";apipath);@()));
+        <0
+      }el{
+        if(gentype="island"){
+          let di=file.mkdir("islands")|{Ok:v v;Err:e false};
+          let islandpath=path.join("islands";str.concat(genname;".tk"));
+          let islandcontent=str.concat("m=islands.";str.concat(genname;";\n"));
+          let iw=file.write(islandpath;islandcontent)|{Ok:v v;Err:e false};
+          (log.info(str.concat("Created island: ";islandpath);@()));
+          <0
+        }el{
+          (log.info(str.concat("unknown gen type: ";gentype);@()));
+          <1
+        }
+      }
+    }
+  }
+};
+
+f=cfgdefault():$ookecfg{
+  <$ookecfg{
+    sitename:"my-site";siteurl:"";sitelanguage:"en";
+    buildoutput:"build/";buildminify:true;buildinlinecss:true;
+    serverport:3000;serverworkers:4;storebackend:"flat";
+    logaccess:"logs/access.log";logmaxlines:10000;logmaxagedays:30
+  }
+};
+
+f=runserve(projectdir:$str):i64{
+  let cfg=config.configload("ooke.toml")|{Ok:v v;Err:e cfgdefault()};
+  let port=cfg.serverport;
+  let workers=cfg.serverworkers;
+  let output=cfg.buildoutput;
+  let sitename=cfg.sitename;
+  let siteurl=cfg.siteurl;
+  let sitelanguage=cfg.sitelanguage;
+  let r=serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage)|{Ok:v 0;Err:e 1};
+  <r
+};
+
+f=runbuild(projectdir:$str):i64{
+  let cfg=config.configload("ooke.toml")|{Ok:v v;Err:e cfgdefault()};
+  let report=build.buildrun(projectdir;cfg)|{Ok:v v;Err:e $buildreport{pagesbuilt:0;assetscopy:0}};
+  (log.info(str.concat("pages built: ";str.fromint(report.pagesbuilt));@()));
+  (log.info(str.concat("assets copied: ";str.fromint(report.assetscopy));@()));
+  <0
+};
+
+f=main():i64{
+  let count=args.count() as i64;
+  if(count=1){
+    (cliprintusage());
+    <0
+  }el{
+    let firstraw=args.get(1 as u64)|{Ok:v v;Err:e ""};
+    if(firstraw="--help"){
+      (cliprintusage());
+      <0
+    }el{
+      if(firstraw="--version"){
+        (cliprintversion());
+        <0
+      }el{
+        let cmd=firstraw;
+        if(cmd="new"){
+          if(count<3){
+            (log.info("usage: ooke new <name>";@()));
+            <1
+          }el{
+            let nameraw=args.get(2 as u64)|{Ok:v v;Err:e ""};
+            <clinew(nameraw)
+          }
+        }el{
+          if(cmd="serve"){
+            <runserve(".")
+          }el{
+            if(cmd="build"){
+              <runbuild(".")
+            }el{
+              if(cmd="gen"){
+                if(count<4){
+                  (log.info("usage: ooke gen <type> <name>";@()));
+                  <1
+                }el{
+                  let gentyperaw=args.get(2 as u64)|{Ok:v v;Err:e ""};
+                  let gennameraw=args.get(3 as u64)|{Ok:v v;Err:e ""};
+                  <cligen(gentyperaw;gennameraw)
+                }
+              }el{
+                (log.info(str.concat("unknown command: ";cmd);@()));
+                (cliprintusage());
+                <1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};

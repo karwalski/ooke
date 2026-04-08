@@ -1,0 +1,159 @@
+m=ooke.router;
+i=file:std.file;
+i=str:std.str;
+i=path:std.path;
+
+t=$route{
+  pattern:$str;
+  filepath:$str;
+  templatepath:$str;
+  contenttype:$str;
+  isdynamic:bool;
+  isapi:bool;
+  params:@$str
+};
+
+t=$routematch{
+  route:$route;
+  params:@($str:$str)
+};
+
+t=$routeerr{msg:$str};
+
+f=routederivepattern(filepath:$str;pagesdir:$str):$str{
+  let rel=str.trimprefix(filepath;pagesdir);
+  let noext=str.trimsuffix(rel;".tk");
+  let segs=str.split(noext;"/");
+  let out=mut."";
+  lp(let i=0;i<segs.len;i=i+1){
+    let seg=segs.get(i);
+    let mapped=str.matchbracket(seg)|{Ok:name str.concat(":";name);Err:e seg};
+    out=str.concat(out;str.concat("/";mapped))
+  };
+  let result=mut.out;
+  if(str.endswith(out;"/index")){
+    result=str.trimsuffix(out;"/index")
+  }el{};
+  if(result=""){
+    <"/"
+  }el{
+    <result
+  }
+};
+
+f=routederivetemplate(filepath:$str;pagesdir:$str):$str{
+  let rel=str.trimprefix(filepath;pagesdir);
+  let noext=str.trimsuffix(rel;".tk");
+  let result=str.concat("templates/";str.concat(noext;".tkt"));
+  <result
+};
+
+f=routederivedtype(filepath:$str;pagesdir:$str):$str{
+  let rel=str.trimprefix(filepath;pagesdir);
+  let segs=str.split(rel;"/");
+  let result=mut."";
+  if(segs.len>1){
+    let parts=mut."";
+    lp(let i=0;i<segs.len-1;i=i+1){
+      let seg=segs.get(i);
+      if(i=0){
+        parts=seg
+      }el{
+        parts=str.concat(parts;str.concat("/";seg))
+      }
+    };
+    result=parts
+  }el{};
+  <result
+};
+
+f=routerscan(pagesdir:$str):@$route!$routeerr{
+  let allfiles=file.listall(pagesdir)!$routeerr;
+  let routes=mut.@($route);
+  lp(let i=0;i<allfiles.len;i=i+1){
+    let p=allfiles.get(i);
+    let ext=path.ext(p);
+    if(ext=".tk"){
+      let pattern=routederivepattern(p;pagesdir);
+      let templatepath=routederivetemplate(p;pagesdir);
+      let contenttype=routederivedtype(p;pagesdir);
+      let isdynamic=str.contains(pattern;":");
+      let isapi=str.contains(p;"/api/");
+      let r=$route{
+        pattern:pattern;
+        filepath:p;
+        templatepath:templatepath;
+        contenttype:contenttype;
+        isdynamic:isdynamic;
+        isapi:isapi;
+        params:@()
+      };
+      routes=routes.append(r)
+    }el{}
+  };
+  <routes
+};
+
+f=routertrymatch(route:$route;url:$str):$routematch!$routeerr{
+  let urlsegs=str.split(url;"/");
+  let patsegs=str.split(route.pattern;"/");
+  if(!(urlsegs.len=patsegs.len)){
+    (file.listall("")!$routeerr)
+  }el{};
+  let captures=mut.@($str:$str);
+  lp(let i=0;i<patsegs.len;i=i+1){
+    let pseg=patsegs.get(i);
+    let useg=urlsegs.get(i);
+    let isparam=str.startswith(pseg;":");
+    if(isparam){
+      let paramname=str.trimprefix(pseg;":");
+      captures=captures.set(paramname;useg)
+    }el{
+      if(!(pseg=useg)){
+        (file.listall("")!$routeerr)
+      }el{}
+    }
+  };
+  <$routematch{route:route;params:captures}
+};
+
+f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
+  let normurl=mut.url;
+  if(str.endswith(url;"/")&&!(url="/")){
+    normurl=str.trimsuffix(url;"/")
+  }el{};
+  let defroute=$route{pattern:"";filepath:"";templatepath:"";contenttype:"";isdynamic:false;isapi:false;params:@()};
+  let defmatch=$routematch{route:defroute;params:@($str:$str)};
+  let foundmatch=mut.defmatch;
+  let foundidx=mut.-1;
+  lp(let i=0;i<routes.len;i=i+1){
+    let r=routes.get(i);
+    if(!r.isdynamic){
+      if(foundidx<0){
+        let result=routertrymatch(r;normurl);
+        let val=result|{Ok:m m;Err:e defmatch};
+        if(!(val.route.pattern="")){
+          foundmatch=val;
+          foundidx=i
+        }el{}
+      }el{}
+    }el{}
+  };
+  lp(let j=0;j<routes.len;j=j+1){
+    let r=routes.get(j);
+    if(r.isdynamic){
+      if(foundidx<0){
+        let result=routertrymatch(r;normurl);
+        let val=result|{Ok:m m;Err:e defmatch};
+        if(!(val.route.pattern="")){
+          foundmatch=val;
+          foundidx=j
+        }el{}
+      }el{}
+    }el{}
+  };
+  if(foundidx<0){
+    (file.listall("")!$routeerr)
+  }el{};
+  <foundmatch
+};

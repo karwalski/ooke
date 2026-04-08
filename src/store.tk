@@ -1,0 +1,113 @@
+m=ooke.store;
+i=file:std.file;
+i=str:std.str;
+i=path:std.path;
+
+t=$content{
+  slug:$str;
+  type:$str;
+  title:$str;
+  meta:@($str:$str);
+  body:$str
+};
+
+t=$storeerr{msg:$str};
+
+f=storeparsefront(src:$str):$content!$storeerr{
+  let opener="---\n";
+  let hasopen=str.startswith(src;opener);
+  if(!hasopen){
+    <$content{
+      slug:"";
+      type:"page";
+      title:"";
+      meta:@($str:$str);
+      body:src
+    }
+  }el{
+    let afteropen=str.slice(src;4;str.len(src))|{Ok:v v;Err:e ""};
+    let closer="\n---\n";
+    let closepos=str.indexof(afteropen;closer);
+    if(closepos<0){
+      <$content{
+        slug:"";
+        type:"page";
+        title:"";
+        meta:@($str:$str);
+        body:src
+      }
+    }el{
+      let fmraw=str.slice(afteropen;0;closepos as u64)|{Ok:v v;Err:e ""};
+      let bodystart=(closepos+5) as u64;
+      let bodyraw=str.trim(str.slice(afteropen;bodystart;str.len(afteropen))|{Ok:v v;Err:e ""});
+      let lines=str.split(fmraw;"\n");
+      let meta=mut.@($str:$str);
+      let slug=mut."";
+      let ctype=mut."page";
+      let ctitle=mut."";
+      lp(let i=0;i<lines.len;i=i+1){
+        let line=str.trim(lines.get(i));
+        let kv=str.split(line;":");
+        if(!kv.len<2){
+          let k=str.trim(kv.get(0));
+          let v=str.trim(kv.get(1));
+          if(k="slug"){slug=v}el{};
+          if(k="type"){ctype=v}el{};
+          if(k="title"){ctitle=v}el{};
+          meta=meta.set(k;v)
+        }el{}
+      };
+      <$content{
+        slug:slug;
+        type:ctype;
+        title:ctitle;
+        meta:meta;
+        body:bodyraw
+      }
+    }
+  }
+};
+
+f=storedefault():$content{
+  <$content{slug:"";type:"page";title:"";meta:@($str:$str);body:""}
+};
+
+f=storetryparse(src:$str):$content{
+  let r=storeparsefront(src)|{Ok:c c; Err:e storedefault()};
+  <r
+};
+
+f=storeall(contentdir:$str;contenttype:$str):@$content!$storeerr{
+  let dir=path.join(contentdir;contenttype);
+  let files=file.listall(dir)!$storeerr;
+  let results=mut.@($content);
+  lp(let i=0;i<files.len;i=i+1){
+    let fpath=files.get(i);
+    if(str.endswith(fpath;".md")){
+      let fullpath=path.join(dir;fpath);
+      let src=file.read(fullpath)|{Ok:s s; Err:e ""};
+      if(str.len(src)>0){
+        let c=storetryparse(src);
+        results=results.append(c)
+      }el{}
+    }el{}
+  };
+  <results
+};
+
+f=storeslug(col:@$content;slug:$str):$content!$storeerr{
+  lp(let i=0;i<col.len;i=i+1){
+    let item=col.get(i);
+    if(item.slug=slug){<item}el{}
+  };
+  (file.listall("")!$storeerr)
+};
+
+f=storefind(col:@$content;key:$str;val:$str):$content!$storeerr{
+  lp(let i=0;i<col.len;i=i+1){
+    let item=col.get(i);
+    let found=item.meta.get(key)|{Ok:v v=val; Err:e false};
+    if(found){<item}el{}
+  };
+  (file.listall("")!$storeerr)
+};

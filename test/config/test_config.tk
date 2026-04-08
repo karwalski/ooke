@@ -1,0 +1,86 @@
+m=test.config;
+i=config:ooke.config;
+i=test:std.test;
+i=file:std.file;
+i=str:std.str;
+
+f=test_load_valid():bool{
+  let toml_src="[site]\nname = \"ooke-test\"\nurl = \"https://test.example.com\"\nlanguage = \"fr\"\n\n[build]\noutput = \"dist/\"\nminify = false\ninline_css = false\n\n[server]\nport = 8080\nworkers = 2\n\n[store]\nbackend = \"flat\"\n";
+  let write_result=file.write("/tmp/test_ooke.toml";toml_src);
+  match write_result{
+    ok(v){};
+    err(e){<false}
+  };
+  let result=config.config_load("/tmp/test_ooke.toml");
+  (match result{
+    ok(cfg){
+      (test.eq(cfg.site_name;"ooke-test"));
+      (test.eq(cfg.site_url;"https://test.example.com"));
+      (test.eq(cfg.site_language;"fr"));
+      (test.eq(cfg.build_output;"dist/"));
+      (test.eq(cfg.server_port;8080));
+      (test.eq(cfg.server_workers;2));
+      (test.eq(cfg.store_backend;"flat"));
+      <true
+    };
+    err(e){
+      (test.fail(e.msg));
+      <false
+    }
+  })
+};
+
+f=test_missing_file():bool{
+  let result=config.config_load("/nonexistent/path.toml");
+  (match result{
+    ok(cfg){
+      (test.fail("expected error for missing file"));
+      <false
+    };
+    err(e){
+      <str.contains(e.msg;"cannot read config")
+    }
+  })
+};
+
+f=test_defaults():bool{
+  let toml_src="[site]\nname = \"x\"\n";
+  let write_result=file.write("/tmp/test_ooke_defaults.toml";toml_src);
+  match write_result{
+    ok(v){};
+    err(e){<false}
+  };
+  let result=config.config_load("/tmp/test_ooke_defaults.toml");
+  (match result{
+    ok(cfg){
+      (test.eq(cfg.site_name;"x"));
+      (test.eq(cfg.site_url;""));
+      (test.eq(cfg.site_language;"en"));
+      (test.eq(cfg.build_output;"build/"));
+      (test.eq(cfg.build_minify;true));
+      (test.eq(cfg.build_inline_css;true));
+      (test.eq(cfg.server_port;3000));
+      (test.eq(cfg.server_workers;4));
+      (test.eq(cfg.store_backend;"flat"));
+      (test.eq(cfg.log_access;"logs/access.log"));
+      (test.eq(cfg.log_max_lines;10000));
+      (test.eq(cfg.log_max_age_days;30));
+      <true
+    };
+    err(e){
+      (test.fail(e.msg));
+      <false
+    }
+  })
+};
+
+f=main():i64{
+  let r0=test_load_valid();
+  let r1=test_missing_file();
+  let r2=test_defaults();
+  if(r0&&r1&&r2){
+    <0
+  }el{
+    <1
+  }
+};

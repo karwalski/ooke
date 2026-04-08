@@ -1,0 +1,214 @@
+m=ooke.build;
+i=file:std.file;
+i=str:std.str;
+i=path:std.path;
+i=cfg:ooke.config;
+i=router:ooke.router;
+i=tpl:ooke.template;
+i=store:ooke.store;
+
+t=$builderr{msg:$str};
+
+t=$buildreport{pagesbuilt:i64;assetscopy:i64};
+
+t=$ookecfg{sitename:$str;siteurl:$str;sitelanguage:$str;buildoutput:$str;buildminify:bool;buildinlinecss:bool;serverport:i64;serverworkers:i64;storebackend:$str;logaccess:$str;logmaxlines:i64;logmaxagedays:i64};
+
+t=$route{pattern:$str;filepath:$str;templatepath:$str;contenttype:$str;isdynamic:bool;isapi:bool;params:@$str};
+
+t=$content{slug:$str;type:$str;title:$str;meta:@($str:$str);body:$str};
+
+f=buildoutputpath(pattern:$str;outputdir:$str):$str{
+  if(pattern="/"){
+    <str.concat(outputdir;"index.html")
+  }el{
+    let stripped=str.trimprefix(pattern;"/");
+    <path.join(outputdir;path.join(stripped;"index.html"))
+  }
+};
+
+f=buildpage(templatepath:$str;pattern:$str;sitename:$str;siteurl:$str;sitelanguage:$str;buildoutput:$str;templatesdir:$str):void!$builderr{
+  let ctx=@(
+    "site.name":sitename;
+    "site.url":siteurl;
+    "site.language":sitelanguage
+  );
+  let html=tpl.tplrenderfile(templatepath;ctx;templatesdir)!$builderr;
+  let outpath=buildoutputpath(pattern;buildoutput);
+  let parentdir=path.dir(outpath);
+  let mkr=file.mkdir(parentdir)!$builderr;
+  let wr=file.write(outpath;html)!$builderr
+};
+
+f=buildinlinecssonce(html:$str;templatesdir:$str):$str{
+  let pos=str.indexof(html;"<link rel=\"stylesheet\"");
+  if(pos<0){
+    <html
+  }el{
+    let afterlink=str.slice(html;pos as u64;str.len(html));
+    let afterlink2=afterlink|{Ok:v v;Err:e ""};
+    if(str.len(afterlink2)=0){
+      <html
+    }el{
+      let hrefmarker="href=\"";
+      let hrefpos=str.indexof(afterlink2;hrefmarker);
+      if(hrefpos<0){
+        <html
+      }el{
+        let start=(hrefpos+6) as u64;
+        let afterhref=str.slice(afterlink2;start;str.len(afterlink2));
+        let afterhref2=afterhref|{Ok:v v;Err:e ""};
+        if(str.len(afterhref2)=0){
+          <html
+        }el{
+          let closequote=str.indexof(afterhref2;"\"");
+          if(closequote<0){
+            <html
+          }el{
+            let hrefval=str.slice(afterhref2;0;closequote as u64);
+            let hrefval2=hrefval|{Ok:v v;Err:e ""};
+            let csspath=path.join(templatesdir;hrefval2);
+            let csscontent=file.read(csspath)|{Ok:c c;Err:e ""};
+            if(str.len(csscontent)=0){
+              <html
+            }el{
+              let tagend=str.indexof(afterlink2;">");
+              if(tagend<0){
+                <html
+              }el{
+                let fulltag=str.slice(afterlink2;0;tagend as u64+1);
+                let fulltag2=fulltag|{Ok:v v;Err:e ""};
+                let styleblock=str.concat("<style>\n";str.concat(csscontent;"\n</style>"));
+                <str.replace(html;fulltag2;styleblock)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+f=buildinlinecss(html:$str;templatesdir:$str):$str{
+  let result=mut.html;
+  let running=mut.true;
+  lp(let ii=0;running;ii=ii+1){
+    let next=buildinlinecssonce(result;templatesdir);
+    if(next=result){
+      running=false
+    }el{
+      result=next
+    }
+  };
+  <result
+};
+
+f=buildminify(html:$str):$str{
+  let s=mut.html;
+  let running=mut.true;
+  lp(let ii=0;running;ii=ii+1){
+    let replaced=str.replace(s;"  ";" ");
+    if(replaced=s){
+      running=false
+    }el{
+      s=replaced
+    }
+  };
+  let running2=mut.true;
+  lp(let jj=0;running2;jj=jj+1){
+    let openpos=str.indexof(s;"<!--");
+    if(openpos<0){
+      running2=false
+    }el{
+      let afteropen=str.slice(s;openpos as u64+4;str.len(s));
+      let afteropen2=afteropen|{Ok:v v;Err:e ""};
+      if(str.len(afteropen2)=0){
+        running2=false
+      }el{
+        let closepos=str.indexof(afteropen2;"-->");
+        if(closepos<0){
+          running2=false
+        }el{
+          let commentend=openpos+4+closepos+3;
+          let before=str.slice(s;0;openpos as u64);
+          let before2=before|{Ok:v v;Err:e ""};
+          let after=str.slice(s;commentend as u64;str.len(s));
+          let after2=after|{Ok:v v;Err:e ""};
+          s=str.concat(before2;after2)
+        }
+      }
+    }
+  };
+  <s
+};
+
+f=buildcopyassets(projectdir:$str;outputdir:$str):i64!$builderr{
+  let staticdir=path.join(projectdir;"static");
+  if(!file.isdir(staticdir)){
+    <0
+  }el{
+    let files=file.listall(staticdir)!$builderr;
+    let count=mut.0;
+    lp(let i=0;i<files.len;i=i+1){
+      let rel=files.get(i);
+      let srcpath=path.join(staticdir;rel);
+      let dstpath=path.join(str.concat(outputdir;"/static");rel);
+      let dstparent=path.dir(dstpath);
+      let mkr2=file.mkdir(dstparent)|{Ok:v true;Err:e false};
+      let copyok=file.copy(srcpath;dstpath)|{Ok:v true;Err:e false};
+      if(copyok){count=count+1}el{}
+    };
+    <count
+  }
+};
+
+f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
+  let pagesdir=path.join(projectdir;"pages");
+  let contentdir=path.join(projectdir;"content");
+  let templatesdir=path.join(projectdir;"templates");
+
+  let routes=router.routerscan(pagesdir)!$builderr;
+
+  let pagescount=mut.0;
+
+  lp(let i=0;i<routes.len;i=i+1){
+    let isdyn=routes.get(i).isdynamic;
+    if(!isdyn){
+      let bp=buildpage(routes.get(i).templatepath;routes.get(i).pattern;config.sitename;config.siteurl;config.sitelanguage;config.buildoutput;templatesdir)!$builderr;
+      pagescount=pagescount+1
+    }el{}
+  };
+
+  lp(let j=0;j<routes.len;j=j+1){
+    let isdyn2=routes.get(j).isdynamic;
+    if(isdyn2){
+      let ctype=routes.get(j).contenttype;
+      let col=store.storeall(contentdir;ctype)|{Ok:c c;Err:e @()};
+      lp(let k=0;k<col.len;k=k+1){
+        let slug=col.get(k).slug;
+        let body=col.get(k).body;
+        let title=col.get(k).title;
+        let ctx=@(
+          "site.name":config.sitename;
+          "site.url":config.siteurl;
+          "site.language":config.sitelanguage;
+          "slug":slug;
+          "body":body;
+          "title":title
+        );
+        let html=tpl.tplrenderfile(routes.get(j).templatepath;ctx;templatesdir)|{Ok:h h;Err:e ""};
+        if(str.len(html)>0){
+          let slugpattern=str.replace(routes.get(j).pattern;":slug";slug);
+          let outpath=buildoutputpath(slugpattern;config.buildoutput);
+          let parentdir=path.dir(outpath);
+          let mkr3=file.mkdir(parentdir)|{Ok:v true;Err:e false};
+          let writeok=file.write(outpath;html)|{Ok:v true;Err:e false};
+          if(writeok){pagescount=pagescount+1}el{}
+        }el{}
+      }
+    }el{}
+  };
+
+  let assetscount=buildcopyassets(projectdir;config.buildoutput)|{Ok:n n;Err:e 0};
+
+  <$buildreport{pagesbuilt:pagescount;assetscopy:assetscount}
+};

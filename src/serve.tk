@@ -1,0 +1,86 @@
+m=ooke.serve;
+i=http:std.http;
+i=log:std.log;
+i=file:std.file;
+i=str:std.str;
+i=path:std.path;
+i=ookerouter:ooke.router;
+i=tpl:ooke.template;
+i=store:ooke.store;
+
+t=$serveerr{msg:$str};
+
+t=$route{pattern:$str;filepath:$str;templatepath:$str;contenttype:$str;isdynamic:bool;isapi:bool;params:@$str};
+
+t=$content{slug:$str;type:$str;title:$str;meta:@($str:$str);body:$str};
+
+f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str):void{
+  let routes=ookerouter.routerscan(pagesdir)|{Ok:r r;Err:e @($route)};
+  lp(let i=0;i<routes.len;i=i+1){
+    let r=routes.get(i);
+    let isdyn=r.isdynamic;
+    let isapi=r.isapi;
+    if(!isdyn&&!isapi){
+      let ctx=@(
+        "site.name":sitename;
+        "site.url":siteurl;
+        "site.language":sitelanguage
+      );
+      let tpath=r.templatepath;
+      let html=tpl.tplrenderfile(tpath;ctx;templatesdir)|{Ok:h h;Err:e ""};
+      if(str.len(html)>0){
+        let webpath=r.pattern;
+        (log.info(str.concat("reg static: ";webpath);@()));
+        (http.getstatic(webpath;html))
+      }el{
+        (log.info(str.concat("skip (no html): ";r.templatepath);@()))
+      }
+    }el{}
+  };
+  lp(let j=0;j<routes.len;j=j+1){
+    let isdyn2=routes.get(j).isdynamic;
+    let isapi2=routes.get(j).isapi;
+    if(isdyn2&&!isapi2){
+      let ctype=routes.get(j).contenttype;
+      let col=store.storeall(contentdir;ctype)|{Ok:c c;Err:e @()};
+      lp(let k=0;k<col.len;k=k+1){
+        let slug=col.get(k).slug;
+        let body=col.get(k).body;
+        let title=col.get(k).title;
+        let ctx2=@(
+          "site.name":sitename;
+          "site.url":siteurl;
+          "site.language":sitelanguage;
+          "slug":slug;
+          "body":body;
+          "title":title
+        );
+        let html2=tpl.tplrenderfile(routes.get(j).templatepath;ctx2;templatesdir)|{Ok:h h;Err:e ""};
+        if(str.len(html2)>0){
+          let fullurl=str.replace(routes.get(j).pattern;":slug";slug);
+          (log.info(str.concat("reg dyn: ";fullurl);@()));
+          (http.getstatic(fullurl;html2))
+        }el{
+          (log.info(str.concat("skip dyn (no html): ";slug);@()))
+        }
+      }
+    }el{}
+  }
+};
+
+f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str):void!$serveerr{
+  let pagesdir=path.join(projectdir;"pages");
+  let contentdir=path.join(projectdir;"content");
+  let templatesdir=path.join(projectdir;"templates");
+  (serveregisterstatic(pagesdir;contentdir;templatesdir;sitename;siteurl;sitelanguage));
+  (log.info("routes registered, starting servedir";@()));
+  (http.servedir("/static";projectdir));
+  (log.info("servedir done, starting listen";@()));
+  let uport=port as u64;
+  let uworkers=workers as u64;
+  if(!(tlscert="")){
+    (http.servetls(uport;tlscert;tlskey))
+  }el{
+    (http.serveworkers(uport;uworkers))
+  }
+};

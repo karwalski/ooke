@@ -1,0 +1,64 @@
+m=ooke.config;
+i=toml:std.toml;
+i=str:std.str;
+i=file:std.file;
+
+t=$ookecfg{
+  sitename:$str;
+  siteurl:$str;
+  sitelanguage:$str;
+  buildoutput:$str;
+  buildminify:bool;
+  buildinlinecss:bool;
+  serverport:i64;
+  serverworkers:i64;
+  storebackend:$str;
+  logaccess:$str;
+  logmaxlines:i64;
+  logmaxagedays:i64
+};
+
+t=$configerr{msg:$str};
+
+f=configload(path:$str):$ookecfg!$configerr{
+  let src=file.read(path)!$configerr;
+  let tab=toml.load(src)!$configerr;
+
+  let site=toml.section(tab;"site")|{Ok:v v;Err:e tab};
+  let build=toml.section(tab;"build")|{Ok:v v;Err:e tab};
+  let server=toml.section(tab;"server")|{Ok:v v;Err:e tab};
+  let store=toml.section(tab;"store")|{Ok:v v;Err:e tab};
+  let log=toml.section(tab;"log")|{Ok:v v;Err:e tab};
+
+  let sitename=toml.str(site;"name")|{Ok:v v;Err:e "my-site"};
+  let siteurl=toml.str(site;"url")|{Ok:v v;Err:e ""};
+  let sitelanguage=toml.str(site;"language")|{Ok:v v;Err:e "en"};
+
+  let buildoutput=toml.str(build;"output")|{Ok:v v;Err:e "build/"};
+  let buildminify=toml.bool(build;"minify")|{Ok:v v;Err:e true};
+  let buildinlinecss=toml.bool(build;"inline_css")|{Ok:v v;Err:e true};
+
+  let serverport=toml.i64(server;"port")|{Ok:v v;Err:e 3000};
+  let serverworkers=toml.i64(server;"workers")|{Ok:v v;Err:e 4};
+
+  let storebackend=toml.str(store;"backend")|{Ok:v v;Err:e "flat"};
+
+  let logaccess=toml.str(log;"access")|{Ok:v v;Err:e "logs/access.log"};
+  let logmaxlines=toml.i64(log;"max_lines")|{Ok:v v;Err:e 10000};
+  let logmaxagedays=toml.i64(log;"max_age_days")|{Ok:v v;Err:e 30};
+
+  <$ookecfg{
+    sitename:sitename;
+    siteurl:siteurl;
+    sitelanguage:sitelanguage;
+    buildoutput:buildoutput;
+    buildminify:buildminify;
+    buildinlinecss:buildinlinecss;
+    serverport:serverport;
+    serverworkers:serverworkers;
+    storebackend:storebackend;
+    logaccess:logaccess;
+    logmaxlines:logmaxlines;
+    logmaxagedays:logmaxagedays
+  }
+};

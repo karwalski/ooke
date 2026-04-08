@@ -1,0 +1,146 @@
+m=test.router;
+i=router:ooke.router;
+i=test:std.test;
+i=str:std.str;
+i=file:std.file;
+
+(* Create a temporary pages directory with a set of .tk page files,
+   call router_scan, and verify that the expected patterns are present. *)
+f=test_scan_basic():bool{
+  let tmp=file.tempdir()!$router.$routeerr;
+  (file.mkdir(str.concat(tmp;"/blog")));
+  (file.write(str.concat(tmp;"/index.tk");""));
+  (file.write(str.concat(tmp;"/about.tk");""));
+  (file.write(str.concat(tmp;"/blog/[slug].tk");""));
+  let result=router.router_scan(tmp);
+  match result{
+    ok(routes){
+      let found_root=mut.false;
+      let found_about=mut.false;
+      let found_blog=mut.false;
+      let found_blog_dynamic=mut.false;
+      lp(let i=mut.0;i<routes.len;i=i+1){
+        let r=routes.get(i);
+        if(r.pattern=="/"){found_root=true};
+        if(r.pattern=="/about"){found_about=true};
+        if(r.pattern=="/blog/:slug"){
+          found_blog=true;
+          found_blog_dynamic=r.is_dynamic
+        }
+      };
+      <found_root&&found_about&&found_blog&&found_blog_dynamic
+    };
+    err(e){
+      (test.fail(e.msg));
+      <false
+    };
+  }
+};
+
+(* Build a static route list manually and verify that an exact URL match
+   succeeds with an empty params map. *)
+f=test_match_static():bool{
+  let r=$router.$route{
+    pattern:"/about";
+    file_path:"pages/about.tk";
+    template_path:"templates/about.tkt";
+    content_type:"";
+    is_dynamic:false;
+    is_api:false;
+    params:@()
+  };
+  let routes=@(r);
+  let result=router.router_match(routes;"/about");
+  match result{
+    ok(m){
+      <m.params.len==0
+    };
+    err(e){
+      (test.fail(e.msg));
+      <false
+    };
+  }
+};
+
+(* Build a dynamic route and verify that the captured param is extracted
+   correctly from the URL. *)
+f=test_match_dynamic():bool{
+  let r=$router.$route{
+    pattern:"/blog/:slug";
+    file_path:"pages/blog/[slug].tk";
+    template_path:"templates/blog.tkt";
+    content_type:"blog";
+    is_dynamic:true;
+    is_api:false;
+    params:@()
+  };
+  let routes=@(r);
+  let result=router.router_match(routes;"/blog/hello-world");
+  match result{
+    ok(m){
+      let slug=match m.params.get("slug"){
+        ok(v){<v};
+        err(e){<""}
+      };
+      <slug=="hello-world"
+    };
+    err(e){
+      (test.fail(e.msg));
+      <false
+    };
+  }
+};
+
+(* Verify that a URL with no matching route returns an error. *)
+f=test_match_no_match():bool{
+  let r=$router.$route{
+    pattern:"/about";
+    file_path:"pages/about.tk";
+    template_path:"templates/about.tkt";
+    content_type:"";
+    is_dynamic:false;
+    is_api:false;
+    params:@()
+  };
+  let routes=@(r);
+  let result=router.router_match(routes;"/nonexistent");
+  match result{
+    ok(m){<false};
+    err(e){<true};
+  }
+};
+
+(* Verify that the root URL "/" matches a route with pattern "/". *)
+f=test_match_root():bool{
+  let r=$router.$route{
+    pattern:"/";
+    file_path:"pages/index.tk";
+    template_path:"templates/index.tkt";
+    content_type:"";
+    is_dynamic:false;
+    is_api:false;
+    params:@()
+  };
+  let routes=@(r);
+  let result=router.router_match(routes;"/");
+  match result{
+    ok(m){<true};
+    err(e){
+      (test.fail(e.msg));
+      <false
+    };
+  }
+};
+
+f=main():i64{
+  let r0=test_scan_basic();
+  let r1=test_match_static();
+  let r2=test_match_dynamic();
+  let r3=test_match_no_match();
+  let r4=test_match_root();
+  if(r0&&r1&&r2&&r3&&r4){
+    <0
+  }el{
+    <1
+  }
+};

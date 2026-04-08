@@ -355,6 +355,145 @@ static int is_html_passthrough(const char *line) {
     return line[0] == '<';
 }
 
+/* Returns 1 if line looks like a table row: starts with | */
+static int is_table_row(const char *line) {
+    const char *p = line;
+    while (*p == ' ') p++;
+    return *p == '|';
+}
+
+/* Returns 1 if line is a table separator: | --- | --- | */
+static int is_table_separator(const char *line) {
+    const char *p = line;
+    while (*p == ' ') p++;
+    if (*p != '|') return 0;
+    p++;
+    int has_dash = 0;
+    while (*p) {
+        if (*p == '-' || *p == ':') has_dash = 1;
+        else if (*p == '|' || *p == ' ') { /* ok */ }
+        else return 0;
+        p++;
+    }
+    return has_dash;
+}
+
+/* Parse cells from a table row, return count. cells[] are pointers into
+   a working buffer — caller must free buf. */
+static int parse_table_cells(const char *line, char ***cells_out) {
+    /* skip leading whitespace and pipe */
+    const char *p = line;
+    while (*p == ' ') p++;
+    if (*p == '|') p++;
+
+    /* count cells first */
+    int count = 0;
+    const char *scan = p;
+    while (*scan) {
+        if (*scan == '|') count++;
+        scan++;
+    }
+    /* if line doesn't end with |, last segment is also a cell */
+    /* trim trailing whitespace to check */
+    const char *end = scan - 1;
+    while (end > p && *end == ' ') end--;
+    if (*end != '|') count++;
+
+    if (count == 0) { *cells_out = NULL; return 0; }
+
+    char **cells = calloc((size_t)count, sizeof(char *));
+    if (!cells) { *cells_out = NULL; return 0; }
+
+    int idx = 0;
+    const char *cell_start = p;
+    while (*p && idx < count) {
+        if (*p == '|' || *(p+1) == '\0') {
+            const char *cell_end = (*p == '|') ? p : p + 1;
+            /* trim whitespace */
+            const char *cs = cell_start;
+            while (cs < cell_end && *cs == ' ') cs++;
+            const char *ce = cell_end - 1;
+            while (ce > cs && *ce == ' ') ce--;
+            size_t clen = (ce >= cs) ? (size_t)(ce - cs + 1) : 0;
+            if (*p == '|' && *(p+1) == '\0') {
+                /* trailing pipe — this cell ends here, no extra cell */
+                cells[idx] = malloc(clen + 1);
+                if (cells[idx]) { memcpy(cells[idx], cs, clen); cells[idx][clen] = '\0'; }
+                idx++;
+                break;
+            }
+            cells[idx] = malloc(clen + 1);
+            if (cells[idx]) { memcpy(cells[idx], cs, clen); cells[idx][clen] = '\0'; }
+            idx++;
+            cell_start = p + 1;
+        }
+        p++;
+    }
+
+    *cells_out = cells;
+    return idx;
+}
+
+static void free_cells(char **cells, int count) {
+    if (!cells) return;
+    for (int i = 0; i < count; i++) free(cells[i]);
+    free(cells);
+}
+
+/* Render a complete table starting at line index *pi. Advances *pi past the table. */
+static void render_table(StrBuf *out, LineArray *la, size_t *pi) {
+    size_t i = *pi;
+
+    /* Parse header row */
+    char **hcells = NULL;
+    int hcount = parse_table_cells(la->lines[i], &hcells);
+    i++;
+
+    /* Skip separator row */
+    if (i < la->count && is_table_separator(la->lines[i])) {
+        i++;
+    }
+
+    sb_append(out, "<table>\n<thead>\n<tr>\n");
+    for (int c = 0; c < hcount; c++) {
+        sb_append(out, "<th>");
+        if (hcells[c]) {
+            char *inl = inline_html(hcells[c]);
+            sb_append(out, inl);
+            free(inl);
+        }
+        sb_append(out, "</th>\n");
+    }
+    sb_append(out, "</tr>\n</thead>\n<tbody>\n");
+    free_cells(hcells, hcount);
+
+    /* Body rows */
+    while (i < la->count && is_table_row(la->lines[i]) && !is_table_separator(la->lines[i])) {
+        char **rcells = NULL;
+        int rcount = parse_table_cells(la->lines[i], &rcells);
+        sb_append(out, "<tr>\n");
+        for (int c = 0; c < rcount; c++) {
+            sb_append(out, "<td>");
+            if (rcells[c]) {
+                char *inl = inline_html(rcells[c]);
+                sb_append(out, inl);
+                free(inl);
+            }
+            sb_append(out, "</td>\n");
+        }
+        /* pad missing cells */
+        for (int c = rcount; c < hcount; c++) {
+            sb_append(out, "<td></td>\n");
+        }
+        sb_append(out, "</tr>\n");
+        free_cells(rcells, rcount);
+        i++;
+    }
+
+    sb_append(out, "</tbody>\n</table>\n");
+    *pi = i;
+}
+
 char *md_to_html(const char *markdown) {
     if (!markdown) return strdup("");
 
@@ -460,6 +599,14 @@ char *md_to_html(const char *markdown) {
             char *inl = inline_html(content);
             sb_append(&out, inl);
             free(inl);
+            continue;
+        }
+
+        /* --- table --- */
+        if (is_table_row(line) && i + 1 < la.count && is_table_separator(la.lines[i + 1])) {
+            CLOSE_BLOCK();
+            render_table(&out, &la, &i);
+            i--; /* loop will increment */
             continue;
         }
 

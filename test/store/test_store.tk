@@ -1,0 +1,80 @@
+m=test.store;
+i=store:ooke.store;
+i=test:std.test;
+i=file:std.file;
+i=str:std.str;
+
+f=test_parse_frontmatter():bool{
+  let src="---\nslug: hello-world\ntype: post\ntitle: Hello World\n---\n# Hello\n\nThis is the body.\n";
+  let result=store.store_parse_frontmatter(src);
+  (match result{
+    ok(c){
+      (test.eq(c.slug;"hello-world"));
+      (test.eq(c.type;"post"));
+      (test.eq(str.contains(c.body;"Hello")&&str.contains(c.body;"body");true));
+      <true
+    };
+    err(e){
+      (test.fail(e.msg));
+      <false
+    }
+  })
+};
+
+f=test_store_all_empty():bool{
+  let mk_result=file.mkdir("/tmp/test_store_empty/posts");
+  match mk_result{
+    ok(v){};
+    err(e){}
+  };
+  let result=store.store_all("/tmp/test_store_empty";"posts");
+  (match result{
+    ok(col){
+      (test.eq(col.len;0));
+      <true
+    };
+    err(e){
+      (test.fail(e.msg));
+      <false
+    }
+  })
+};
+
+f=test_store_slug():bool{
+  let c1=store.$content{
+    slug:"about";
+    type:"page";
+    meta:@($str:$str);
+    body:"About page body"
+  };
+  let c2=store.$content{
+    slug:"contact";
+    type:"page";
+    meta:@($str:$str);
+    body:"Contact page body"
+  };
+  let col=@(c1;c2);
+  let result=store.store_slug(col;"contact");
+  (match result{
+    ok(c){
+      (test.eq(c.slug;"contact"));
+      (test.eq(str.contains(c.body;"Contact");true));
+      <true
+    };
+    err(e){
+      (test.fail(e.msg));
+      <false
+    }
+  })
+};
+
+f=main():i64{
+  let r0=test_parse_frontmatter();
+  let r1=test_store_all_empty();
+  let r2=test_store_slug();
+  if(r0&&r1&&r2){
+    <0
+  }el{
+    <1
+  }
+};

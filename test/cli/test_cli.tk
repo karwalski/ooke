@@ -1,0 +1,138 @@
+m=test.cli;
+i=file:std.file;
+i=str:std.str;
+i=test:std.test;
+i=path:std.path;
+i=ooke_cli:ooke.cli;
+
+(* Verify that cli_new creates the expected directory structure and config file. *)
+f=test_new_creates_dirs():bool{
+  let proj="test_ooke_proj";
+  let rc=ooke_cli.cli_new(proj);
+  if(rc!=0){
+    (test.fail("cli_new returned non-zero"));
+    <false
+  };
+  let root_ok=match file.exists(proj){
+    ok(v){<v};
+    err(e){<false}
+  };
+  let pages_ok=match file.exists(path.join(proj;"pages")){
+    ok(v){<v};
+    err(e){<false}
+  };
+  let templates_ok=match file.exists(path.join(proj;"templates")){
+    ok(v){<v};
+    err(e){<false}
+  };
+  let content_ok=match file.exists(path.join(proj;"content")){
+    ok(v){<v};
+    err(e){<false}
+  };
+  let static_ok=match file.exists(path.join(proj;"static")){
+    ok(v){<v};
+    err(e){<false}
+  };
+  let toml_ok=match file.exists(path.join(proj;"ooke.toml")){
+    ok(v){<v};
+    err(e){<false}
+  };
+  let index_ok=match file.exists(path.join(path.join(proj;"pages");"index.tk")){
+    ok(v){<v};
+    err(e){<false}
+  };
+  let base_ok=match file.exists(path.join(path.join(proj;"templates");"base.tkt")){
+    ok(v){<v};
+    err(e){<false}
+  };
+  (file.removeall(proj));
+  <root_ok&&pages_ok&&templates_ok&&content_ok&&static_ok&&toml_ok&&index_ok&&base_ok
+};
+
+(* Verify that cli_new writes a valid ooke.toml containing the project name. *)
+f=test_new_toml_content():bool{
+  let proj="test_ooke_toml";
+  let rc=ooke_cli.cli_new(proj);
+  if(rc!=0){
+    (test.fail("cli_new returned non-zero"));
+    <false
+  };
+  let toml_path=path.join(proj;"ooke.toml");
+  let read_result=file.read(toml_path);
+  let ok=match read_result{
+    ok(src){
+      <str.contains(src;proj)&&str.contains(src;"[site]")&&str.contains(src;"[server]")
+    };
+    err(e){
+      (test.fail("could not read ooke.toml"));
+      <false
+    }
+  };
+  (file.removeall(proj));
+  <ok
+};
+
+(* Verify that cli_gen creates a page stub at pages/<name>.tk. *)
+f=test_gen_page():bool{
+  let mk_result=file.mkdir("pages");
+  match mk_result{
+    ok(v){};
+    err(e){}
+  };
+  let rc=ooke_cli.cli_gen("page";"mypage");
+  if(rc!=0){
+    (test.fail("cli_gen page returned non-zero"));
+    <false
+  };
+  let page_path=path.join("pages";"mypage.tk");
+  let exists=match file.exists(page_path){
+    ok(v){<v};
+    err(e){<false}
+  };
+  let content_ok=match file.read(page_path){
+    ok(src){<str.contains(src;"mypage")};
+    err(e){<false}
+  };
+  (file.remove(page_path));
+  <exists&&content_ok
+};
+
+(* Verify that cli_gen for an unknown type returns non-zero. *)
+f=test_gen_unknown_type():bool{
+  let rc=ooke_cli.cli_gen("unknown_type";"foo");
+  <rc==1
+};
+
+(* Verify that cli_gen creates an api stub under pages/api/. *)
+f=test_gen_api():bool{
+  let mk_result=file.mkdir(path.join("pages";"api"));
+  match mk_result{
+    ok(v){};
+    err(e){}
+  };
+  let rc=ooke_cli.cli_gen("api";"myapi");
+  if(rc!=0){
+    (test.fail("cli_gen api returned non-zero"));
+    <false
+  };
+  let api_path=path.join(path.join("pages";"api");"myapi.tk");
+  let exists=match file.exists(api_path){
+    ok(v){<v};
+    err(e){<false}
+  };
+  (file.remove(api_path));
+  <exists
+};
+
+f=main():i64{
+  let r0=test_new_creates_dirs();
+  let r1=test_new_toml_content();
+  let r2=test_gen_page();
+  let r3=test_gen_unknown_type();
+  let r4=test_gen_api();
+  if(r0&&r1&&r2&&r3&&r4){
+    <0
+  }el{
+    <1
+  }
+};

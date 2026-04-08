@@ -1,0 +1,366 @@
+m=ooke.template;
+i=file:std.file;
+i=str:std.str;
+i=path:std.path;
+i=md:std.md;
+
+t=$tokenkind{raw:bool;expr:bool;directive:bool;comment:bool};
+
+t=$token{
+  kind:$tokenkind;
+  content:$str
+};
+
+t=$tplerr{msg:$str};
+
+t=$block{
+  name:$str;
+  content:$str
+};
+
+t=$tplcache{entries:@($str:@$token)};
+
+t=$renderresult{output:$str;cache:$tplcache};
+
+f=tplescape(s:$str):$str{
+  let s1=str.replace(s;"&";"&amp;");
+  let s2=str.replace(s1;"<";"&lt;");
+  let s3=str.replace(s2;">";"&gt;");
+  let s4=str.replace(s3;"\"";"&quot;");
+  let s5=str.replace(s4;"'";"&#39;");
+  <s5
+};
+
+f=tplapplyfilter(val:$str;filtername:$str):$str{
+  let fname=str.trim(filtername);
+  if(fname="md"){
+    <md.render(val)
+  }el{
+    if(fname="escape"){
+      <tplescape(val)
+    }el{
+      if(fname="upper"){
+        <str.upper(val)
+      }el{
+        if(fname="lower"){
+          <str.lower(val)
+        }el{
+          if(fname="trim"){
+            <str.trim(val)
+          }el{
+            <val
+          }
+        }
+      }
+    }
+  }
+};
+
+f=tplresolveexpr(expr:$str;ctx:@($str:$str)):$str{
+  let trimmed=str.trim(expr);
+  let pipepos=str.indexof(trimmed;"|");
+  if(!(pipepos<0)){
+    let key=str.trim(str.slice(trimmed;0;pipepos)|{Ok:v v;Err:e trimmed});
+    let filter=str.trim(str.slice(trimmed;pipepos+1;str.len(trimmed))|{Ok:v v;Err:e ""});
+    let vgot=ctx.get(key);
+    let val=vgot|{Ok:v v;Err:e ""};
+    <tplapplyfilter(val;filter)
+  }el{
+    let vgot2=ctx.get(trimmed);
+    <vgot2|{Ok:v v;Err:e ""}
+  }
+};
+
+f=tpllex(src:$str):@$token!$tplerr{
+  let tokens=mut.@();
+  let remaining=mut.src;
+
+  let rawkind=$tokenkind{raw:true;expr:false;directive:false;comment:false};
+  let exprkind=$tokenkind{raw:false;expr:true;directive:false;comment:false};
+  let dirkind=$tokenkind{raw:false;expr:false;directive:true;comment:false};
+  let cmtkind=$tokenkind{raw:false;expr:false;directive:false;comment:true};
+
+  let running=mut.true;
+  lp(let ii=0;running;ii=ii+1){
+    let rem=remaining;
+    let rlen=str.len(rem);
+    if(rlen=0){
+      running=false
+    }el{
+      let posexpr=str.indexof(rem;"{=");
+      let posdir=str.indexof(rem;"{!");
+      let poscmt=str.indexof(rem;"{#");
+
+      let bestpos=mut.-1;
+      let besttype=mut."none";
+
+      if(!(posexpr<0)){
+        if(bestpos<0||posexpr<bestpos){
+          bestpos=posexpr;
+          besttype="expr"
+        }el{}
+      }el{};
+      if(!(posdir<0)){
+        if(bestpos<0||posdir<bestpos){
+          bestpos=posdir;
+          besttype="dir"
+        }el{}
+      }el{};
+      if(!(poscmt<0)){
+        if(bestpos<0||poscmt<bestpos){
+          bestpos=poscmt;
+          besttype="cmt"
+        }el{}
+      }el{};
+
+      if(bestpos<0){
+        let tok=$token{kind:rawkind;content:rem};
+        tokens=tokens.append(tok);
+        remaining="";
+        running=false
+      }el{
+        if(bestpos>0){
+          let rawcontent=str.slice(rem;0;bestpos)|{Ok:v v;Err:e ""};
+          let rawtok=$token{kind:rawkind;content:rawcontent};
+          tokens=tokens.append(rawtok)
+        }el{};
+
+        let afteropen=str.slice(rem;bestpos+2;rlen)|{Ok:v v;Err:e ""};
+
+        let closedelim=mut."";
+        if(besttype="expr"){
+          closedelim="=}"
+        }el{
+          if(besttype="dir"){
+            closedelim="!}"
+          }el{
+            closedelim="#}"
+          }
+        };
+
+        let closepos=str.indexof(afteropen;closedelim);
+        if(closepos<0){
+          let rawtok=$token{kind:rawkind;content:rem};
+          tokens=tokens.append(rawtok);
+          remaining="";
+          running=false
+        }el{
+          let inner=str.slice(afteropen;0;closepos)|{Ok:v v;Err:e ""};
+          let afterclose=str.slice(afteropen;closepos+2;str.len(afteropen))|{Ok:v v;Err:e ""};
+
+          if(besttype="expr"){
+            let tok=$token{kind:exprkind;content:inner};
+            tokens=tokens.append(tok)
+          }el{
+            if(besttype="dir"){
+              let tok=$token{kind:dirkind;content:inner};
+              tokens=tokens.append(tok)
+            }el{
+              let tok=$token{kind:cmtkind;content:inner};
+              tokens=tokens.append(tok)
+            }
+          };
+
+          remaining=afterclose
+        }
+      }
+    }
+  };
+  <tokens
+};
+
+f=tpldirectivename(content:$str):$str{
+  let trimmed=str.trim(content);
+  let paren=str.indexof(trimmed;"(");
+  if(!(paren<0)){
+    <str.slice(trimmed;0;paren)|{Ok:v v;Err:e trimmed}
+  }el{
+    <trimmed
+  }
+};
+
+f=tpldirectivearg(content:$str):$str{
+  let trimmed=str.trim(content);
+  let open=str.indexof(trimmed;"(");
+  if(open<0){
+    <""
+  }el{
+    let afteropen=str.slice(trimmed;open+1;str.len(trimmed))|{Ok:v v;Err:e ""};
+    let close=str.indexof(afteropen;")");
+    if(close<0){
+      <""
+    }el{
+      let raw=str.slice(afteropen;0;close)|{Ok:v v;Err:e ""};
+      let t=str.trim(raw);
+      let tlen=str.len(t);
+      if(tlen>1){
+        let first=str.slice(t;0;1)|{Ok:v v;Err:e ""};
+        let last=str.slice(t;tlen-1;tlen)|{Ok:v v;Err:e ""};
+        if(first="\""&&last="\""){
+          <str.slice(t;1;tlen-1)|{Ok:v v;Err:e t}
+        }el{
+          <t
+        }
+      }el{
+        <t
+      }
+    }
+  }
+};
+
+f=tplfindblock(blocks:@$block;name:$str):$str{
+  lp(let i=0;i<blocks.len;i=i+1){
+    let b=blocks.get(i);
+    if(b.name=name){
+      <b.content
+    }el{}
+  };
+  <""
+};
+
+f=tplrender(
+  tokens:@$token;
+  ctx:@($str:$str);
+  templatesdir:$str;
+  blocks:@$block
+):$str!$tplerr{
+  let buf=mut."";
+
+  let inblock=mut.false;
+  let currentblockname=mut."";
+  let currentblockbuf=mut."";
+  let collectedblocks=mut.@();
+
+  let layoutname=mut."";
+
+  lp(let i=0;i<tokens.len;i=i+1){
+    let tok=tokens.get(i);
+
+    if(tok.kind.raw){
+      if(inblock){
+        currentblockbuf=str.concat(currentblockbuf;tok.content)
+      }el{
+        buf=str.concat(buf;tok.content)
+      }
+    }el{};
+
+    if(tok.kind.comment){
+    }el{};
+
+    if(tok.kind.expr){
+      let val=tplresolveexpr(tok.content;ctx);
+      if(inblock){
+        currentblockbuf=str.concat(currentblockbuf;val)
+      }el{
+        buf=str.concat(buf;val)
+      }
+    }el{};
+
+    if(tok.kind.directive){
+      let dname=tpldirectivename(tok.content);
+      let darg=tpldirectivearg(tok.content);
+
+      if(dname="layout"){
+        layoutname=darg
+      }el{
+        if(dname="block"){
+          inblock=true;
+          currentblockname=darg;
+          currentblockbuf=""
+        }el{
+          if(dname="end"){
+            if(inblock){
+              let b=$block{name:currentblockname;content:currentblockbuf};
+              collectedblocks=collectedblocks.append(b);
+              inblock=false;
+              currentblockname="";
+              currentblockbuf=""
+            }el{}
+          }el{
+            if(dname="yield"){
+              let blockcontent=tplfindblock(blocks;darg);
+              if(str.len(blockcontent)>0){
+                buf=str.concat(buf;blockcontent)
+              }el{}
+            }el{
+              if(dname="partial"){
+                let partialpath=path.join(templatesdir;str.concat(darg;".tkt"));
+                let psrcr=file.read(partialpath);
+                let partialsrc=psrcr|{Ok:s s;Err:e ""};
+                if(str.len(partialsrc)>0){
+                  let partialtokens=tpllex(partialsrc)!$tplerr;
+                  let partialout=tplrender(partialtokens;ctx;templatesdir;@())!$tplerr;
+                  if(inblock){
+                    currentblockbuf=str.concat(currentblockbuf;partialout)
+                  }el{
+                    buf=str.concat(buf;partialout)
+                  }
+                }el{}
+              }el{}
+            }
+          }
+        }
+      }
+    }el{}
+  };
+
+  if(str.len(layoutname)>0){
+    let layoutpath=path.join(templatesdir;str.concat(layoutname;".tkt"));
+    let layoutsrc=file.read(layoutpath)!$tplerr;
+    let layouttokens=tpllex(layoutsrc)!$tplerr;
+    let layoutout=tplrender(layouttokens;ctx;templatesdir;collectedblocks)!$tplerr;
+    <layoutout
+  }el{
+    <buf
+  }
+};
+
+f=tplrenderfile(
+  templatepath:$str;
+  ctx:@($str:$str);
+  templatesdir:$str
+):$str!$tplerr{
+  let src=file.read(templatepath)!$tplerr;
+  let tokens=tpllex(src)!$tplerr;
+  let out=tplrender(tokens;ctx;templatesdir;@())!$tplerr;
+  <out
+};
+
+f=tplcachenew():$tplcache{
+  <$tplcache{entries:@()}
+};
+
+f=tplcacheget(
+  cache:$tplcache;
+  path:$str
+):@$token!$tplerr{
+  let r=cache.entries.get(path);
+  let hit=r|{Ok:toks true;Err:e false};
+  if(hit){
+    <r|{Ok:toks toks;Err:e @()}
+  }el{
+    let src=file.read(path)!$tplerr;
+    <tpllex(src)!$tplerr
+  }
+};
+
+f=tplrenderfilecached(
+  templatepath:$str;
+  ctx:@($str:$str);
+  templatesdir:$str;
+  cache:$tplcache
+):$renderresult!$tplerr{
+  let r=cache.entries.get(templatepath);
+  let hit=r|{Ok:toks true;Err:e false};
+  let tokens=mut.@();
+  if(hit){
+    tokens=r|{Ok:toks toks;Err:e @()}
+  }el{
+    let src=file.read(templatepath)!$tplerr;
+    tokens=tpllex(src)!$tplerr
+  };
+  let newentries=cache.entries.set(templatepath;tokens);
+  let newcache=$tplcache{entries:newentries};
+  let out=tplrender(tokens;ctx;templatesdir;@())!$tplerr;
+  <$renderresult{output:out;cache:newcache}
+};

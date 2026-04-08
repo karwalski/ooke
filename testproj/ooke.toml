@@ -1,0 +1,21 @@
+[site]
+name = "testproj"
+url = ""
+language = "en"
+
+[build]
+output = "build/"
+minify = true
+inline_css = true
+
+[server]
+port = 3000
+workers = 4
+
+[store]
+backend = "flat"
+
+[log]
+access = "logs/access.log"
+max_lines = 10000
+max_age_days = 30
