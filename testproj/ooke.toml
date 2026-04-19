@@ -9,7 +9,7 @@ minify = true
 inline_css = true
 
 [server]
-port = 3000
+port = 8092
 workers = 4
 
 [store]
