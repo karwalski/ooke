@@ -117,6 +117,18 @@ f=routertrymatch(route:$route;url:$str):$routematch!$routeerr{
   <$routematch{route:route;params:captures}
 };
 
+f=routecountdynamic(pattern:$str):i64{
+  let segs=str.split(pattern;"/");
+  let count=mut.0;
+  lp(let i=0;i<segs.len;i=i+1){
+    let seg=segs.get(i);
+    if(str.startswith(seg;":")){
+      count=count+1
+    }el{}
+  };
+  <count
+};
+
 f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
   let normurl=mut.url;
   if(str.endswith(url;"/")&&!(url="/")){
@@ -139,15 +151,20 @@ f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
       }el{}
     }el{}
   };
+  let bestdyncount=mut.999;
   lp(let j=0;j<routes.len;j=j+1){
     let r=routes.get(j);
     if(r.isdynamic){
-      if(foundidx<0){
+      if(foundidx<0||foundmatch.route.isdynamic){
         let result=routertrymatch(r;normurl);
         let val=result|{Ok:m m;Err:e defmatch};
         if(!(val.route.pattern="")){
-          foundmatch=val;
-          foundidx=j
+          let dyncount=routecountdynamic(r.pattern);
+          if(dyncount<bestdyncount){
+            foundmatch=val;
+            foundidx=j;
+            bestdyncount=dyncount
+          }el{}
         }el{}
       }el{}
     }el{}

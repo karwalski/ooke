@@ -1,6 +1,15 @@
-build/
+# Compiled binaries
+ooke
+ooke-toke
+
+# Build artifacts
 *.o
 *.ll
 *.dSYM/
-ooke
-ooke-toke
+build/
+
+# Generated interfaces
+*.tki
+
+# macOS
+.DS_Store

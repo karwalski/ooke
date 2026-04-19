@@ -1,0 +1,81 @@
+{! layout("base") !}
+{! block("title") !}404 - Page Not Found{! end !}
+{! block("content") !}
+
+<main class="error-page">
+  <div class="error-container">
+    <h1 class="error-code">404</h1>
+    <h2 class="error-message">Page Not Found</h2>
+    <p class="error-detail">
+      The page <code>{= request.path =}</code> does not exist on this site.
+    </p>
+    <p class="error-suggestion">
+      You might find what you are looking for by searching or browsing the sections below.
+    </p>
+    <nav class="error-nav">
+      <a href="/">Home</a>
+      <a href="/docs/">Documentation</a>
+      <a href="/search/">Search</a>
+      <a href="/ecosystem/">Ecosystem</a>
+    </nav>
+  </div>
+</main>
+
+<style>
+  .error-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: 2rem;
+  }
+  .error-container {
+    text-align: center;
+    max-width: 480px;
+  }
+  .error-code {
+    font-size: 6rem;
+    font-weight: 800;
+    margin: 0;
+    color: var(--accent, #e2b714);
+    line-height: 1;
+  }
+  .error-message {
+    font-size: 1.5rem;
+    margin: 0.5rem 0 1rem;
+    color: var(--text, #d1d5db);
+  }
+  .error-detail {
+    color: var(--text-muted, #9ca3af);
+    margin-bottom: 0.5rem;
+  }
+  .error-detail code {
+    background: var(--code-bg, #1f2937);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+  }
+  .error-suggestion {
+    color: var(--text-muted, #9ca3af);
+    margin-bottom: 1.5rem;
+  }
+  .error-nav {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .error-nav a {
+    color: var(--accent, #e2b714);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border, #374151);
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .error-nav a:hover {
+    background: var(--code-bg, #1f2937);
+  }
+</style>
+
+{! end !}

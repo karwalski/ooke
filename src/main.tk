@@ -105,7 +105,7 @@ f=cfgdefault():$ookecfg{
 };
 
 f=runserve(projectdir:$str):i64{
-  let cfg=config.configload("ooke.toml")|{Ok:v v;Err:e cfgdefault()};
+  let cfg=config.configload(path.join(projectdir;"ooke.toml"))|{Ok:v v;Err:e cfgdefault()};
   let port=cfg.serverport;
   let workers=cfg.serverworkers;
   let output=cfg.buildoutput;
@@ -117,7 +117,7 @@ f=runserve(projectdir:$str):i64{
 };
 
 f=runbuild(projectdir:$str):i64{
-  let cfg=config.configload("ooke.toml")|{Ok:v v;Err:e cfgdefault()};
+  let cfg=config.configload(path.join(projectdir;"ooke.toml"))|{Ok:v v;Err:e cfgdefault()};
   let report=build.buildrun(projectdir;cfg)|{Ok:v v;Err:e $buildreport{pagesbuilt:0;assetscopy:0}};
   (log.info(str.concat("pages built: ";str.fromint(report.pagesbuilt));@()));
   (log.info(str.concat("assets copied: ";str.fromint(report.assetscopy));@()));

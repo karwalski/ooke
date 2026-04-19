@@ -28,7 +28,17 @@ STDLIB_SRCS := \
   $(TOKE_STDLIB)/args.c \
   $(TOKE_STDLIB)/path.c \
   $(TOKE_STDLIB)/md.c \
-  $(TOKE_STDLIB)/toml.c
+  $(TOKE_STDLIB)/toml.c \
+  $(TOKE_STDLIB)/http2.c \
+  $(TOKE_STDLIB)/acme.c \
+  $(TOKE_STDLIB)/proxy.c \
+  $(TOKE_STDLIB)/cache.c \
+  $(TOKE_STDLIB)/content.c \
+  $(TOKE_STDLIB)/security.c \
+  $(TOKE_STDLIB)/metrics.c \
+  $(TOKE_STDLIB)/server_ops.c \
+  $(TOKE_STDLIB)/ws_server.c \
+  $(TOKE_STDLIB)/hooks.c
 
 # ── Vendor C sources ───────────────────────────────────────────────────────
 CMARK_SRCS := $(filter-out $(TOKE_VENDOR)/cmark/src/main.c, \
@@ -39,7 +49,7 @@ VENDOR_SRCS := $(CMARK_SRCS) $(TOML_SRCS)
 
 # ── Compiler / linker flags ────────────────────────────────────────────────
 UNAME := $(shell uname -s)
-CFLAGS := -std=c99 -O1 -I$(TOKE_STDLIB) \
+CFLAGS := -std=c99 -D_GNU_SOURCE -O1 -I$(TOKE_STDLIB) \
           -I$(TOKE_VENDOR)/cmark/src \
           -I$(TOKE_VENDOR)/tomlc99 \
           -Wno-pedantic -DTK_HAVE_OPENSSL

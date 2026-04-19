@@ -132,13 +132,48 @@ f=test_match_root():bool{
   }
 };
 
+(* Verify that a more specific dynamic route (fewer dynamic segments)
+   is preferred over a less specific one. *)
+f=test_match_specificity():bool{
+  let generic=$router.$route{
+    pattern:"/docs/:section/:slug";
+    file_path:"pages/docs/[section]/[slug].tk";
+    template_path:"templates/docs/[section]/[slug].tkt";
+    content_type:"docs";
+    is_dynamic:true;
+    is_api:false;
+    params:@()
+  };
+  let specific=$router.$route{
+    pattern:"/docs/about/:slug";
+    file_path:"pages/docs/about/[slug].tk";
+    template_path:"templates/docs/about/[slug].tkt";
+    content_type:"docs/about";
+    is_dynamic:true;
+    is_api:false;
+    params:@()
+  };
+  let routes=@(generic;specific);
+  let result=router.router_match(routes;"/docs/about/overview");
+  match result{
+    ok(m){
+      <m.route.pattern=="/docs/about/:slug"
+    };
+    err(e){
+      (test.fail(e.msg));
+      <false
+    };
+  }
+};
+
 f=main():i64{
   let r0=test_scan_basic();
   let r1=test_match_static();
   let r2=test_match_dynamic();
   let r3=test_match_no_match();
   let r4=test_match_root();
-  if(r0&&r1&&r2&&r3&&r4){
+  let r5=test_match_specificity();
+  if(r0&&r1&&r2&&r3&&r4&&r5){
     <0
   }el{
     <1
