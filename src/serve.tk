@@ -65,6 +65,15 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
         }
       }
     }el{}
+  };
+  lp(let a=0;a<routes.len;a=a+1){
+    let ra=routes.get(a);
+    let isapia=ra.isapi;
+    if(isapia){
+      let apipath=ra.pattern;
+      (log.info(str.concat("reg api POST echo: ";apipath);@()));
+      (http.postecho(apipath))
+    }el{}
   }
 };
 

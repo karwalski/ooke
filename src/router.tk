@@ -78,7 +78,7 @@ f=routerscan(pagesdir:$str):@$route!$routeerr{
       let templatepath=routederivetemplate(p;pagesdir);
       let contenttype=routederivedtype(p;pagesdir);
       let isdynamic=str.contains(pattern;":");
-      let isapi=str.contains(p;"/api/");
+      let isapi=str.contains(p;"/api/")||str.startswith(p;"api/");
       let r=$route{
         pattern:pattern;
         filepath:p;
