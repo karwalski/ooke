@@ -218,6 +218,44 @@ f=tplfindblock(blocks:@$block;name:$str):$str{
   <""
 };
 
+f=tplislandparse(content:$str):@($str:$str){
+  let trimmed=str.trim(content);
+  let open=str.indexof(trimmed;"(");
+  if(open<0){
+    <@("name":"";"hydrate":"load")
+  }el{
+    let afteropen=str.slice(trimmed;open+1;str.len(trimmed))|{Ok:v v;Err:e ""};
+    let close=str.indexof(afteropen;")");
+    let inner=str.slice(afteropen;0;close)|{Ok:v v;Err:e afteropen};
+    let q1=str.indexof(inner;"\"");
+    if(q1<0){
+      <@("name":"";"hydrate":"load")
+    }el{
+      let afterq1=str.slice(inner;q1+1;str.len(inner))|{Ok:v v;Err:e ""};
+      let q2=str.indexof(afterq1;"\"");
+      if(q2<0){
+        <@("name":"";"hydrate":"load")
+      }el{
+        let iname=str.slice(afterq1;0;q2)|{Ok:v v;Err:e ""};
+        let rest=str.slice(afterq1;q2+1;str.len(afterq1))|{Ok:v v;Err:e ""};
+        let hpos=str.indexof(rest;"hydrate=\"");
+        if(hpos<0){
+          <@("name":iname;"hydrate":"load")
+        }el{
+          let afterh=str.slice(rest;hpos+9;str.len(rest))|{Ok:v v;Err:e ""};
+          let hclose=str.indexof(afterh;"\"");
+          if(hclose<0){
+            <@("name":iname;"hydrate":"load")
+          }el{
+            let hval=str.slice(afterh;0;hclose)|{Ok:v v;Err:e "load"};
+            <@("name":iname;"hydrate":hval)
+          }
+        }
+      }
+    }
+  }
+};
+
 f=tplrender(
   tokens:@$token;
   ctx:@($str:$str);
@@ -225,6 +263,7 @@ f=tplrender(
   blocks:@$block
 ):$str!$tplerr{
   let buf=mut."";
+  let hasislands=mut.false;
 
   let inblock=mut.false;
   let currentblockname=mut."";
@@ -296,7 +335,20 @@ f=tplrender(
                     buf=str.concat(buf;partialout)
                   }
                 }el{}
-              }el{}
+              }el{
+                if(dname="island"){
+                  let iparse=tplislandparse(tok.content);
+                  let iname=iparse.get("name")|{Ok:v v;Err:e ""};
+                  let ihydrate=iparse.get("hydrate")|{Ok:v v;Err:e "load"};
+                  let idiv=str.concat("<div data-island=\"";str.concat(iname;str.concat("\" data-hydrate=\"";str.concat(ihydrate;"\"></div>"))));
+                  if(inblock){
+                    currentblockbuf=str.concat(currentblockbuf;idiv)
+                  }el{
+                    buf=str.concat(buf;idiv)
+                  };
+                  hasislands=true
+                }el{}
+              }
             }
           }
         }
@@ -304,14 +356,24 @@ f=tplrender(
     }el{}
   };
 
+  let islandscript="<script src=\"/static/ooke-islands.js\" defer></script>";
+
   if(str.len(layoutname)>0){
     let layoutpath=path.join(templatesdir;str.concat(layoutname;".tkt"));
     let layoutsrc=file.read(layoutpath)!$tplerr;
     let layouttokens=tpllex(layoutsrc)!$tplerr;
     let layoutout=tplrender(layouttokens;ctx;templatesdir;collectedblocks)!$tplerr;
-    <layoutout
+    if(hasislands){
+      <str.concat(layoutout;islandscript)
+    }el{
+      <layoutout
+    }
   }el{
-    <buf
+    if(hasislands){
+      <str.concat(buf;islandscript)
+    }el{
+      <buf
+    }
   }
 };
 

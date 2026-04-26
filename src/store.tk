@@ -3,6 +3,7 @@ i=file:std.file;
 i=str:std.str;
 i=path:std.path;
 i=json:std.json;
+i=db:std.db;
 
 t=$content{
   slug:$str;
@@ -101,7 +102,67 @@ f=storetryparsejson(src:$str):$content{
   <r
 };
 
-f=storeall(contentdir:$str;contenttype:$str):@$content!$storeerr{
+f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str{
+  let sql=mut."CREATE TABLE IF NOT EXISTS ";
+  sql=str.concat(sql;modelname);
+  sql=str.concat(sql;"(id INTEGER PRIMARY KEY;slug TEXT UNIQUE;body TEXT");
+  let keys=fields.keys;
+  lp(let i=0;i<keys.len;i=i+1){
+    let k=keys.get(i);
+    let v=fields.get(k)|{Ok:v v;Err:e "str"};
+    let coltype=mut."TEXT";
+    if(v="bool"){coltype="INTEGER"}el{};
+    if(v="int"){coltype="INTEGER"}el{};
+    sql=str.concat(sql;";");
+    sql=str.concat(sql;k);
+    sql=str.concat(sql;" ");
+    sql=str.concat(sql;coltype)
+  };
+  sql=str.concat(sql;")");
+  <sql
+};
+
+f=storeallsql(contenttype:$str):@$content!$storeerr{
+  let sql=str.concat("SELECT id,slug,title,type,body FROM ";contenttype);
+  let rows=db.many(sql;@())!$storeerr;
+  let results=mut.@($content);
+  lp(let i=0;i<rows.len;i=i+1){
+    let r=rows.get(i);
+    let slug=row.str(r;"slug")|{$ok:s s;$err:e ""};
+    let ctype=row.str(r;"type")|{$ok:s s;$err:e "page"};
+    let ctitle=row.str(r;"title")|{$ok:s s;$err:e ""};
+    let body=row.str(r;"body")|{$ok:s s;$err:e ""};
+    let meta=mut.@($str:$str);
+    if(str.len(slug)>0){meta=meta.set("slug";slug)}el{};
+    if(str.len(ctype)>0){meta=meta.set("type";ctype)}el{};
+    if(str.len(ctitle)>0){meta=meta.set("title";ctitle)}el{};
+    let c=$content{slug:slug;type:ctype;title:ctitle;meta:meta;body:body};
+    results=results.append(c)
+  };
+  <results
+};
+
+f=storewrite(contenttype:$str;content:$content):bool!$storeerr{
+  let check=str.concat("SELECT id FROM ";contenttype);
+  let check=str.concat(check;" WHERE slug=?");
+  let existing=db.one(check;@(content.slug));
+  let found=existing|{$ok:r true;$err:e false};
+  if(found){
+    let sql=mut."UPDATE ";
+    sql=str.concat(sql;contenttype);
+    sql=str.concat(sql;" SET title=?,type=?,body=? WHERE slug=?");
+    db.exec(sql;@(content.title;content.type;content.body;content.slug))!$storeerr;
+    <true
+  }el{
+    let sql=mut."INSERT INTO ";
+    sql=str.concat(sql;contenttype);
+    sql=str.concat(sql;"(slug,title,type,body) VALUES(?,?,?,?)");
+    db.exec(sql;@(content.slug;content.title;content.type;content.body))!$storeerr;
+    <true
+  }
+};
+
+f=storeallflat(contentdir:$str;contenttype:$str):@$content!$storeerr{
   let dir=path.join(contentdir;contenttype);
   let files=file.listall(dir)!$storeerr;
   let results=mut.@($content);
@@ -126,6 +187,14 @@ f=storeall(contentdir:$str;contenttype:$str):@$content!$storeerr{
     }
   };
   <results
+};
+
+f=storeall(contentdir:$str;contenttype:$str;backend:$str):@$content!$storeerr{
+  if(backend="sqlite"){
+    <storeallsql(contenttype)!$storeerr
+  }el{
+    <storeallflat(contentdir;contenttype)!$storeerr
+  }
 };
 
 f=storeslug(col:@$content;slug:$str):$content!$storeerr{

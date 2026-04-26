@@ -196,7 +196,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     let isdyn2=routes.get(j).isdynamic;
     if(isdyn2){
       let ctype=routes.get(j).contenttype;
-      let col=store.storeall(contentdir;ctype)|{Ok:c c;Err:e @()};
+      let col=store.storeall(contentdir;ctype;"flat")|{Ok:c c;Err:e @()};
       let model=validate.validateloadmodel(modelsdir;ctype)|{Ok:m m;Err:e $modeldef{name:"";fields:@($fielddef)}};
       let hasmodel=model.fields.len>0;
       lp(let k=0;k<col.len;k=k+1){
