@@ -77,12 +77,31 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
   }
 };
 
-f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str):void!$serveerr{
+f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str):i64!$serveerr{
   let pagesdir=path.join(projectdir;"pages");
   let contentdir=path.join(projectdir;"content");
   let templatesdir=path.join(projectdir;"templates");
   (serveregisterstatic(pagesdir;contentdir;templatesdir;sitename;siteurl;sitelanguage));
-  (log.info("routes registered, starting servedir";@()));
+  (log.info("routes registered, registering 404 handler";@()));
+  let notfoundtpl=path.join(templatesdir;"errors/404.tkt");
+  if(file.exists(notfoundtpl)){
+    let nfctx=@(
+      "site.name":sitename;
+      "site.url":siteurl;
+      "site.language":sitelanguage;
+      "request.path":"(unknown)"
+    );
+    let nfhtml=tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir)|{Ok:h h;Err:e ""};
+    if(str.len(nfhtml)>0){
+      (http.setnotfound(nfhtml));
+      (log.info("custom 404 registered from templates/errors/404.tkt";@()))
+    }el{
+      (log.info("404 template render failed, using default";@()))
+    }
+  }el{
+    (log.info("no templates/errors/404.tkt found, using default 404";@()))
+  };
+  (log.info("starting servedir";@()));
   (http.servedir("/static";projectdir));
   (log.info("servedir done, starting listen";@()));
   let uport=port as u64;
