@@ -1,0 +1,24 @@
+name = "posts"
+
+[fields]
+_list = "title, slug, type, date, draft"
+
+[fields.title]
+type = "str"
+required = true
+
+[fields.slug]
+type = "str"
+required = true
+
+[fields.type]
+type = "str"
+required = false
+
+[fields.date]
+type = "str"
+required = true
+
+[fields.draft]
+type = "bool"
+required = false

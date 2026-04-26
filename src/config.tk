@@ -39,7 +39,7 @@ f=configload(path:$str):$ookecfg!$configerr{
   let buildinlinecss=toml.bool(build;"inline_css")|{Ok:v v;Err:e true};
 
   let serverport=toml.i64(server;"port")|{Ok:v v;Err:e 3000};
-  let serverworkers=toml.i64(server;"workers")|{Ok:v v;Err:e 4};
+  let serverworkers=toml.i64(server;"workers")|{Ok:v v;Err:e 0};
 
   let storebackend=toml.str(store;"backend")|{Ok:v v;Err:e "flat"};
 

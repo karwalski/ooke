@@ -19,7 +19,7 @@ t=$serveerr{msg:$str};
 
 t=$builderr{msg:$str};
 
-t=$buildreport{pagesbuilt:i64;assetscopy:i64};
+t=$buildreport{pagesbuilt:i64;assetscopy:i64;valerrors:i64;valwarnings:i64};
 
 f=cliprintusage():void{
   (log.info("ooke - toke CMS and web framework";@()));
@@ -45,7 +45,7 @@ f=clinew(name:$str):i64{
   let d3=file.mkdir(path.join(name;"templates"))|{Ok:v v;Err:e false};
   let d4=file.mkdir(path.join(name;"content"))|{Ok:v v;Err:e false};
   let d5=file.mkdir(path.join(name;"static"))|{Ok:v v;Err:e false};
-  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninline_css = true\n\n[server]\nport = 3000\nworkers = 4\n\n[store]\nbackend = \"flat\"\n\n[log]\naccess = \"logs/access.log\"\nmax_lines = 10000\nmax_age_days = 30\n"));
+  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninline_css = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[log]\naccess = \"logs/access.log\"\nmax_lines = 10000\nmax_age_days = 30\n"));
   let w1=file.write(path.join(name;"ooke.toml");tomlcontent)|{Ok:v v;Err:e false};
   let indexcontent="m=pages.index;\n";
   let w2=file.write(path.join(path.join(name;"pages");"index.tk");indexcontent)|{Ok:v v;Err:e false};
@@ -65,8 +65,8 @@ f=cligen(gentype:$str;genname:$str):i64{
   }el{
     if(gentype="type"){
       let dm=file.mkdir("models")|{Ok:v v;Err:e false};
-      let typepath=path.join("models";str.concat(genname;".tk"));
-      let typecontent=str.concat("m=models.";str.concat(genname;";\n"));
+      let typepath=path.join("models";str.concat(genname;".toml"));
+      let typecontent=str.concat("name = \"";str.concat(genname;"\"\n\n[fields]\n_list = \"title, slug\"\n\n[fields.title]\ntype = \"str\"\nrequired = true\n\n[fields.slug]\ntype = \"str\"\nrequired = true\n"));
       let tw=file.write(typepath;typecontent)|{Ok:v v;Err:e false};
       (log.info(str.concat("Created type: ";typepath);@()));
       <0
@@ -99,7 +99,7 @@ f=cfgdefault():$ookecfg{
   <$ookecfg{
     sitename:"my-site";siteurl:"";sitelanguage:"en";
     buildoutput:"build/";buildminify:true;buildinlinecss:true;
-    serverport:3000;serverworkers:4;storebackend:"flat";
+    serverport:3000;serverworkers:0;storebackend:"flat";
     logaccess:"logs/access.log";logmaxlines:10000;logmaxagedays:30
   }
 };
@@ -118,9 +118,15 @@ f=runserve(projectdir:$str):i64{
 
 f=runbuild(projectdir:$str):i64{
   let cfg=config.configload(path.join(projectdir;"ooke.toml"))|{Ok:v v;Err:e cfgdefault()};
-  let report=build.buildrun(projectdir;cfg)|{Ok:v v;Err:e $buildreport{pagesbuilt:0;assetscopy:0}};
+  let report=build.buildrun(projectdir;cfg)|{Ok:v v;Err:e $buildreport{pagesbuilt:0;assetscopy:0;valerrors:0;valwarnings:0}};
   (log.info(str.concat("pages built: ";str.fromint(report.pagesbuilt));@()));
   (log.info(str.concat("assets copied: ";str.fromint(report.assetscopy));@()));
+  if(report.valerrors>0){
+    (log.info(str.concat("validation errors: ";str.fromint(report.valerrors));@()))
+  }el{};
+  if(report.valwarnings>0){
+    (log.info(str.concat("validation warnings: ";str.fromint(report.valwarnings));@()))
+  }el{};
   <0
 };
 

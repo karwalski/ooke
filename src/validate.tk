@@ -1,0 +1,129 @@
+m=ooke.validate;
+i=file:std.file;
+i=str:std.str;
+i=path:std.path;
+i=toml:std.toml;
+i=log:std.log;
+
+t=$fielddef{
+  name:$str;
+  fieldtype:$str;
+  required:bool
+};
+
+t=$modeldef{
+  name:$str;
+  fields:@$fielddef
+};
+
+t=$valerror{
+  filepath:$str;
+  field:$str;
+  msg:$str
+};
+
+t=$valresult{
+  errors:@$valerror;
+  warnings:@$valerror
+};
+
+t=$validateerr{msg:$str};
+
+f=validateloadmodel(modelspath:$str;typename:$str):$modeldef!$validateerr{
+  let tomlpath=path.join(modelspath;str.concat(typename;".toml"));
+  let src=file.read(tomlpath)!$validateerr;
+  let tab=toml.load(src)!$validateerr;
+
+  let modelname=toml.str(tab;"name")|{Ok:v v;Err:e typename};
+
+  let fieldsec=toml.section(tab;"fields")!$validateerr;
+  let fieldnames=toml.str(fieldsec;"_list")!$validateerr;
+  let parts=str.split(fieldnames;",");
+
+  let fields=mut.@($fielddef);
+  lp(let i=0;i<parts.len;i=i+1){
+    let fname=str.trim(parts.get(i));
+    if(str.len(fname)>0){
+      let fsec=toml.section(fieldsec;fname)|{Ok:v v;Err:e fieldsec};
+      let ftype=toml.str(fsec;"type")|{Ok:v v;Err:e "str"};
+      let freq=toml.bool(fsec;"required")|{Ok:v v;Err:e false};
+      fields=fields.append($fielddef{
+        name:fname;
+        fieldtype:ftype;
+        required:freq
+      })
+    }el{}
+  };
+
+  <$modeldef{name:modelname;fields:fields}
+};
+
+f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
+  let errors=mut.@($valerror);
+  let warnings=mut.@($valerror);
+
+  lp(let i=0;i<model.fields.len;i=i+1){
+    let fd=model.fields.get(i);
+    let val=meta.get(fd.name)|{Ok:v v;Err:e ""};
+    if(str.len(val)=0){
+      if(fd.required){
+        errors=errors.append($valerror{
+          filepath:filepath;
+          field:fd.name;
+          msg:str.concat("required field missing: ";fd.name)
+        })
+      }el{}
+    }el{
+      if(fd.fieldtype="int"){
+        let isnum=str.toint(val)|{Ok:v true;Err:e false};
+        if(!isnum){
+          errors=errors.append($valerror{
+            filepath:filepath;
+            field:fd.name;
+            msg:str.concat("field '";str.concat(fd.name;"' expected int"))
+          })
+        }el{}
+      }el{
+        if(fd.fieldtype="bool"){
+          let isbool=val="true"||val="false";
+          if(!isbool){
+            errors=errors.append($valerror{
+              filepath:filepath;
+              field:fd.name;
+              msg:str.concat("field '";str.concat(fd.name;"' expected bool"))
+            })
+          }el{}
+        }el{}
+      }
+    }
+  };
+
+  <$valresult{errors:errors;warnings:warnings}
+};
+
+f=validatelogresult(result:$valresult):void{
+  lp(let i=0;i<result.errors.len;i=i+1){
+    let e=result.errors.get(i);
+    (log.info(str.concat("[validate] ERROR ";str.concat(e.filepath;str.concat(": ";e.msg)));@()))
+  };
+  lp(let j=0;j<result.warnings.len;j=j+1){
+    let w=result.warnings.get(j);
+    (log.info(str.concat("[validate] WARN ";str.concat(w.filepath;str.concat(": ";w.msg)));@()))
+  }
+};
+
+f=validatemerge(a:$valresult;b:$valresult):$valresult{
+  let errs=mut.a.errors;
+  lp(let i=0;i<b.errors.len;i=i+1){
+    errs=errs.append(b.errors.get(i))
+  };
+  let warns=mut.a.warnings;
+  lp(let j=0;j<b.warnings.len;j=j+1){
+    warns=warns.append(b.warnings.get(j))
+  };
+  <$valresult{errors:errs;warnings:warns}
+};
+
+f=validateempty():$valresult{
+  <$valresult{errors:@($valerror);warnings:@($valerror)}
+};

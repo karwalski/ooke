@@ -1,0 +1,12 @@
+name = "pages"
+
+[fields]
+_list = "title, slug"
+
+[fields.title]
+type = "str"
+required = true
+
+[fields.slug]
+type = "str"
+required = true

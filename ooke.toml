@@ -11,6 +11,7 @@ image_optimize = true
 
 [server]
 port = 3000
+workers = 0
 admin = false
 
 [store]

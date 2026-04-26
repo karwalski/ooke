@@ -64,7 +64,7 @@ endif
 # ── LLVM IR targets ────────────────────────────────────────────────────────
 IFACE_DIR := $(SRC)/ooke
 
-BASE_MODS    := config store router template
+BASE_MODS    := config store router template validate
 DERIVED_MODS := build serve
 ALL_MODS     := $(BASE_MODS) $(DERIVED_MODS)
 
@@ -93,11 +93,15 @@ $(IFACE_DIR)/router.tki $(IFACE_DIR)/router: $(SRC)/router.tk | $(IFACE_DIR)
 $(IFACE_DIR)/template.tki $(IFACE_DIR)/template: $(SRC)/template.tk | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/template template.tk
 
+$(IFACE_DIR)/validate.tki $(IFACE_DIR)/validate: $(SRC)/validate.tk | $(IFACE_DIR)
+	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/validate validate.tk
+
 # ── Derived modules ──────────────────────────────────────────────────────
 $(IFACE_DIR)/build.tki $(IFACE_DIR)/build: \
     $(SRC)/build.tk \
     $(IFACE_DIR)/config.tki $(IFACE_DIR)/router.tki \
-    $(IFACE_DIR)/template.tki $(IFACE_DIR)/store.tki | $(IFACE_DIR)
+    $(IFACE_DIR)/template.tki $(IFACE_DIR)/store.tki \
+    $(IFACE_DIR)/validate.tki | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/build build.tk
 
 $(IFACE_DIR)/serve.tki $(IFACE_DIR)/serve: \
@@ -120,7 +124,7 @@ interfaces: $(OOKE_TKI)
 
 check:
 	@for f in $(SRC)/config.tk $(SRC)/store.tk $(SRC)/router.tk \
-	           $(SRC)/template.tk $(SRC)/build.tk $(SRC)/serve.tk $(SRC)/main.tk; do \
+	           $(SRC)/template.tk $(SRC)/validate.tk $(SRC)/build.tk $(SRC)/serve.tk $(SRC)/main.tk; do \
 	  echo "--- $$f"; \
 	  cd $(SRC) && $(TKC) --check $$(basename $$f) 2>&1 | head -5 || true; \
 	  cd ..; \

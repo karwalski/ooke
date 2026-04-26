@@ -6,16 +6,28 @@ i=cfg:ooke.config;
 i=router:ooke.router;
 i=tpl:ooke.template;
 i=store:ooke.store;
+i=validate:ooke.validate;
+i=log:std.log;
 
 t=$builderr{msg:$str};
 
-t=$buildreport{pagesbuilt:i64;assetscopy:i64};
+t=$buildreport{pagesbuilt:i64;assetscopy:i64;valerrors:i64;valwarnings:i64};
 
 t=$ookecfg{sitename:$str;siteurl:$str;sitelanguage:$str;buildoutput:$str;buildminify:bool;buildinlinecss:bool;serverport:i64;serverworkers:i64;storebackend:$str;logaccess:$str;logmaxlines:i64;logmaxagedays:i64};
 
 t=$route{pattern:$str;filepath:$str;templatepath:$str;contenttype:$str;isdynamic:bool;isapi:bool;params:@$str};
 
 t=$content{slug:$str;type:$str;title:$str;meta:@($str:$str);body:$str};
+
+t=$validateerr{msg:$str};
+
+t=$fielddef{name:$str;fieldtype:$str;required:bool};
+
+t=$modeldef{name:$str;fields:@$fielddef};
+
+t=$valerror{filepath:$str;field:$str;msg:$str};
+
+t=$valresult{errors:@$valerror;warnings:@$valerror};
 
 f=buildoutputpath(pattern:$str;outputdir:$str):$str{
   if(pattern="/"){
@@ -165,10 +177,12 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
   let pagesdir=path.join(projectdir;"pages");
   let contentdir=path.join(projectdir;"content");
   let templatesdir=path.join(projectdir;"templates");
+  let modelsdir=path.join(projectdir;"models");
 
   let routes=router.routerscan(pagesdir)!$builderr;
 
   let pagescount=mut.0;
+  let allval=mut.validate.validateempty();
 
   lp(let i=0;i<routes.len;i=i+1){
     let isdyn=routes.get(i).isdynamic;
@@ -183,10 +197,17 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     if(isdyn2){
       let ctype=routes.get(j).contenttype;
       let col=store.storeall(contentdir;ctype)|{Ok:c c;Err:e @()};
+      let model=validate.validateloadmodel(modelsdir;ctype)|{Ok:m m;Err:e $modeldef{name:"";fields:@($fielddef)}};
+      let hasmodel=model.fields.len>0;
       lp(let k=0;k<col.len;k=k+1){
         let slug=col.get(k).slug;
         let body=col.get(k).body;
         let title=col.get(k).title;
+        if(hasmodel){
+          let fpath=str.concat(ctype;str.concat("/";str.concat(slug;".md")));
+          let vr=validate.validatecontent(model;col.get(k).meta;fpath);
+          allval=validate.validatemerge(allval;vr)
+        }el{};
         let ctx=@(
           "site.name":config.sitename;
           "site.url":config.siteurl;
@@ -208,7 +229,27 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     }el{}
   };
 
+  (validate.validatelogresult(allval));
+
   let assetscount=buildcopyassets(projectdir;config.buildoutput)|{Ok:n n;Err:e 0};
 
-  <$buildreport{pagesbuilt:pagescount;assetscopy:assetscount}
+  let notfoundtpl=path.join(templatesdir;"errors/404.tkt");
+  if(file.exists(notfoundtpl)){
+    let nfctx=@(
+      "site.name":config.sitename;
+      "site.url":config.siteurl;
+      "site.language":config.sitelanguage;
+      "request.path":"(unknown)"
+    );
+    let nfhtml=tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir)|{Ok:h h;Err:e ""};
+    if(str.len(nfhtml)>0){
+      let nfpath=str.concat(config.buildoutput;"404.html");
+      let nfwrite=file.write(nfpath;nfhtml)|{Ok:v true;Err:e false};
+      if(nfwrite){
+        pagescount=pagescount+1
+      }el{}
+    }el{}
+  }el{};
+
+  <$buildreport{pagesbuilt:pagescount;assetscopy:assetscount;valerrors:allval.errors.len;valwarnings:allval.warnings.len}
 };
