@@ -7,6 +7,7 @@ i=path:std.path;
 i=config:ooke.config;
 i=serve:ooke.serve;
 i=build:ooke.build;
+i=repair:ooke.repair;
 
 t=$ookecfg{
   sitename:$str;siteurl:$str;sitelanguage:$str;
@@ -29,6 +30,7 @@ f=cliprintusage():void{
   (log.info("  ooke serve [options]  start development server";@()));
   (log.info("  ooke build            build static HTML";@()));
   (log.info("  ooke gen <type> <name>  scaffold component";@()));
+  (log.info("  ooke repair <file>    run diagnostic repair";@()));
   (log.info("";@()));
   (log.info("Options:";@()));
   (log.info("  --help       show this help";@()));
@@ -171,9 +173,19 @@ f=main():i64{
                   <cligen(gentyperaw;gennameraw)
                 }
               }el{
-                (log.info(str.concat("unknown command: ";cmd);@()));
-                (cliprintusage());
-                <1
+                if(cmd="repair"){
+                  if(count<3){
+                    (log.info("usage: ooke repair <file>";@()));
+                    <1
+                  }el{
+                    let repairpath=args.get(2 as u64)|{Ok:v v;Err:e ""};
+                    <repair.repairfile(repairpath;10)
+                  }
+                }el{
+                  (log.info(str.concat("unknown command: ";cmd);@()));
+                  (cliprintusage());
+                  <1
+                }
               }
             }
           }
