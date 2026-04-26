@@ -2,6 +2,7 @@ m=ooke.store;
 i=file:std.file;
 i=str:std.str;
 i=path:std.path;
+i=json:std.json;
 
 t=$content{
   slug:$str;
@@ -77,6 +78,29 @@ f=storetryparse(src:$str):$content{
   <r
 };
 
+f=storeparsejson(src:$str):$content!$storeerr{
+  let doc=json.dec(src)!$storeerr;
+  let meta=mut.@($str:$str);
+  let slug=json.str(doc;"slug")|{Ok:v v;Err:e ""};
+  let ctype=json.str(doc;"type")|{Ok:v v;Err:e "page"};
+  let ctitle=json.str(doc;"title")|{Ok:v v;Err:e ""};
+  if(str.len(slug)>0){meta=meta.set("slug";slug)}el{};
+  if(str.len(ctype)>0){meta=meta.set("type";ctype)}el{};
+  if(str.len(ctitle)>0){meta=meta.set("title";ctitle)}el{};
+  <$content{
+    slug:slug;
+    type:ctype;
+    title:ctitle;
+    meta:meta;
+    body:""
+  }
+};
+
+f=storetryparsejson(src:$str):$content{
+  let r=storeparsejson(src)|{Ok:c c; Err:e storedefault()};
+  <r
+};
+
 f=storeall(contentdir:$str;contenttype:$str):@$content!$storeerr{
   let dir=path.join(contentdir;contenttype);
   let files=file.listall(dir)!$storeerr;
@@ -90,7 +114,16 @@ f=storeall(contentdir:$str;contenttype:$str):@$content!$storeerr{
         let c=storetryparse(src);
         results=results.append(c)
       }el{}
-    }el{}
+    }el{
+      if(str.endswith(fpath;".json")){
+        let fullpath=path.join(dir;fpath);
+        let src=file.read(fullpath)|{Ok:s s; Err:e ""};
+        if(str.len(src)>0){
+          let c=storetryparsejson(src);
+          results=results.append(c)
+        }el{}
+      }el{}
+    }
   };
   <results
 };
