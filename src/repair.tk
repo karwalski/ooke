@@ -3,45 +3,8 @@ i=str:std.str;
 i=log:std.log;
 i=process:std.process;
 
-(* ooke.repair -- automated diagnostic-driven repair module.
- *
- * Runs tkc --check on a source file, captures stderr for JSON
- * diagnostics, parses each diagnostic line, and logs errors found.
- *
- * Story: 52.1.1
- *)
-
 t=$diagnostic{code:$str;msg:$str;line:i64;col:i64;file:$str;fix:$str};
 
-(* repairfile -- run tkc --check on filepath, parse diagnostics from stderr.
- * Returns 0 if no errors found, otherwise the count of errors.
- * maxiters is reserved for future LLM-driven repair loop iteration cap.
- *)
-f=repairfile(filepath:$str;maxiters:i64):i64{
-  let _mi=maxiters;
-  (log.info(str.concat("repair: checking ";filepath);@()));
-  let h=process.spawn(@("tkc";"--check";filepath))|{
-    Ok:v v;
-    Err:e {
-      (log.info("repair: failed to spawn tkc";@()));
-      <1
-    }
-  };
-  let _exit=process.wait(h)|{Ok:v v;Err:e -1};
-  let errout=process.stderr(h)|{Ok:v v;Err:e ""};
-  if(errout=""){
-    (log.info("repair: clean -- no diagnostics";@()));
-    <0
-  }el{
-    let errcount=parsediags(errout);
-    (log.info(str.concat("repair: found ";str.concat(str.fromint(errcount);" diagnostic(s)"));@()));
-    <errcount
-  }
-};
-
-(* parsediags -- split stderr output on newlines, parse each JSON
- * diagnostic line, log the error.  Returns count of diagnostics found.
- *)
 f=parsediags(raw:$str):i64{
   let lines=str.split(raw;"\n");
   let count=mut.0;
@@ -53,4 +16,24 @@ f=parsediags(raw:$str):i64{
     }el{}
   };
   <count
+};
+
+f=repairfile(filepath:$str;maxiters:i64):i64{
+  let mi=maxiters;
+  (log.info(str.concat("repair: checking ";filepath);@()));
+  let h=process.spawn(@("tkc";"--check";filepath))|{Ok:v v;Err:e 0};
+  if(h=0){
+    (log.info("repair: failed to spawn tkc";@()));
+    <1
+  }el{};
+  let ecode=process.wait(h)|{Ok:v v;Err:e 0-1};
+  let errout=process.stderr(h)|{Ok:v v;Err:e ""};
+  if(str.len(errout)=0){
+    (log.info("repair: clean";@()));
+    <0
+  }el{
+    let errcount=parsediags(errout);
+    (log.info(str.concat("repair: found ";str.concat(str.from_int(errcount);" diagnostic(s)"));@()));
+    <errcount
+  }
 };
