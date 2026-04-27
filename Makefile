@@ -45,7 +45,9 @@ STDLIB_SRCS := \
   $(TOKE_STDLIB)/net.c \
   $(TOKE_STDLIB)/sys.c \
   $(TOKE_STDLIB)/mem.c \
-  $(TOKE_STDLIB)/os.c
+  $(TOKE_STDLIB)/os.c \
+  $(TOKE_STDLIB)/db.c \
+  $(TOKE_STDLIB)/json.c
 
 # ── Vendor C sources ───────────────────────────────────────────────────────
 CMARK_SRCS := $(filter-out $(TOKE_VENDOR)/cmark/src/main.c, \
@@ -61,7 +63,7 @@ CFLAGS := -std=c99 -D_GNU_SOURCE -O1 -iquote $(TOKE_STDLIB) \
           -I$(TOKE_VENDOR)/tomlc99 \
           -Wno-pedantic -DTK_HAVE_OPENSSL
 LDFLAGS :=
-LIBS := -lssl -lcrypto -lz -lm
+LIBS := -lssl -lcrypto -lz -lm -lsqlite3
 
 ifeq ($(UNAME), Darwin)
   CFLAGS  += -I/opt/homebrew/include
@@ -71,7 +73,7 @@ endif
 # ── LLVM IR targets ────────────────────────────────────────────────────────
 IFACE_DIR := $(SRC)/ooke
 
-BASE_MODS    := config store router template validate
+BASE_MODS    := config store router template validate repair
 DERIVED_MODS := build serve
 ALL_MODS     := $(BASE_MODS) $(DERIVED_MODS)
 
@@ -103,6 +105,9 @@ $(IFACE_DIR)/template.tki $(IFACE_DIR)/template: $(SRC)/template.tk | $(IFACE_DI
 $(IFACE_DIR)/validate.tki $(IFACE_DIR)/validate: $(SRC)/validate.tk | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/validate validate.tk
 
+$(IFACE_DIR)/repair.tki $(IFACE_DIR)/repair: $(SRC)/repair.tk | $(IFACE_DIR)
+	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/repair repair.tk
+
 # ── Derived modules ──────────────────────────────────────────────────────
 $(IFACE_DIR)/build.tki $(IFACE_DIR)/build: \
     $(SRC)/build.tk \
@@ -131,7 +136,7 @@ interfaces: $(OOKE_TKI)
 
 check:
 	@for f in $(SRC)/config.tk $(SRC)/store.tk $(SRC)/router.tk \
-	           $(SRC)/template.tk $(SRC)/validate.tk $(SRC)/build.tk $(SRC)/serve.tk $(SRC)/main.tk; do \
+	           $(SRC)/template.tk $(SRC)/validate.tk $(SRC)/repair.tk $(SRC)/build.tk $(SRC)/serve.tk $(SRC)/main.tk; do \
 	  echo "--- $$f"; \
 	  cd $(SRC) && $(TKC) --check $$(basename $$f) 2>&1 | head -5 || true; \
 	  cd ..; \
