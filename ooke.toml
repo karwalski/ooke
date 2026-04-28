@@ -16,3 +16,9 @@ admin = false
 
 [store]
 backend = "flat"
+
+[log]
+access_format = "combined"
+
+[requires]
+min_toke = "2.0.0"

@@ -145,3 +145,19 @@ check:
 clean:
 	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI)
 	rmdir $(IFACE_DIR) 2>/dev/null || true
+
+# ── Version check ────────────────────────────────────────────────────────
+MIN_TOKE_VERSION := 2.0.0
+check-toke-version:
+	@if [ -f $(TOKE_ROOT)/VERSION ]; then \
+		TOKE_VER=$$(cat $(TOKE_ROOT)/VERSION); \
+		TOKE_MAJ=$$(echo $$TOKE_VER | cut -d. -f1); \
+		MIN_MAJ=$$(echo $(MIN_TOKE_VERSION) | cut -d. -f1); \
+		if [ "$$TOKE_MAJ" -lt "$$MIN_MAJ" ]; then \
+			echo "ERROR: ooke v$$(cat VERSION) requires toke >= $(MIN_TOKE_VERSION), found $$TOKE_VER"; \
+			exit 1; \
+		fi; \
+		echo "toke $$TOKE_VER >= $(MIN_TOKE_VERSION) ✓"; \
+	else \
+		echo "WARNING: toke VERSION file not found, skipping version check"; \
+	fi
