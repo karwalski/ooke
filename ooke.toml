@@ -13,12 +13,16 @@ image_optimize = true
 port = 3000
 workers = 0
 admin = false
+# cors_origins = "http://localhost:11432"
 
 [store]
 backend = "flat"
 
 [log]
 access_format = "combined"
+
+[paths]
+api_prefix = ""
 
 [requires]
 min_toke = "2.0.0"

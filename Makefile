@@ -75,7 +75,8 @@ IFACE_DIR := $(SRC)/ooke
 
 BASE_MODS    := config store router template validate repair
 DERIVED_MODS := build serve
-ALL_MODS     := $(BASE_MODS) $(DERIVED_MODS)
+API_MODS     := apihealth
+ALL_MODS     := $(BASE_MODS) $(DERIVED_MODS) $(API_MODS)
 
 OOKE_LL  := $(addprefix $(IFACE_DIR)/,$(ALL_MODS))
 OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
@@ -122,6 +123,10 @@ $(IFACE_DIR)/serve.tki $(IFACE_DIR)/serve: \
     $(IFACE_DIR)/template.tki $(IFACE_DIR)/store.tki | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/serve serve.tk
 
+# ── API modules ─────────────────────────────────────────────────────────
+$(IFACE_DIR)/apihealth.tki $(IFACE_DIR)/apihealth: $(SRC)/apihealth.tk | $(IFACE_DIR)
+	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/apihealth apihealth.tk
+
 # ── main.ll ──────────────────────────────────────────────────────────────
 $(MAIN_LL): $(SRC)/main.tk $(OOKE_TKI) | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-llvm --out main.ll main.tk
@@ -136,7 +141,8 @@ interfaces: $(OOKE_TKI)
 
 check:
 	@for f in $(SRC)/config.tk $(SRC)/store.tk $(SRC)/router.tk \
-	           $(SRC)/template.tk $(SRC)/validate.tk $(SRC)/repair.tk $(SRC)/build.tk $(SRC)/serve.tk $(SRC)/main.tk; do \
+	           $(SRC)/template.tk $(SRC)/validate.tk $(SRC)/repair.tk $(SRC)/build.tk $(SRC)/serve.tk \
+	           $(SRC)/apihealth.tk $(SRC)/main.tk; do \
 	  echo "--- $$f"; \
 	  cd $(SRC) && $(TKC) --check $$(basename $$f) 2>&1 | head -5 || true; \
 	  cd ..; \

@@ -12,10 +12,12 @@ t=$ookecfg{
   buildinlinecss:bool;
   serverport:i64;
   serverworkers:i64;
+  servercorsorigins:$str;
   storebackend:$str;
   logaccess:$str;
   logmaxlines:i64;
-  logmaxagedays:i64
+  logmaxagedays:i64;
+  apiprefix:$str
 };
 
 t=$configerr{msg:$str};
@@ -40,12 +42,16 @@ f=configload(path:$str):$ookecfg!$configerr{
 
   let serverport=toml.i64(server;"port")|{Ok:v v;Err:e 3000};
   let serverworkers=toml.i64(server;"workers")|{Ok:v v;Err:e 0};
+  let servercorsorigins=toml.str(server;"cors_origins")|{Ok:v v;Err:e ""};
 
   let storebackend=toml.str(store;"backend")|{Ok:v v;Err:e "flat"};
 
   let logaccess=toml.str(log;"access")|{Ok:v v;Err:e "logs/access.log"};
   let logmaxlines=toml.i64(log;"max_lines")|{Ok:v v;Err:e 10000};
   let logmaxagedays=toml.i64(log;"max_age_days")|{Ok:v v;Err:e 30};
+
+  let paths=toml.section(tab;"paths")|{Ok:v v;Err:e tab};
+  let apiprefix=toml.str(paths;"api_prefix")|{Ok:v v;Err:e ""};
 
   <$ookecfg{
     sitename:sitename;
@@ -56,9 +62,11 @@ f=configload(path:$str):$ookecfg!$configerr{
     buildinlinecss:buildinlinecss;
     serverport:serverport;
     serverworkers:serverworkers;
+    servercorsorigins:servercorsorigins;
     storebackend:storebackend;
     logaccess:logaccess;
     logmaxlines:logmaxlines;
-    logmaxagedays:logmaxagedays
+    logmaxagedays:logmaxagedays;
+    apiprefix:apiprefix
   }
 };

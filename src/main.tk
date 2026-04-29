@@ -4,16 +4,19 @@ i=str:std.str;
 i=file:std.file;
 i=log:std.log;
 i=path:std.path;
+i=http:std.http;
 i=config:ooke.config;
 i=serve:ooke.serve;
 i=build:ooke.build;
 i=repair:ooke.repair;
+i=apihealth:ooke.apihealth;
 
 t=$ookecfg{
   sitename:$str;siteurl:$str;sitelanguage:$str;
   buildoutput:$str;buildminify:bool;buildinlinecss:bool;
-  serverport:i64;serverworkers:i64;storebackend:$str;
-  logaccess:$str;logmaxlines:i64;logmaxagedays:i64
+  serverport:i64;serverworkers:i64;servercorsorigins:$str;storebackend:$str;
+  logaccess:$str;logmaxlines:i64;logmaxagedays:i64;
+  apiprefix:$str
 };
 
 t=$serveerr{msg:$str};
@@ -47,7 +50,7 @@ f=clinew(name:$str):i64{
   let d3=file.mkdir(path.join(name;"templates"))|{Ok:v v;Err:e false};
   let d4=file.mkdir(path.join(name;"content"))|{Ok:v v;Err:e false};
   let d5=file.mkdir(path.join(name;"static"))|{Ok:v v;Err:e false};
-  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninline_css = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[log]\naccess = \"logs/access.log\"\nmax_lines = 10000\nmax_age_days = 30\n"));
+  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninline_css = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[paths]\napi_prefix = \"\"\n\n[log]\naccess = \"logs/access.log\"\nmax_lines = 10000\nmax_age_days = 30\n"));
   let w1=file.write(path.join(name;"ooke.toml");tomlcontent)|{Ok:v v;Err:e false};
   let indexcontent="m=pages.index;\n";
   let w2=file.write(path.join(path.join(name;"pages");"index.tk");indexcontent)|{Ok:v v;Err:e false};
@@ -79,6 +82,7 @@ f=cligen(gentype:$str;genname:$str):i64{
         let apicontent=str.concat("m=pages.api.";str.concat(genname;";\n"));
         let aw=file.write(apipath;apicontent)|{Ok:v v;Err:e false};
         (log.info(str.concat("Created api: ";apipath);@()));
+        (log.info("Wire handler: add src/api<name>.tk with apiget/apipost/apiinit, import in main.tk, add to Makefile";@()));
         <0
       }el{
         if(gentype="island"){
@@ -101,8 +105,9 @@ f=cfgdefault():$ookecfg{
   <$ookecfg{
     sitename:"my-site";siteurl:"";sitelanguage:"en";
     buildoutput:"build/";buildminify:true;buildinlinecss:true;
-    serverport:3000;serverworkers:0;storebackend:"flat";
-    logaccess:"logs/access.log";logmaxlines:10000;logmaxagedays:30
+    serverport:3000;serverworkers:0;servercorsorigins:"";storebackend:"flat";
+    logaccess:"logs/access.log";logmaxlines:10000;logmaxagedays:30;
+    apiprefix:""
   }
 };
 
@@ -114,7 +119,13 @@ f=runserve(projectdir:$str):i64{
   let sitename=cfg.sitename;
   let siteurl=cfg.siteurl;
   let sitelanguage=cfg.sitelanguage;
-  let r=serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage)|{Ok:v 0;Err:e 1};
+  let apiprefix=cfg.apiprefix;
+  let corsorigins=cfg.servercorsorigins;
+  let healthjson=apihealth.apigetjson();
+  (http.getstaticmime("/api/health";healthjson;"application/json"));
+  (http.postjson("/api/health";healthjson));
+  (log.info("api /api/health: GET+POST handlers registered (compiled module)";@()));
+  let r=serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins)|{Ok:v 0;Err:e 1};
   <r
 };
 

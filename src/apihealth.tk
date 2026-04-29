@@ -1,0 +1,6 @@
+m=ooke.apihealth;
+i=str:std.str;
+
+f=apigetjson():$str{
+  <"{\"status\":\"ok\",\"service\":\"ooke\"}"
+};

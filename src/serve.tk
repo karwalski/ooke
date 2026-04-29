@@ -14,7 +14,7 @@ t=$route{pattern:$str;filepath:$str;templatepath:$str;contenttype:$str;isdynamic
 
 t=$content{slug:$str;type:$str;title:$str;meta:@($str:$str);body:$str};
 
-f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str):void{
+f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str):void{
   let routes=ookerouter.routerscan(pagesdir)|{Ok:r r;Err:e @($route)};
   lp(let i=0;i<routes.len;i=i+1){
     let r=routes.get(i);
@@ -28,12 +28,27 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
       );
       let tpath=r.templatepath;
       let html=tpl.tplrenderfile(tpath;ctx;templatesdir)|{Ok:h h;Err:e ""};
+      let rawweb=r.pattern;
+      let webpath=mut.rawweb;
+      if(str.startswith(rawweb;"/api/")&&str.len(apiprefix)>0){
+        let wroutename=str.trimprefix(rawweb;"/api/");
+        webpath=str.concat("/api/";str.concat(apiprefix;str.concat("/";wroutename)))
+      }el{};
       if(str.len(html)>0){
-        let webpath=r.pattern;
         (log.info(str.concat("reg static: ";webpath);@()));
         (http.getstatic(webpath;html))
       }el{
-        (log.info(str.concat("skip (no html): ";r.templatepath);@()))
+        let isapiroute=str.startswith(webpath;"/api/");
+        if(isapiroute){
+          let defaultjson=str.concat("{\"status\":\"ok\",\"endpoint\":\"";str.concat(webpath;"\"}"));
+          (log.info(str.concat("reg static api json (fallback): ";webpath);@()));
+          (http.getstaticmime(webpath;defaultjson;"application/json"));
+          (http.postecho(webpath))
+        }el{
+          let fallbackhtml=str.concat("<html><body><p>";str.concat(webpath;"</p></body></html>"));
+          (log.info(str.concat("reg static (empty tpl fallback): ";webpath);@()));
+          (http.getstatic(webpath;fallbackhtml))
+        }
       }
     }el{}
   };
@@ -70,33 +85,26 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
     let ra=routes.get(a);
     let isapia=ra.isapi;
     if(isapia){
-      let apipath=ra.pattern;
-      let apitpl=ra.templatepath;
-      let apictx=@(
-        "site.name":sitename;
-        "site.url":siteurl;
-        "site.language":sitelanguage
-      );
-      let apijson=tpl.tplrenderfile(apitpl;apictx;templatesdir)|{Ok:h h;Err:e ""};
-      if(str.len(apijson)>0){
-        (log.info(str.concat("reg api GET json (tpl): ";apipath);@()));
-        (http.getstaticmime(apipath;apijson;"application/json"))
-      }el{
-        let defaultjson=str.concat("{\"status\":\"ok\",\"endpoint\":\"";str.concat(apipath;"\"}"));
-        (log.info(str.concat("reg api GET json (default): ";apipath);@()));
-        (http.getstaticmime(apipath;defaultjson;"application/json"))
-      };
-      (log.info(str.concat("reg api POST echo: ";apipath);@()));
-      (http.postecho(apipath))
+      let rawapi=ra.pattern;
+      let apipath=mut.rawapi;
+      if(str.len(apiprefix)>0){
+        let routename=str.trimprefix(rawapi;"/api/");
+        apipath=str.concat("/api/";str.concat(apiprefix;str.concat("/";routename)))
+      }el{};
+      (log.info(str.concat("api route (handler via module init): ";apipath);@()))
     }el{}
   }
 };
 
-f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str):i64!$serveerr{
+f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;corsorigins:$str):i64!$serveerr{
   let pagesdir=path.join(projectdir;"pages");
   let contentdir=path.join(projectdir;"content");
   let templatesdir=path.join(projectdir;"templates");
-  (serveregisterstatic(pagesdir;contentdir;templatesdir;sitename;siteurl;sitelanguage));
+  (serveregisterstatic(pagesdir;contentdir;templatesdir;sitename;siteurl;sitelanguage;apiprefix));
+  if(str.len(corsorigins)>0){
+    (http.setcors(corsorigins));
+    (log.info(str.concat("CORS enabled: ";corsorigins);@()))
+  }el{};
   (log.info("routes registered, registering 404 handler";@()));
   let notfoundtpl=path.join(templatesdir;"errors/404.tkt");
   if(file.exists(notfoundtpl)){
