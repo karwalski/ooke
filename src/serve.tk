@@ -71,6 +71,21 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
     let isapia=ra.isapi;
     if(isapia){
       let apipath=ra.pattern;
+      let apitpl=ra.templatepath;
+      let apictx=@(
+        "site.name":sitename;
+        "site.url":siteurl;
+        "site.language":sitelanguage
+      );
+      let apijson=tpl.tplrenderfile(apitpl;apictx;templatesdir)|{Ok:h h;Err:e ""};
+      if(str.len(apijson)>0){
+        (log.info(str.concat("reg api GET json (tpl): ";apipath);@()));
+        (http.getstaticmime(apipath;apijson;"application/json"))
+      }el{
+        let defaultjson=str.concat("{\"status\":\"ok\",\"endpoint\":\"";str.concat(apipath;"\"}"));
+        (log.info(str.concat("reg api GET json (default): ";apipath);@()));
+        (http.getstaticmime(apipath;defaultjson;"application/json"))
+      };
       (log.info(str.concat("reg api POST echo: ";apipath);@()));
       (http.postecho(apipath))
     }el{}
