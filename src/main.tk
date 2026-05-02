@@ -10,6 +10,7 @@ i=serve:ooke.serve;
 i=build:ooke.build;
 i=repair:ooke.repair;
 i=apihealth:ooke.apihealth;
+i=handlers:ooke.handlers;
 i=run:ooke.run;
 
 t=$ookecfg{
@@ -198,10 +199,6 @@ f=cfgdefault():$ookecfg{
   }
 };
 
-f=healthhandler(req:i64):i64{
-  <apihealth.apigethandler(req)
-};
-
 f=runserve(projectdir:$str):i64{
   let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {Ok:v v;Err:e cfgdefault()};
   let port=cfg.serverport;
@@ -212,10 +209,8 @@ f=runserve(projectdir:$str):i64{
   let sitelanguage=cfg.sitelanguage;
   let apiprefix=cfg.apiprefix;
   let corsorigins=cfg.servercorsorigins;
-  let handledpaths=mut.@($str);
-  (http.get("/api/health";&healthhandler));
-  handledpaths=handledpaths.append("/api/health");
-  (log.info("api /api/health: GET+POST handlers registered (compiled module)";@()));
+  let handledpaths=handlers.registerall();
+  (log.info(str.concat("auto-registered ";str.concat(str.fromint(handledpaths.len);" handler routes"));@()));
   let r=mt serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {Ok:v 0;Err:e 1};
   <r
 };

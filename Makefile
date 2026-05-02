@@ -79,7 +79,8 @@ IFACE_DIR := $(SRC)/ooke
 BASE_MODS    := config store router template validate repair run
 DERIVED_MODS := build serve
 API_MODS     := apihealth
-ALL_MODS     := $(BASE_MODS) $(DERIVED_MODS) $(API_MODS)
+GEN_MODS     := handlers
+ALL_MODS     := $(BASE_MODS) $(DERIVED_MODS) $(API_MODS) $(GEN_MODS)
 
 OOKE_LL  := $(addprefix $(IFACE_DIR)/,$(ALL_MODS))
 OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
@@ -133,6 +134,13 @@ $(IFACE_DIR)/serve.tki $(IFACE_DIR)/serve: \
 $(IFACE_DIR)/apihealth.tki $(IFACE_DIR)/apihealth: $(SRC)/apihealth.tk | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/apihealth apihealth.tk
 
+# ── Generated handler registry (auto-scans pages/ for get/post handlers) ──
+$(SRC)/_handlers.tk: scripts/gen_handlers.sh $(wildcard pages/**/*.tk) $(wildcard pages/*.tk) | $(IFACE_DIR)
+	./scripts/gen_handlers.sh pages $(SRC)/_handlers.tk
+
+$(IFACE_DIR)/handlers.tki $(IFACE_DIR)/handlers: $(SRC)/_handlers.tk $(IFACE_DIR)/apihealth.tki | $(IFACE_DIR)
+	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/handlers _handlers.tk
+
 # ── main.ll ──────────────────────────────────────────────────────────────
 $(MAIN_LL): $(SRC)/main.tk $(OOKE_TKI) | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-llvm --out main.ll main.tk
@@ -156,7 +164,7 @@ check:
 	done
 
 clean:
-	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI)
+	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI) $(SRC)/_handlers.tk
 	rmdir $(IFACE_DIR) 2>/dev/null || true
 
 # ── Version check ────────────────────────────────────────────────────────
