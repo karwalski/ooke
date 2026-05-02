@@ -1,6 +1,12 @@
 m=ooke.apihealth;
 i=str:std.str;
+i=http:std.http;
 
 f=apigetjson():$str{
   <"{\"status\":\"ok\",\"service\":\"ooke\"}"
+};
+
+f=apigethandler(req:i64):i64{
+  let json=apigetjson();
+  <http.resjson(200;json)
 };
