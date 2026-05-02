@@ -4,10 +4,10 @@ i=test:std.test;
 i=file:std.file;
 i=str:std.str;
 
-f=test_parse_frontmatter():bool{
+f=testparsefrontmatter():bool{
   let src="---\nslug: hello-world\ntype: post\ntitle: Hello World\n---\n# Hello\n\nThis is the body.\n";
-  let result=store.store_parse_frontmatter(src);
-  (match result{
+  let result=store.storeparsefront(src);
+  (mt result{
     ok(c){
       (test.eq(c.slug;"hello-world"));
       (test.eq(c.type;"post"));
@@ -21,14 +21,14 @@ f=test_parse_frontmatter():bool{
   })
 };
 
-f=test_store_all_empty():bool{
-  let mk_result=file.mkdir("/tmp/test_store_empty/posts");
-  match mk_result{
+f=teststoreallempty():bool{
+  let mkresult=file.mkdir("/tmp/test_store_empty/posts");
+  mt mkresult{
     ok(v){};
     err(e){}
   };
-  let result=store.store_all("/tmp/test_store_empty";"posts");
-  (match result{
+  let result=store.storeall("/tmp/test_store_empty";"posts";"flat");
+  (mt result{
     ok(col){
       (test.eq(col.len;0));
       <true
@@ -40,22 +40,24 @@ f=test_store_all_empty():bool{
   })
 };
 
-f=test_store_slug():bool{
+f=teststoreslug():bool{
   let c1=store.$content{
     slug:"about";
     type:"page";
+    title:"";
     meta:@($str:$str);
     body:"About page body"
   };
   let c2=store.$content{
     slug:"contact";
     type:"page";
+    title:"";
     meta:@($str:$str);
     body:"Contact page body"
   };
   let col=@(c1;c2);
-  let result=store.store_slug(col;"contact");
-  (match result{
+  let result=store.storeslug(col;"contact");
+  (mt result{
     ok(c){
       (test.eq(c.slug;"contact"));
       (test.eq(str.contains(c.body;"Contact");true));
@@ -69,9 +71,9 @@ f=test_store_slug():bool{
 };
 
 f=main():i64{
-  let r0=test_parse_frontmatter();
-  let r1=test_store_all_empty();
-  let r2=test_store_slug();
+  let r0=testparsefrontmatter();
+  let r1=teststoreallempty();
+  let r2=teststoreslug();
   if(r0&&r1&&r2){
     <0
   }el{

@@ -57,7 +57,7 @@ f=buildinlinecssonce(html:$str;templatesdir:$str):$str{
     <html
   }el{
     let afterlink=str.slice(html;pos as u64;str.len(html));
-    let afterlink2=afterlink|{Ok:v v;Err:e ""};
+    let afterlink2=mt afterlink {Ok:v v;Err:e ""};
     if(str.len(afterlink2)=0){
       <html
     }el{
@@ -68,7 +68,7 @@ f=buildinlinecssonce(html:$str;templatesdir:$str):$str{
       }el{
         let start=(hrefpos+6) as u64;
         let afterhref=str.slice(afterlink2;start;str.len(afterlink2));
-        let afterhref2=afterhref|{Ok:v v;Err:e ""};
+        let afterhref2=mt afterhref {Ok:v v;Err:e ""};
         if(str.len(afterhref2)=0){
           <html
         }el{
@@ -77,9 +77,9 @@ f=buildinlinecssonce(html:$str;templatesdir:$str):$str{
             <html
           }el{
             let hrefval=str.slice(afterhref2;0;closequote as u64);
-            let hrefval2=hrefval|{Ok:v v;Err:e ""};
+            let hrefval2=mt hrefval {Ok:v v;Err:e ""};
             let csspath=path.join(templatesdir;hrefval2);
-            let csscontent=file.read(csspath)|{Ok:c c;Err:e ""};
+            let csscontent=mt file.read(csspath) {Ok:c c;Err:e ""};
             if(str.len(csscontent)=0){
               <html
             }el{
@@ -88,7 +88,7 @@ f=buildinlinecssonce(html:$str;templatesdir:$str):$str{
                 <html
               }el{
                 let fulltag=str.slice(afterlink2;0;tagend as u64+1);
-                let fulltag2=fulltag|{Ok:v v;Err:e ""};
+                let fulltag2=mt fulltag {Ok:v v;Err:e ""};
                 let styleblock=str.concat("<style>\n";str.concat(csscontent;"\n</style>"));
                 <str.replace(html;fulltag2;styleblock)
               }
@@ -132,7 +132,7 @@ f=buildminify(html:$str):$str{
       running2=false
     }el{
       let afteropen=str.slice(s;openpos as u64+4;str.len(s));
-      let afteropen2=afteropen|{Ok:v v;Err:e ""};
+      let afteropen2=mt afteropen {Ok:v v;Err:e ""};
       if(str.len(afteropen2)=0){
         running2=false
       }el{
@@ -142,9 +142,9 @@ f=buildminify(html:$str):$str{
         }el{
           let commentend=openpos+4+closepos+3;
           let before=str.slice(s;0;openpos as u64);
-          let before2=before|{Ok:v v;Err:e ""};
+          let before2=mt before {Ok:v v;Err:e ""};
           let after=str.slice(s;commentend as u64;str.len(s));
-          let after2=after|{Ok:v v;Err:e ""};
+          let after2=mt after {Ok:v v;Err:e ""};
           s=str.concat(before2;after2)
         }
       }
@@ -165,8 +165,8 @@ f=buildcopyassets(projectdir:$str;outputdir:$str):i64!$builderr{
       let srcpath=path.join(staticdir;rel);
       let dstpath=path.join(str.concat(outputdir;"/static");rel);
       let dstparent=path.dir(dstpath);
-      let mkr2=file.mkdir(dstparent)|{Ok:v true;Err:e false};
-      let copyok=file.copy(srcpath;dstpath)|{Ok:v true;Err:e false};
+      let mkr2=mt file.mkdir(dstparent) {Ok:v true;Err:e false};
+      let copyok=mt file.copy(srcpath;dstpath) {Ok:v true;Err:e false};
       if(copyok){count=count+1}el{}
     };
     <count
@@ -196,8 +196,8 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     let isdyn2=routes.get(j).isdynamic;
     if(isdyn2){
       let ctype=routes.get(j).contenttype;
-      let col=store.storeall(contentdir;ctype;"flat")|{Ok:c c;Err:e @()};
-      let model=validate.validateloadmodel(modelsdir;ctype)|{Ok:m m;Err:e $modeldef{name:"";fields:@($fielddef)}};
+      let col=mt store.storeall(contentdir;ctype;"flat") {Ok:c c;Err:e @()};
+      let model=mt validate.validateloadmodel(modelsdir;ctype) {Ok:m m;Err:e $modeldef{name:"";fields:@($fielddef)}};
       let hasmodel=model.fields.len>0;
       lp(let k=0;k<col.len;k=k+1){
         let slug=col.get(k).slug;
@@ -216,13 +216,13 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
           "body":body;
           "title":title
         );
-        let html=tpl.tplrenderfile(routes.get(j).templatepath;ctx;templatesdir)|{Ok:h h;Err:e ""};
+        let html=mt tpl.tplrenderfile(routes.get(j).templatepath;ctx;templatesdir) {Ok:h h;Err:e ""};
         if(str.len(html)>0){
           let slugpattern=str.replace(routes.get(j).pattern;":slug";slug);
           let outpath=buildoutputpath(slugpattern;config.buildoutput);
           let parentdir=path.dir(outpath);
-          let mkr3=file.mkdir(parentdir)|{Ok:v true;Err:e false};
-          let writeok=file.write(outpath;html)|{Ok:v true;Err:e false};
+          let mkr3=mt file.mkdir(parentdir) {Ok:v true;Err:e false};
+          let writeok=mt file.write(outpath;html) {Ok:v true;Err:e false};
           if(writeok){pagescount=pagescount+1}el{}
         }el{}
       }
@@ -231,7 +231,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
 
   (validate.validatelogresult(allval));
 
-  let assetscount=buildcopyassets(projectdir;config.buildoutput)|{Ok:n n;Err:e 0};
+  let assetscount=mt buildcopyassets(projectdir;config.buildoutput) {Ok:n n;Err:e 0};
 
   let notfoundtpl=path.join(templatesdir;"errors/404.tkt");
   if(file.exists(notfoundtpl)){
@@ -241,10 +241,10 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
       "site.language":config.sitelanguage;
       "request.path":"(unknown)"
     );
-    let nfhtml=tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir)|{Ok:h h;Err:e ""};
+    let nfhtml=mt tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir) {Ok:h h;Err:e ""};
     if(str.len(nfhtml)>0){
       let nfpath=str.concat(config.buildoutput;"404.html");
-      let nfwrite=file.write(nfpath;nfhtml)|{Ok:v true;Err:e false};
+      let nfwrite=mt file.write(nfpath;nfhtml) {Ok:v true;Err:e false};
       if(nfwrite){
         pagescount=pagescount+1
       }el{}

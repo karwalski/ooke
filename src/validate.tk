@@ -34,19 +34,19 @@ f=validateloadmodel(modelspath:$str;typename:$str):$modeldef!$validateerr{
   let src=file.read(tomlpath)!$validateerr;
   let tab=toml.load(src)!$validateerr;
 
-  let modelname=toml.str(tab;"name")|{Ok:v v;Err:e typename};
+  let modelname=mt toml.str(tab;"name") {Ok:v v;Err:e typename};
 
   let fieldsec=toml.section(tab;"fields")!$validateerr;
-  let fieldnames=toml.str(fieldsec;"_list")!$validateerr;
+  let fieldnames=toml.str(fieldsec;"list")!$validateerr;
   let parts=str.split(fieldnames;",");
 
   let fields=mut.@($fielddef);
   lp(let i=0;i<parts.len;i=i+1){
     let fname=str.trim(parts.get(i));
     if(str.len(fname)>0){
-      let fsec=toml.section(fieldsec;fname)|{Ok:v v;Err:e fieldsec};
-      let ftype=toml.str(fsec;"type")|{Ok:v v;Err:e "str"};
-      let freq=toml.bool(fsec;"required")|{Ok:v v;Err:e false};
+      let fsec=mt toml.section(fieldsec;fname) {Ok:v v;Err:e fieldsec};
+      let ftype=mt toml.str(fsec;"type") {Ok:v v;Err:e "str"};
+      let freq=mt toml.bool(fsec;"required") {Ok:v v;Err:e false};
       fields=fields.append($fielddef{
         name:fname;
         fieldtype:ftype;
@@ -64,7 +64,7 @@ f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
 
   lp(let i=0;i<model.fields.len;i=i+1){
     let fd=model.fields.get(i);
-    let val=meta.get(fd.name)|{Ok:v v;Err:e ""};
+    let val=mt meta.get(fd.name) {Ok:v v;Err:e ""};
     if(str.len(val)=0){
       if(fd.required){
         errors=errors.append($valerror{
@@ -75,7 +75,7 @@ f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
       }el{}
     }el{
       if(fd.fieldtype="int"){
-        let isnum=str.toint(val)|{Ok:v true;Err:e false};
+        let isnum=mt str.toint(val) {Ok:v true;Err:e false};
         if(!isnum){
           errors=errors.append($valerror{
             filepath:filepath;

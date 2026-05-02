@@ -185,8 +185,8 @@ language = "en"
 [build]
 output = "build/"
 minify = true
-inline_css = true
-image_optimize = true
+inlinecss = true
+imageoptimize = true
 
 [server]
 port = 3000
@@ -197,7 +197,7 @@ admin = true       # enable admin routes
 backend = "flat"   # "flat" (default) or "sqlite"
 
 [log]
-access_format = "combined"   # "combined" (default) or "json" (NDJSON)
+accessformat = "combined"   # "combined" (default) or "json" (NDJSON)
 ```
 
 ### Server
@@ -216,9 +216,9 @@ access_format = "combined"   # "combined" (default) or "json" (NDJSON)
 
 ### Log
 
-| Key             | Default      | Description |
-|-----------------|--------------|-------------|
-| `access_format` | `"combined"` | Access log format. `"combined"` for Apache-style lines. `"json"` for NDJSON (one JSON object per request). |
+| Key              | Default      | Description |
+|------------------|--------------|-------------|
+| `accessformat`   | `"combined"` | Access log format. `"combined"` for Apache-style lines. `"json"` for NDJSON (one JSON object per request). |
 
 Errors (4xx and 5xx responses) are also written to a separate `error.log` with automatic rotation and gzip compression.
 

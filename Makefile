@@ -47,7 +47,8 @@ STDLIB_SRCS := \
   $(TOKE_STDLIB)/mem.c \
   $(TOKE_STDLIB)/os.c \
   $(TOKE_STDLIB)/db.c \
-  $(TOKE_STDLIB)/json.c
+  $(TOKE_STDLIB)/json.c \
+  $(TOKE_STDLIB)/process.c
 
 # ── Vendor C sources ───────────────────────────────────────────────────────
 CMARK_SRCS := $(filter-out $(TOKE_VENDOR)/cmark/src/main.c, \
@@ -73,7 +74,7 @@ endif
 # ── LLVM IR targets ────────────────────────────────────────────────────────
 IFACE_DIR := $(SRC)/ooke
 
-BASE_MODS    := config store router template validate repair
+BASE_MODS    := config store router template validate repair run
 DERIVED_MODS := build serve
 API_MODS     := apihealth
 ALL_MODS     := $(BASE_MODS) $(DERIVED_MODS) $(API_MODS)
@@ -109,6 +110,9 @@ $(IFACE_DIR)/validate.tki $(IFACE_DIR)/validate: $(SRC)/validate.tk | $(IFACE_DI
 $(IFACE_DIR)/repair.tki $(IFACE_DIR)/repair: $(SRC)/repair.tk | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/repair repair.tk
 
+$(IFACE_DIR)/run.tki $(IFACE_DIR)/run: $(SRC)/run.tk | $(IFACE_DIR)
+	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/run run.tk
+
 # ── Derived modules ──────────────────────────────────────────────────────
 $(IFACE_DIR)/build.tki $(IFACE_DIR)/build: \
     $(SRC)/build.tk \
@@ -142,6 +146,7 @@ interfaces: $(OOKE_TKI)
 check:
 	@for f in $(SRC)/config.tk $(SRC)/store.tk $(SRC)/router.tk \
 	           $(SRC)/template.tk $(SRC)/validate.tk $(SRC)/repair.tk $(SRC)/build.tk $(SRC)/serve.tk \
+	           $(SRC)/run.tk \
 	           $(SRC)/apihealth.tk $(SRC)/main.tk; do \
 	  echo "--- $$f"; \
 	  cd $(SRC) && $(TKC) --check $$(basename $$f) 2>&1 | head -5 || true; \

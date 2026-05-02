@@ -27,7 +27,7 @@ f=routederivepattern(filepath:$str;pagesdir:$str):$str{
   let out=mut."";
   lp(let i=0;i<segs.len;i=i+1){
     let seg=segs.get(i);
-    let mapped=str.matchbracket(seg)|{Ok:name str.concat(":";name);Err:e seg};
+    let mapped=mt str.matchbracket(seg) {Ok:name str.concat(":";name);Err:e seg};
     out=str.concat(out;str.concat("/";mapped))
   };
   let result=mut.out;
@@ -143,7 +143,7 @@ f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
     if(!r.isdynamic){
       if(foundidx<0){
         let result=routertrymatch(r;normurl);
-        let val=result|{Ok:m m;Err:e defmatch};
+        let val=mt result {Ok:m m;Err:e defmatch};
         if(!(val.route.pattern="")){
           foundmatch=val;
           foundidx=i
@@ -157,7 +157,7 @@ f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
     if(r.isdynamic){
       if(foundidx<0||foundmatch.route.isdynamic){
         let result=routertrymatch(r;normurl);
-        let val=result|{Ok:m m;Err:e defmatch};
+        let val=mt result {Ok:m m;Err:e defmatch};
         if(!(val.route.pattern="")){
           let dyncount=routecountdynamic(r.pattern);
           if(dyncount<bestdyncount){

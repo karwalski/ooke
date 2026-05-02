@@ -21,19 +21,19 @@ f=parsediags(raw:$str):i64{
 f=repairfile(filepath:$str;maxiters:i64):i64{
   let mi=maxiters;
   (log.info(str.concat("repair: checking ";filepath);@()));
-  let h=process.spawn(@("tkc";"--check";filepath))|{Ok:v v;Err:e 0};
+  let h=mt process.spawn(@("tkc";"--check";filepath)) {Ok:v v;Err:e 0};
   if(h=0){
     (log.info("repair: failed to spawn tkc";@()));
     <1
   }el{};
-  let ecode=process.wait(h)|{Ok:v v;Err:e 0-1};
-  let errout=process.stderr(h)|{Ok:v v;Err:e ""};
+  let ecode=mt process.wait(h) {Ok:v v;Err:e 0-1};
+  let errout=mt process.stderr(h) {Ok:v v;Err:e ""};
   if(str.len(errout)=0){
     (log.info("repair: clean";@()));
     <0
   }el{
     let errcount=parsediags(errout);
-    (log.info(str.concat("repair: found ";str.concat(str.from_int(errcount);" diagnostic(s)"));@()));
+    (log.info(str.concat("repair: found ";str.concat(str.fromint(errcount);" diagnostic(s)"));@()));
     <errcount
   }
 };

@@ -5,30 +5,30 @@ i=str:std.str;
 i=file:std.file;
 
 (* Create a temporary pages directory with a set of .tk page files,
-   call router_scan, and verify that the expected patterns are present. *)
-f=test_scan_basic():bool{
+   call routerscan, and verify that the expected patterns are present. *)
+f=testscanbasic():bool{
   let tmp=file.tempdir()!$router.$routeerr;
   (file.mkdir(str.concat(tmp;"/blog")));
   (file.write(str.concat(tmp;"/index.tk");""));
   (file.write(str.concat(tmp;"/about.tk");""));
   (file.write(str.concat(tmp;"/blog/[slug].tk");""));
-  let result=router.router_scan(tmp);
-  match result{
+  let result=router.routerscan(tmp);
+  mt result{
     ok(routes){
-      let found_root=mut.false;
-      let found_about=mut.false;
-      let found_blog=mut.false;
-      let found_blog_dynamic=mut.false;
+      let foundroot=mut.false;
+      let foundabout=mut.false;
+      let foundblog=mut.false;
+      let foundblogdynamic=mut.false;
       lp(let i=mut.0;i<routes.len;i=i+1){
         let r=routes.get(i);
-        if(r.pattern=="/"){found_root=true};
-        if(r.pattern=="/about"){found_about=true};
+        if(r.pattern=="/"){foundroot=true};
+        if(r.pattern=="/about"){foundabout=true};
         if(r.pattern=="/blog/:slug"){
-          found_blog=true;
-          found_blog_dynamic=r.is_dynamic
+          foundblog=true;
+          foundblogdynamic=r.isdynamic
         }
       };
-      <found_root&&found_about&&found_blog&&found_blog_dynamic
+      <foundroot&&foundabout&&foundblog&&foundblogdynamic
     };
     err(e){
       (test.fail(e.msg));
@@ -39,19 +39,19 @@ f=test_scan_basic():bool{
 
 (* Build a static route list manually and verify that an exact URL match
    succeeds with an empty params map. *)
-f=test_match_static():bool{
+f=testmatchstatic():bool{
   let r=$router.$route{
     pattern:"/about";
-    file_path:"pages/about.tk";
-    template_path:"templates/about.tkt";
-    content_type:"";
-    is_dynamic:false;
-    is_api:false;
+    filepath:"pages/about.tk";
+    templatepath:"templates/about.tkt";
+    contenttype:"";
+    isdynamic:false;
+    isapi:false;
     params:@()
   };
   let routes=@(r);
-  let result=router.router_match(routes;"/about");
-  match result{
+  let result=router.routermatch(routes;"/about");
+  mt result{
     ok(m){
       <m.params.len==0
     };
@@ -64,21 +64,21 @@ f=test_match_static():bool{
 
 (* Build a dynamic route and verify that the captured param is extracted
    correctly from the URL. *)
-f=test_match_dynamic():bool{
+f=testmatchdynamic():bool{
   let r=$router.$route{
     pattern:"/blog/:slug";
-    file_path:"pages/blog/[slug].tk";
-    template_path:"templates/blog.tkt";
-    content_type:"blog";
-    is_dynamic:true;
-    is_api:false;
+    filepath:"pages/blog/[slug].tk";
+    templatepath:"templates/blog.tkt";
+    contenttype:"blog";
+    isdynamic:true;
+    isapi:false;
     params:@()
   };
   let routes=@(r);
-  let result=router.router_match(routes;"/blog/hello-world");
-  match result{
+  let result=router.routermatch(routes;"/blog/hello-world");
+  mt result{
     ok(m){
-      let slug=match m.params.get("slug"){
+      let slug=mt m.params.get("slug"){
         ok(v){<v};
         err(e){<""}
       };
@@ -92,38 +92,38 @@ f=test_match_dynamic():bool{
 };
 
 (* Verify that a URL with no matching route returns an error. *)
-f=test_match_no_match():bool{
+f=testmatchnomatch():bool{
   let r=$router.$route{
     pattern:"/about";
-    file_path:"pages/about.tk";
-    template_path:"templates/about.tkt";
-    content_type:"";
-    is_dynamic:false;
-    is_api:false;
+    filepath:"pages/about.tk";
+    templatepath:"templates/about.tkt";
+    contenttype:"";
+    isdynamic:false;
+    isapi:false;
     params:@()
   };
   let routes=@(r);
-  let result=router.router_match(routes;"/nonexistent");
-  match result{
+  let result=router.routermatch(routes;"/nonexistent");
+  mt result{
     ok(m){<false};
     err(e){<true};
   }
 };
 
 (* Verify that the root URL "/" matches a route with pattern "/". *)
-f=test_match_root():bool{
+f=testmatchroot():bool{
   let r=$router.$route{
     pattern:"/";
-    file_path:"pages/index.tk";
-    template_path:"templates/index.tkt";
-    content_type:"";
-    is_dynamic:false;
-    is_api:false;
+    filepath:"pages/index.tk";
+    templatepath:"templates/index.tkt";
+    contenttype:"";
+    isdynamic:false;
+    isapi:false;
     params:@()
   };
   let routes=@(r);
-  let result=router.router_match(routes;"/");
-  match result{
+  let result=router.routermatch(routes;"/");
+  mt result{
     ok(m){<true};
     err(e){
       (test.fail(e.msg));
@@ -134,28 +134,28 @@ f=test_match_root():bool{
 
 (* Verify that a more specific dynamic route (fewer dynamic segments)
    is preferred over a less specific one. *)
-f=test_match_specificity():bool{
+f=testmatchspecificity():bool{
   let generic=$router.$route{
     pattern:"/docs/:section/:slug";
-    file_path:"pages/docs/[section]/[slug].tk";
-    template_path:"templates/docs/[section]/[slug].tkt";
-    content_type:"docs";
-    is_dynamic:true;
-    is_api:false;
+    filepath:"pages/docs/[section]/[slug].tk";
+    templatepath:"templates/docs/[section]/[slug].tkt";
+    contenttype:"docs";
+    isdynamic:true;
+    isapi:false;
     params:@()
   };
   let specific=$router.$route{
     pattern:"/docs/about/:slug";
-    file_path:"pages/docs/about/[slug].tk";
-    template_path:"templates/docs/about/[slug].tkt";
-    content_type:"docs/about";
-    is_dynamic:true;
-    is_api:false;
+    filepath:"pages/docs/about/[slug].tk";
+    templatepath:"templates/docs/about/[slug].tkt";
+    contenttype:"docs/about";
+    isdynamic:true;
+    isapi:false;
     params:@()
   };
   let routes=@(generic;specific);
-  let result=router.router_match(routes;"/docs/about/overview");
-  match result{
+  let result=router.routermatch(routes;"/docs/about/overview");
+  mt result{
     ok(m){
       <m.route.pattern=="/docs/about/:slug"
     };
@@ -167,12 +167,12 @@ f=test_match_specificity():bool{
 };
 
 f=main():i64{
-  let r0=test_scan_basic();
-  let r1=test_match_static();
-  let r2=test_match_dynamic();
-  let r3=test_match_no_match();
-  let r4=test_match_root();
-  let r5=test_match_specificity();
+  let r0=testscanbasic();
+  let r1=testmatchstatic();
+  let r2=testmatchdynamic();
+  let r3=testmatchnomatch();
+  let r4=testmatchroot();
+  let r5=testmatchspecificity();
   if(r0&&r1&&r2&&r3&&r4&&r5){
     <0
   }el{

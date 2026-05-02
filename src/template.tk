@@ -60,14 +60,14 @@ f=tplresolveexpr(expr:$str;ctx:@($str:$str)):$str{
   let trimmed=str.trim(expr);
   let pipepos=str.indexof(trimmed;"|");
   if(!(pipepos<0)){
-    let key=str.trim(str.slice(trimmed;0;pipepos)|{Ok:v v;Err:e trimmed});
-    let filter=str.trim(str.slice(trimmed;pipepos+1;str.len(trimmed))|{Ok:v v;Err:e ""});
+    let key=str.trim(mt str.slice(trimmed;0;pipepos) {Ok:v v;Err:e trimmed});
+    let filter=str.trim(mt str.slice(trimmed;pipepos+1;str.len(trimmed)) {Ok:v v;Err:e ""});
     let vgot=ctx.get(key);
-    let val=vgot|{Ok:v v;Err:e ""};
+    let val=mt vgot {Ok:v v;Err:e ""};
     <tplapplyfilter(val;filter)
   }el{
     let vgot2=ctx.get(trimmed);
-    <vgot2|{Ok:v v;Err:e ""}
+    <mt vgot2 {Ok:v v;Err:e ""}
   }
 };
 
@@ -120,12 +120,12 @@ f=tpllex(src:$str):@$token!$tplerr{
         running=false
       }el{
         if(bestpos>0){
-          let rawcontent=str.slice(rem;0;bestpos)|{Ok:v v;Err:e ""};
+          let rawcontent=mt str.slice(rem;0;bestpos) {Ok:v v;Err:e ""};
           let rawtok=$token{kind:rawkind;content:rawcontent};
           tokens=tokens.append(rawtok)
         }el{};
 
-        let afteropen=str.slice(rem;bestpos+2;rlen)|{Ok:v v;Err:e ""};
+        let afteropen=mt str.slice(rem;bestpos+2;rlen) {Ok:v v;Err:e ""};
 
         let closedelim=mut."";
         if(besttype="expr"){
@@ -145,8 +145,8 @@ f=tpllex(src:$str):@$token!$tplerr{
           remaining="";
           running=false
         }el{
-          let inner=str.slice(afteropen;0;closepos)|{Ok:v v;Err:e ""};
-          let afterclose=str.slice(afteropen;closepos+2;str.len(afteropen))|{Ok:v v;Err:e ""};
+          let inner=mt str.slice(afteropen;0;closepos) {Ok:v v;Err:e ""};
+          let afterclose=mt str.slice(afteropen;closepos+2;str.len(afteropen)) {Ok:v v;Err:e ""};
 
           if(besttype="expr"){
             let tok=$token{kind:exprkind;content:inner};
@@ -173,7 +173,7 @@ f=tpldirectivename(content:$str):$str{
   let trimmed=str.trim(content);
   let paren=str.indexof(trimmed;"(");
   if(!(paren<0)){
-    <str.slice(trimmed;0;paren)|{Ok:v v;Err:e trimmed}
+    <mt str.slice(trimmed;0;paren) {Ok:v v;Err:e trimmed}
   }el{
     <trimmed
   }
@@ -185,19 +185,19 @@ f=tpldirectivearg(content:$str):$str{
   if(open<0){
     <""
   }el{
-    let afteropen=str.slice(trimmed;open+1;str.len(trimmed))|{Ok:v v;Err:e ""};
+    let afteropen=mt str.slice(trimmed;open+1;str.len(trimmed)) {Ok:v v;Err:e ""};
     let close=str.indexof(afteropen;")");
     if(close<0){
       <""
     }el{
-      let raw=str.slice(afteropen;0;close)|{Ok:v v;Err:e ""};
+      let raw=mt str.slice(afteropen;0;close) {Ok:v v;Err:e ""};
       let t=str.trim(raw);
       let tlen=str.len(t);
       if(tlen>1){
-        let first=str.slice(t;0;1)|{Ok:v v;Err:e ""};
-        let last=str.slice(t;tlen-1;tlen)|{Ok:v v;Err:e ""};
+        let first=mt str.slice(t;0;1) {Ok:v v;Err:e ""};
+        let last=mt str.slice(t;tlen-1;tlen) {Ok:v v;Err:e ""};
         if(first="\""&&last="\""){
-          <str.slice(t;1;tlen-1)|{Ok:v v;Err:e t}
+          <mt str.slice(t;1;tlen-1) {Ok:v v;Err:e t}
         }el{
           <t
         }
@@ -224,30 +224,30 @@ f=tplislandparse(content:$str):@($str:$str){
   if(open<0){
     <@("name":"";"hydrate":"load")
   }el{
-    let afteropen=str.slice(trimmed;open+1;str.len(trimmed))|{Ok:v v;Err:e ""};
+    let afteropen=mt str.slice(trimmed;open+1;str.len(trimmed)) {Ok:v v;Err:e ""};
     let close=str.indexof(afteropen;")");
-    let inner=str.slice(afteropen;0;close)|{Ok:v v;Err:e afteropen};
+    let inner=mt str.slice(afteropen;0;close) {Ok:v v;Err:e afteropen};
     let q1=str.indexof(inner;"\"");
     if(q1<0){
       <@("name":"";"hydrate":"load")
     }el{
-      let afterq1=str.slice(inner;q1+1;str.len(inner))|{Ok:v v;Err:e ""};
+      let afterq1=mt str.slice(inner;q1+1;str.len(inner)) {Ok:v v;Err:e ""};
       let q2=str.indexof(afterq1;"\"");
       if(q2<0){
         <@("name":"";"hydrate":"load")
       }el{
-        let iname=str.slice(afterq1;0;q2)|{Ok:v v;Err:e ""};
-        let rest=str.slice(afterq1;q2+1;str.len(afterq1))|{Ok:v v;Err:e ""};
+        let iname=mt str.slice(afterq1;0;q2) {Ok:v v;Err:e ""};
+        let rest=mt str.slice(afterq1;q2+1;str.len(afterq1)) {Ok:v v;Err:e ""};
         let hpos=str.indexof(rest;"hydrate=\"");
         if(hpos<0){
           <@("name":iname;"hydrate":"load")
         }el{
-          let afterh=str.slice(rest;hpos+9;str.len(rest))|{Ok:v v;Err:e ""};
+          let afterh=mt str.slice(rest;hpos+9;str.len(rest)) {Ok:v v;Err:e ""};
           let hclose=str.indexof(afterh;"\"");
           if(hclose<0){
             <@("name":iname;"hydrate":"load")
           }el{
-            let hval=str.slice(afterh;0;hclose)|{Ok:v v;Err:e "load"};
+            let hval=mt str.slice(afterh;0;hclose) {Ok:v v;Err:e "load"};
             <@("name":iname;"hydrate":hval)
           }
         }
@@ -316,6 +316,15 @@ f=tplrender(
               currentblockbuf=""
             }el{}
           }el{
+            if(dname="var"){
+              let vargot=ctx.get(darg);
+              let varval=mt vargot {Ok:v v;Err:e ""};
+              if(inblock){
+                currentblockbuf=str.concat(currentblockbuf;varval)
+              }el{
+                buf=str.concat(buf;varval)
+              }
+            }el{
             if(dname="yield"){
               let blockcontent=tplfindblock(blocks;darg);
               if(str.len(blockcontent)>0){
@@ -325,7 +334,7 @@ f=tplrender(
               if(dname="partial"){
                 let partialpath=path.join(templatesdir;str.concat(darg;".tkt"));
                 let psrcr=file.read(partialpath);
-                let partialsrc=psrcr|{Ok:s s;Err:e ""};
+                let partialsrc=mt psrcr {Ok:s s;Err:e ""};
                 if(str.len(partialsrc)>0){
                   let partialtokens=tpllex(partialsrc)!$tplerr;
                   let partialout=tplrender(partialtokens;ctx;templatesdir;@())!$tplerr;
@@ -338,8 +347,8 @@ f=tplrender(
               }el{
                 if(dname="island"){
                   let iparse=tplislandparse(tok.content);
-                  let iname=iparse.get("name")|{Ok:v v;Err:e ""};
-                  let ihydrate=iparse.get("hydrate")|{Ok:v v;Err:e "load"};
+                  let iname=mt iparse.get("name") {Ok:v v;Err:e ""};
+                  let ihydrate=mt iparse.get("hydrate") {Ok:v v;Err:e "load"};
                   let idiv=str.concat("<div data-island=\"";str.concat(iname;str.concat("\" data-hydrate=\"";str.concat(ihydrate;"\"></div>"))));
                   if(inblock){
                     currentblockbuf=str.concat(currentblockbuf;idiv)
@@ -350,6 +359,7 @@ f=tplrender(
                 }el{}
               }
             }
+          }
           }
         }
       }
@@ -397,9 +407,9 @@ f=tplcacheget(
   path:$str
 ):@$token!$tplerr{
   let r=cache.entries.get(path);
-  let hit=r|{Ok:toks true;Err:e false};
+  let hit=mt r {Ok:toks true;Err:e false};
   if(hit){
-    <r|{Ok:toks toks;Err:e @()}
+    <mt r {Ok:toks toks;Err:e @()}
   }el{
     let src=file.read(path)!$tplerr;
     <tpllex(src)!$tplerr
@@ -413,10 +423,10 @@ f=tplrenderfilecached(
   cache:$tplcache
 ):$renderresult!$tplerr{
   let r=cache.entries.get(templatepath);
-  let hit=r|{Ok:toks true;Err:e false};
+  let hit=mt r {Ok:toks true;Err:e false};
   let tokens=mut.@();
   if(hit){
-    tokens=r|{Ok:toks toks;Err:e @()}
+    tokens=mt r {Ok:toks toks;Err:e @()}
   }el{
     let src=file.read(templatepath)!$tplerr;
     tokens=tpllex(src)!$tplerr

@@ -12,14 +12,14 @@ i=file:std.file;
    =================================================================== *)
 
 (* 1. Raw passthrough — a template with no delimiters returns itself. *)
-f=test_raw_passthrough():bool{
+f=testrawpassthrough():bool{
   let src="<p>Hello, world!</p>";
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
       let ctx=@($str:$str);
-      let out=tpl.tpl_render(toks;ctx;"/tmp";@());
-      (match out{
+      let out=tpl.tplrender(toks;ctx;"/tmp";@());
+      (mt out{
         ok(s){
           (test.eq(s;src));
           <true
@@ -38,14 +38,14 @@ f=test_raw_passthrough():bool{
 };
 
 (* 2. Simple expression substitution: {= name =} with ctx ("name":"World"). *)
-f=test_expr_simple():bool{
+f=testexprsimple():bool{
   let src="Hello, {= name =}!";
   let ctx=@("name":"World");
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
-      let out=tpl.tpl_render(toks;ctx;"/tmp";@());
-      (match out{
+      let out=tpl.tplrender(toks;ctx;"/tmp";@());
+      (mt out{
         ok(s){
           (test.eq(str.contains(s;"World");true));
           (test.eq(str.contains(s;"Hello");true));
@@ -65,14 +65,14 @@ f=test_expr_simple():bool{
 };
 
 (* 3. Missing key in ctx yields empty string, no crash. *)
-f=test_expr_missing_key():bool{
-  let src="{= missing_key =}";
+f=testexprmissingkey():bool{
+  let src="{= missingkey =}";
   let ctx=@($str:$str);
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
-      let out=tpl.tpl_render(toks;ctx;"/tmp";@());
-      (match out{
+      let out=tpl.tplrender(toks;ctx;"/tmp";@());
+      (mt out{
         ok(s){
           (test.eq(s;""));
           <true
@@ -91,14 +91,14 @@ f=test_expr_missing_key():bool{
 };
 
 (* 4. Dotted key: {= site.name =} with ctx ("site.name":"toke"). *)
-f=test_dotted_key():bool{
+f=testdottedkey():bool{
   let src="Site: {= site.name =}";
   let ctx=@("site.name":"toke");
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
-      let out=tpl.tpl_render(toks;ctx;"/tmp";@());
-      (match out{
+      let out=tpl.tplrender(toks;ctx;"/tmp";@());
+      (mt out{
         ok(s){
           (test.eq(str.contains(s;"toke");true));
           <true
@@ -117,14 +117,14 @@ f=test_dotted_key():bool{
 };
 
 (* 5. Filter md: {= body | md =} with body "# Hello" should produce <h1>. *)
-f=test_filter_md():bool{
+f=testfiltermd():bool{
   let src="{= body | md =}";
   let ctx=@("body":"# Hello");
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
-      let out=tpl.tpl_render(toks;ctx;"/tmp";@());
-      (match out{
+      let out=tpl.tplrender(toks;ctx;"/tmp";@());
+      (mt out{
         ok(s){
           (test.eq(str.contains(s;"<h1");true));
           <true
@@ -143,14 +143,14 @@ f=test_filter_md():bool{
 };
 
 (* 6. Filter upper: {= name | upper =} uppercases the value. *)
-f=test_filter_upper():bool{
+f=testfilterupper():bool{
   let src="{= name | upper =}";
   let ctx=@("name":"toke");
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
-      let out=tpl.tpl_render(toks;ctx;"/tmp";@());
-      (match out{
+      let out=tpl.tplrender(toks;ctx;"/tmp";@());
+      (mt out{
         ok(s){
           (test.eq(s;"TOKE"));
           <true
@@ -168,15 +168,15 @@ f=test_filter_upper():bool{
   })
 };
 
-(* 7. Filter escape: {= text | escape =} with <script> → &lt;script&gt;. *)
-f=test_filter_escape():bool{
+(* 7. Filter escape: {= text | escape =} with <script> produces &lt;script&gt;. *)
+f=testfilterescape():bool{
   let src="{= text | escape =}";
   let ctx=@("text":"<script>alert(1)</script>");
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
-      let out=tpl.tpl_render(toks;ctx;"/tmp";@());
-      (match out{
+      let out=tpl.tplrender(toks;ctx;"/tmp";@());
+      (mt out{
         ok(s){
           (test.eq(str.contains(s;"&lt;script&gt;");true));
           (test.eq(str.contains(s;"<script>");false));
@@ -196,14 +196,14 @@ f=test_filter_escape():bool{
 };
 
 (* 8. Comment: {# this is a comment #} should not appear in output. *)
-f=test_comment_ignored():bool{
+f=testcommentignored():bool{
   let src="before{# this is a comment #}after";
   let ctx=@($str:$str);
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
-      let out=tpl.tpl_render(toks;ctx;"/tmp";@());
-      (match out{
+      let out=tpl.tplrender(toks;ctx;"/tmp";@());
+      (mt out{
         ok(s){
           (test.eq(str.contains(s;"comment");false));
           (test.eq(str.contains(s;"before");true));
@@ -225,10 +225,10 @@ f=test_comment_ignored():bool{
 
 (* 9. Layout directive: {! layout("base") !} should lex without crash.
    We verify the directive token is present with "layout" content. *)
-f=test_layout_detected():bool{
+f=testlayoutdetected():bool{
   let src="{! layout(\"base\") !}<p>child content</p>";
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
       (* should have at least two tokens: directive + raw *)
       (test.eq(toks.len>=2;true));
@@ -245,16 +245,16 @@ f=test_layout_detected():bool{
 };
 
 (* 10. Block collection: block/end pair is lexed and rendered without error. *)
-f=test_block_collected():bool{
+f=testblockcollected():bool{
   let src="{! block(\"title\") !}My Title{! end !}";
   let ctx=@($str:$str);
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
       (* three tokens: directive(block), raw, directive(end) *)
       (test.eq(toks.len;3));
-      let out=tpl.tpl_render(toks;ctx;"/tmp";@());
-      (match out{
+      let out=tpl.tplrender(toks;ctx;"/tmp";@());
+      (mt out{
         ok(s){
           (* block content is collected and not emitted in plain render *)
           <true
@@ -272,9 +272,9 @@ f=test_block_collected():bool{
   })
 };
 
-(* 11. tpl_escape helper: "<b>&" → "&lt;b&gt;&amp;". *)
-f=test_escape_helper():bool{
-  let result=tpl.tpl_escape("<b>&");
+(* 11. tplescape helper: "<b>&" produces "&lt;b&gt;&amp;". *)
+f=testescapehelper():bool{
+  let result=tpl.tplescape("<b>&");
   (test.eq(str.contains(result;"&lt;b&gt;");true));
   (test.eq(str.contains(result;"&amp;");true));
   (test.eq(str.contains(result;"<b>");false));
@@ -282,10 +282,10 @@ f=test_escape_helper():bool{
 };
 
 (* 12. Lex a mixed template and verify token count and types. *)
-f=test_lex_basic():bool{
+f=testlexbasic():bool{
   let src="<p>{= title =}</p>{# ignore #}{! block(\"x\") !}body{! end !}";
-  let tokens=tpl.tpl_lex(src);
-  (match tokens{
+  let tokens=tpl.tpllex(src);
+  (mt tokens{
     ok(toks){
       (* expected: raw("<p>"), expr("title"), raw("</p>"),
                    comment, directive(block), raw("body"), directive(end) *)
@@ -307,12 +307,12 @@ f=test_lex_basic():bool{
   })
 };
 
-(* 13. tpl_renderfile_simple — write a temp .tkt file and render it. *)
-f=test_renderfile_simple():bool{
-  let tkt_src="<h1>{= heading =}</h1><p>{= body =}</p>";
-  let tkt_path="/tmp/test_ooke_simple.tkt";
-  let write_result=file.write(tkt_path;tkt_src);
-  (match write_result{
+(* 13. tplrenderfile simple — write a temp .tkt file and render it. *)
+f=testrenderfilesimple():bool{
+  let tktsrc="<h1>{= heading =}</h1><p>{= body =}</p>";
+  let tktpath="/tmp/test_ooke_simple.tkt";
+  let writeresult=file.write(tktpath;tktsrc);
+  (mt writeresult{
     ok(v){};
     err(e){
       (test.fail("could not write temp template"));
@@ -320,8 +320,8 @@ f=test_renderfile_simple():bool{
     }
   });
   let ctx=@("heading":"Welcome";"body":"Hello from ooke.");
-  let result=tpl.tpl_renderfile(tkt_path;ctx;"/tmp");
-  (match result{
+  let result=tpl.tplrenderfile(tktpath;ctx;"/tmp");
+  (mt result{
     ok(s){
       (test.eq(str.contains(s;"<h1>Welcome</h1>");true));
       (test.eq(str.contains(s;"Hello from ooke.");true));
@@ -335,11 +335,11 @@ f=test_renderfile_simple():bool{
 };
 
 (* 14. Cache hit — rendering same path twice stores tokens in cache. *)
-f=test_cache_hit():bool{
-  let tkt_src="<p>{= msg =}</p>";
-  let tkt_path="/tmp/test_ooke_cache.tkt";
-  let write_result=file.write(tkt_path;tkt_src);
-  (match write_result{
+f=testcachehit():bool{
+  let tktsrc="<p>{= msg =}</p>";
+  let tktpath="/tmp/test_ooke_cache.tkt";
+  let writeresult=file.write(tktpath;tktsrc);
+  (mt writeresult{
     ok(v){};
     err(e){
       (test.fail("could not write temp template"));
@@ -347,24 +347,24 @@ f=test_cache_hit():bool{
     }
   });
   let ctx=@("msg":"cached");
-  let cache0=tpl.tpl_cache_new();
+  let cache0=tpl.tplcachenew();
 
   (* first render — lex and cache *)
-  let r1=tpl.tpl_renderfile_cached(tkt_path;ctx;"/tmp";cache0);
-  (match r1{
+  let r1=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";cache0);
+  (mt r1{
     ok(rr1){
       (test.eq(str.contains(rr1.output;"cached");true));
       (* second render — should use cache; cache should contain the key *)
-      let r2=tpl.tpl_renderfile_cached(tkt_path;ctx;"/tmp";rr1.cache);
-      (match r2{
+      let r2=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";rr1.cache);
+      (mt r2{
         ok(rr2){
           (test.eq(str.contains(rr2.output;"cached");true));
           (* verify key is now present in entries *)
-          let has_entry=match rr2.cache.entries.get(tkt_path){
+          let hasentry=mt rr2.cache.entries.get(tktpath){
             ok(v){<true};
             err(e){<false}
           };
-          (test.eq(has_entry;true));
+          (test.eq(hasentry;true));
           <true
         };
         err(e){
@@ -383,21 +383,21 @@ f=test_cache_hit():bool{
 (* 15. Partial inclusion: {! partial("header") !}
    Writes a header partial file, then renders a parent template that
    includes it, verifying the partial content appears in output. *)
-f=test_partial():bool{
-  let partial_src="<header><a href=\"/\">Home</a></header>";
-  let partial_path="/tmp/header.tkt";
-  let p_write=file.write(partial_path;partial_src);
-  (match p_write{
+f=testpartial():bool{
+  let partialsrc="<header><a href=\"/\">Home</a></header>";
+  let partialpath="/tmp/header.tkt";
+  let pwrite=file.write(partialpath;partialsrc);
+  (mt pwrite{
     ok(v){};
     err(e){
       (test.fail("could not write partial"));
       <false
     }
   });
-  let tkt_src="{! partial(\"header\") !}<main>{= content =}</main>";
-  let tkt_path="/tmp/test_ooke_partial.tkt";
-  let t_write=file.write(tkt_path;tkt_src);
-  (match t_write{
+  let tktsrc="{! partial(\"header\") !}<main>{= content =}</main>";
+  let tktpath="/tmp/test_ooke_partial.tkt";
+  let twrite=file.write(tktpath;tktsrc);
+  (mt twrite{
     ok(v){};
     err(e){
       (test.fail("could not write template"));
@@ -405,8 +405,8 @@ f=test_partial():bool{
     }
   });
   let ctx=@("content":"Hello from partial test.");
-  let result=tpl.tpl_renderfile(tkt_path;ctx;"/tmp");
-  (match result{
+  let result=tpl.tplrenderfile(tktpath;ctx;"/tmp");
+  (mt result{
     ok(s){
       (test.eq(str.contains(s;"<header>");true));
       (test.eq(str.contains(s;"Home");true));
@@ -423,21 +423,21 @@ f=test_partial():bool{
 (* ---- main: run all 15 tests ---- *)
 
 f=main():i64{
-  let r0=test_raw_passthrough();
-  let r1=test_expr_simple();
-  let r2=test_expr_missing_key();
-  let r3=test_dotted_key();
-  let r4=test_filter_md();
-  let r5=test_filter_upper();
-  let r6=test_filter_escape();
-  let r7=test_comment_ignored();
-  let r8=test_layout_detected();
-  let r9=test_block_collected();
-  let r10=test_escape_helper();
-  let r11=test_lex_basic();
-  let r12=test_renderfile_simple();
-  let r13=test_cache_hit();
-  let r14=test_partial();
+  let r0=testrawpassthrough();
+  let r1=testexprsimple();
+  let r2=testexprmissingkey();
+  let r3=testdottedkey();
+  let r4=testfiltermd();
+  let r5=testfilterupper();
+  let r6=testfilterescape();
+  let r7=testcommentignored();
+  let r8=testlayoutdetected();
+  let r9=testblockcollected();
+  let r10=testescapehelper();
+  let r11=testlexbasic();
+  let r12=testrenderfilesimple();
+  let r13=testcachehit();
+  let r14=testpartial();
   if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14){
     <0
   }el{

@@ -26,32 +26,32 @@ f=configload(path:$str):$ookecfg!$configerr{
   let src=file.read(path)!$configerr;
   let tab=toml.load(src)!$configerr;
 
-  let site=toml.section(tab;"site")|{Ok:v v;Err:e tab};
-  let build=toml.section(tab;"build")|{Ok:v v;Err:e tab};
-  let server=toml.section(tab;"server")|{Ok:v v;Err:e tab};
-  let store=toml.section(tab;"store")|{Ok:v v;Err:e tab};
-  let log=toml.section(tab;"log")|{Ok:v v;Err:e tab};
+  let site=mt toml.section(tab;"site") {Ok:v v;Err:e tab};
+  let build=mt toml.section(tab;"build") {Ok:v v;Err:e tab};
+  let server=mt toml.section(tab;"server") {Ok:v v;Err:e tab};
+  let store=mt toml.section(tab;"store") {Ok:v v;Err:e tab};
+  let log=mt toml.section(tab;"log") {Ok:v v;Err:e tab};
 
-  let sitename=toml.str(site;"name")|{Ok:v v;Err:e "my-site"};
-  let siteurl=toml.str(site;"url")|{Ok:v v;Err:e ""};
-  let sitelanguage=toml.str(site;"language")|{Ok:v v;Err:e "en"};
+  let sitename=mt toml.str(site;"name") {Ok:v v;Err:e "my-site"};
+  let siteurl=mt toml.str(site;"url") {Ok:v v;Err:e ""};
+  let sitelanguage=mt toml.str(site;"language") {Ok:v v;Err:e "en"};
 
-  let buildoutput=toml.str(build;"output")|{Ok:v v;Err:e "build/"};
-  let buildminify=toml.bool(build;"minify")|{Ok:v v;Err:e true};
-  let buildinlinecss=toml.bool(build;"inline_css")|{Ok:v v;Err:e true};
+  let buildoutput=mt toml.str(build;"output") {Ok:v v;Err:e "build/"};
+  let buildminify=mt toml.bool(build;"minify") {Ok:v v;Err:e true};
+  let buildinlinecss=mt toml.bool(build;"inlinecss") {Ok:v v;Err:e true};
 
-  let serverport=toml.i64(server;"port")|{Ok:v v;Err:e 3000};
-  let serverworkers=toml.i64(server;"workers")|{Ok:v v;Err:e 0};
-  let servercorsorigins=toml.str(server;"cors_origins")|{Ok:v v;Err:e ""};
+  let serverport=mt toml.i64(server;"port") {Ok:v v;Err:e 3000};
+  let serverworkers=mt toml.i64(server;"workers") {Ok:v v;Err:e 0};
+  let servercorsorigins=mt toml.str(server;"corsorigins") {Ok:v v;Err:e ""};
 
-  let storebackend=toml.str(store;"backend")|{Ok:v v;Err:e "flat"};
+  let storebackend=mt toml.str(store;"backend") {Ok:v v;Err:e "flat"};
 
-  let logaccess=toml.str(log;"access")|{Ok:v v;Err:e "logs/access.log"};
-  let logmaxlines=toml.i64(log;"max_lines")|{Ok:v v;Err:e 10000};
-  let logmaxagedays=toml.i64(log;"max_age_days")|{Ok:v v;Err:e 30};
+  let logaccess=mt toml.str(log;"access") {Ok:v v;Err:e "logs/access.log"};
+  let logmaxlines=mt toml.i64(log;"maxlines") {Ok:v v;Err:e 10000};
+  let logmaxagedays=mt toml.i64(log;"maxagedays") {Ok:v v;Err:e 30};
 
-  let paths=toml.section(tab;"paths")|{Ok:v v;Err:e tab};
-  let apiprefix=toml.str(paths;"api_prefix")|{Ok:v v;Err:e ""};
+  let paths=mt toml.section(tab;"paths") {Ok:v v;Err:e tab};
+  let apiprefix=mt toml.str(paths;"apiprefix") {Ok:v v;Err:e ""};
 
   <$ookecfg{
     sitename:sitename;

@@ -1,0 +1,95 @@
+m=ooke.run;
+i=str:std.str;
+i=log:std.log;
+i=file:std.file;
+i=path:std.path;
+i=toml:std.toml;
+i=process:std.process;
+i=args:std.args;
+
+t=$runerr{msg:$str};
+
+t=$clicfg{name:$str;entry:$str};
+
+f=loadclicfg(projectdir:$str):$clicfg!$runerr{
+  let tomlpath=path.join(projectdir;"ooke.toml");
+  let src=file.read(tomlpath)!$runerr;
+  let tab=toml.load(src)!$runerr;
+  let pkg=mt toml.section(tab;"package") {Ok:v v;Err:e tab};
+  let name=mt toml.str(pkg;"name") {Ok:v v;Err:e "app"};
+  let entry=mt toml.str(pkg;"entry") {Ok:v v;Err:e "src/main.tk"};
+  <$clicfg{name:name;entry:entry}
+};
+
+f=runcompile(projectdir:$str;cfg:$clicfg):$str!$runerr{
+  let entrypath=path.join(projectdir;cfg.entry);
+  if(!file.exists(entrypath)){
+    !$runerr{msg:str.concat("entry point not found: ";entrypath)}
+  }el{};
+  let outbin=path.join(projectdir;str.concat("build/";cfg.name));
+  let builddir=path.join(projectdir;"build");
+  let mkr=mt file.mkdir(builddir) {Ok:v v;Err:e false};
+  (log.info(str.concat("compiling ";str.concat(entrypath;str.concat(" -> ";outbin)));@()));
+  let h=mt process.spawn(@("tkc";entrypath;"--out";outbin)) {Ok:v v;Err:e 0};
+  if(h=0){
+    !$runerr{msg:"failed to spawn tkc"}
+  }el{};
+  let ecode=mt process.wait(h) {Ok:v v;Err:e 0-1};
+  let errout=mt process.stderr(h) {Ok:v v;Err:e ""};
+  if(!(ecode=0)){
+    (log.info(str.concat("tkc error: ";errout);@()));
+    <""
+  }el{};
+  if(str.len(errout)>0){
+    (log.info(str.concat("tkc: ";errout);@()))
+  }el{};
+  if(!file.exists(outbin)){
+    (log.info("compilation produced no output binary";@()));
+    <""
+  }el{};
+  <outbin
+};
+
+f=runexec(binpath:$str;passargs:@$str):i64{
+  let cmdparts=mut.@(binpath);
+  lp(let i=0;i<passargs.len;i=i+1){
+    cmdparts=cmdparts.append(passargs.get(i))
+  };
+  (log.info(str.concat("running ";binpath);@()));
+  let h=mt process.spawn(cmdparts) {Ok:v v;Err:e 0};
+  if(h=0){
+    (log.info("failed to spawn binary";@()));
+    <1
+  }el{};
+  let ecode=mt process.wait(h) {Ok:v v;Err:e 0-1};
+  let sout=mt process.stdout(h) {Ok:v v;Err:e ""};
+  if(str.len(sout)>0){
+    (log.info(sout;@()))
+  }el{};
+  let serr=mt process.stderr(h) {Ok:v v;Err:e ""};
+  if(str.len(serr)>0){
+    (log.info(serr;@()))
+  }el{};
+  <ecode as i64
+};
+
+f=run(projectdir:$str;passargs:@$str):i64{
+  let cfg=mt loadclicfg(projectdir) {Ok:v v;Err:e $clicfg{name:"app";entry:"src/main.tk"}};
+  let binpath=mt runcompile(projectdir;cfg) {Ok:v v;Err:e ""};
+  if(str.len(binpath)=0){
+    (log.info("compilation failed, aborting run";@()));
+    <1
+  }el{};
+  <runexec(binpath;passargs)
+};
+
+f=build(projectdir:$str):i64{
+  let cfg=mt loadclicfg(projectdir) {Ok:v v;Err:e $clicfg{name:"app";entry:"src/main.tk"}};
+  let binpath=mt runcompile(projectdir;cfg) {Ok:v v;Err:e ""};
+  if(str.len(binpath)=0){
+    (log.info("compilation failed";@()));
+    <1
+  }el{};
+  (log.info(str.concat("built: ";binpath);@()));
+  <0
+};

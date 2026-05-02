@@ -27,7 +27,7 @@ f=storeparsefront(src:$str):$content!$storeerr{
       body:src
     }
   }el{
-    let afteropen=str.slice(src;4;str.len(src))|{Ok:v v;Err:e ""};
+    let afteropen=mt str.slice(src;4;str.len(src)) {Ok:v v;Err:e ""};
     let closer="\n---\n";
     let closepos=str.indexof(afteropen;closer);
     if(closepos<0){
@@ -39,9 +39,9 @@ f=storeparsefront(src:$str):$content!$storeerr{
         body:src
       }
     }el{
-      let fmraw=str.slice(afteropen;0;closepos as u64)|{Ok:v v;Err:e ""};
+      let fmraw=mt str.slice(afteropen;0;closepos as u64) {Ok:v v;Err:e ""};
       let bodystart=(closepos+5) as u64;
-      let bodyraw=str.trim(str.slice(afteropen;bodystart;str.len(afteropen))|{Ok:v v;Err:e ""});
+      let bodyraw=str.trim(mt str.slice(afteropen;bodystart;str.len(afteropen)) {Ok:v v;Err:e ""});
       let lines=str.split(fmraw;"\n");
       let meta=mut.@($str:$str);
       let slug=mut."";
@@ -75,16 +75,16 @@ f=storedefault():$content{
 };
 
 f=storetryparse(src:$str):$content{
-  let r=storeparsefront(src)|{Ok:c c; Err:e storedefault()};
+  let r=mt storeparsefront(src) {Ok:c c; Err:e storedefault()};
   <r
 };
 
 f=storeparsejson(src:$str):$content!$storeerr{
   let doc=json.dec(src)!$storeerr;
   let meta=mut.@($str:$str);
-  let slug=json.str(doc;"slug")|{Ok:v v;Err:e ""};
-  let ctype=json.str(doc;"type")|{Ok:v v;Err:e "page"};
-  let ctitle=json.str(doc;"title")|{Ok:v v;Err:e ""};
+  let slug=mt json.str(doc;"slug") {Ok:v v;Err:e ""};
+  let ctype=mt json.str(doc;"type") {Ok:v v;Err:e "page"};
+  let ctitle=mt json.str(doc;"title") {Ok:v v;Err:e ""};
   if(str.len(slug)>0){meta=meta.set("slug";slug)}el{};
   if(str.len(ctype)>0){meta=meta.set("type";ctype)}el{};
   if(str.len(ctitle)>0){meta=meta.set("title";ctitle)}el{};
@@ -98,7 +98,7 @@ f=storeparsejson(src:$str):$content!$storeerr{
 };
 
 f=storetryparsejson(src:$str):$content{
-  let r=storeparsejson(src)|{Ok:c c; Err:e storedefault()};
+  let r=mt storeparsejson(src) {Ok:c c; Err:e storedefault()};
   <r
 };
 
@@ -109,7 +109,7 @@ f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str{
   let keys=fields.keys;
   lp(let i=0;i<keys.len;i=i+1){
     let k=keys.get(i);
-    let v=fields.get(k)|{Ok:v v;Err:e "str"};
+    let v=mt fields.get(k) {Ok:v v;Err:e "str"};
     let coltype=mut."TEXT";
     if(v="bool"){coltype="INTEGER"}el{};
     if(v="int"){coltype="INTEGER"}el{};
@@ -128,10 +128,10 @@ f=storeallsql(contenttype:$str):@$content!$storeerr{
   let results=mut.@($content);
   lp(let i=0;i<rows.len;i=i+1){
     let r=rows.get(i);
-    let slug=row.str(r;"slug")|{$ok:s s;$err:e ""};
-    let ctype=row.str(r;"type")|{$ok:s s;$err:e "page"};
-    let ctitle=row.str(r;"title")|{$ok:s s;$err:e ""};
-    let body=row.str(r;"body")|{$ok:s s;$err:e ""};
+    let slug=mt row.str(r;"slug") {$ok:s s;$err:e ""};
+    let ctype=mt row.str(r;"type") {$ok:s s;$err:e "page"};
+    let ctitle=mt row.str(r;"title") {$ok:s s;$err:e ""};
+    let body=mt row.str(r;"body") {$ok:s s;$err:e ""};
     let meta=mut.@($str:$str);
     if(str.len(slug)>0){meta=meta.set("slug";slug)}el{};
     if(str.len(ctype)>0){meta=meta.set("type";ctype)}el{};
@@ -146,7 +146,7 @@ f=storewrite(contenttype:$str;content:$content):bool!$storeerr{
   let check=str.concat("SELECT id FROM ";contenttype);
   let check=str.concat(check;" WHERE slug=?");
   let existing=db.one(check;@(content.slug));
-  let found=existing|{$ok:r true;$err:e false};
+  let found=mt existing {$ok:r true;$err:e false};
   if(found){
     let sql=mut."UPDATE ";
     sql=str.concat(sql;contenttype);
@@ -170,7 +170,7 @@ f=storeallflat(contentdir:$str;contenttype:$str):@$content!$storeerr{
     let fpath=files.get(i);
     if(str.endswith(fpath;".md")){
       let fullpath=path.join(dir;fpath);
-      let src=file.read(fullpath)|{Ok:s s; Err:e ""};
+      let src=mt file.read(fullpath) {Ok:s s; Err:e ""};
       if(str.len(src)>0){
         let c=storetryparse(src);
         results=results.append(c)
@@ -178,7 +178,7 @@ f=storeallflat(contentdir:$str;contenttype:$str):@$content!$storeerr{
     }el{
       if(str.endswith(fpath;".json")){
         let fullpath=path.join(dir;fpath);
-        let src=file.read(fullpath)|{Ok:s s; Err:e ""};
+        let src=mt file.read(fullpath) {Ok:s s; Err:e ""};
         if(str.len(src)>0){
           let c=storetryparsejson(src);
           results=results.append(c)
@@ -208,7 +208,7 @@ f=storeslug(col:@$content;slug:$str):$content!$storeerr{
 f=storefind(col:@$content;key:$str;val:$str):$content!$storeerr{
   lp(let i=0;i<col.len;i=i+1){
     let item=col.get(i);
-    let found=item.meta.get(key)|{Ok:v v=val; Err:e false};
+    let found=mt item.meta.get(key) {Ok:v v=val; Err:e false};
     if(found){<item}el{}
   };
   (file.listall("")!$storeerr)

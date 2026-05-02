@@ -10,6 +10,7 @@ i=serve:ooke.serve;
 i=build:ooke.build;
 i=repair:ooke.repair;
 i=apihealth:ooke.apihealth;
+i=run:ooke.run;
 
 t=$ookecfg{
   sitename:$str;siteurl:$str;sitelanguage:$str;
@@ -33,7 +34,10 @@ f=cliprintusage():void{
   (log.info("  ooke serve [options]  start development server";@()));
   (log.info("  ooke build            build static HTML";@()));
   (log.info("  ooke gen <type> <name>  scaffold component";@()));
+  (log.info("  ooke gen spec <container> <type>  generate type-specialised code";@()));
   (log.info("  ooke repair <file>    run diagnostic repair";@()));
+  (log.info("  ooke run [path]       compile and run CLI package";@()));
+  (log.info("  ooke build --cli [path]  compile CLI binary only";@()));
   (log.info("";@()));
   (log.info("Options:";@()));
   (log.info("  --help       show this help";@()));
@@ -45,17 +49,17 @@ f=cliprintversion():void{
 };
 
 f=clinew(name:$str):i64{
-  let d1=file.mkdir(name)|{Ok:v v;Err:e false};
-  let d2=file.mkdir(path.join(name;"pages"))|{Ok:v v;Err:e false};
-  let d3=file.mkdir(path.join(name;"templates"))|{Ok:v v;Err:e false};
-  let d4=file.mkdir(path.join(name;"content"))|{Ok:v v;Err:e false};
-  let d5=file.mkdir(path.join(name;"static"))|{Ok:v v;Err:e false};
-  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninline_css = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[paths]\napi_prefix = \"\"\n\n[log]\naccess = \"logs/access.log\"\nmax_lines = 10000\nmax_age_days = 30\n"));
-  let w1=file.write(path.join(name;"ooke.toml");tomlcontent)|{Ok:v v;Err:e false};
+  let d1=mt file.mkdir(name) {Ok:v v;Err:e false};
+  let d2=mt file.mkdir(path.join(name;"pages")) {Ok:v v;Err:e false};
+  let d3=mt file.mkdir(path.join(name;"templates")) {Ok:v v;Err:e false};
+  let d4=mt file.mkdir(path.join(name;"content")) {Ok:v v;Err:e false};
+  let d5=mt file.mkdir(path.join(name;"static")) {Ok:v v;Err:e false};
+  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[paths]\napiprefix = \"\"\n\n[log]\naccess = \"logs/access.log\"\nmaxlines = 10000\nmaxagedays = 30\n"));
+  let w1=mt file.write(path.join(name;"ooke.toml");tomlcontent) {Ok:v v;Err:e false};
   let indexcontent="m=pages.index;\n";
-  let w2=file.write(path.join(path.join(name;"pages");"index.tk");indexcontent)|{Ok:v v;Err:e false};
+  let w2=mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {Ok:v v;Err:e false};
   let basecontent="<!DOCTYPE html>\n<html lang=\"en\">\n<head><meta charset=\"UTF-8\"><title>{{title}}</title></head>\n<body>\n{{content}}\n</body>\n</html>\n";
-  let w3=file.write(path.join(path.join(name;"templates");"base.tkt");basecontent)|{Ok:v v;Err:e false};
+  let w3=mt file.write(path.join(path.join(name;"templates");"base.tkt");basecontent) {Ok:v v;Err:e false};
   (log.info(str.concat("Created project: ";name);@()));
   <0
 };
@@ -64,38 +68,121 @@ f=cligen(gentype:$str;genname:$str):i64{
   if(gentype="page"){
     let pagepath=path.join("pages";str.concat(genname;".tk"));
     let pagecontent=str.concat("m=pages.";str.concat(genname;";\n"));
-    let pw=file.write(pagepath;pagecontent)|{Ok:v v;Err:e false};
+    let pw=mt file.write(pagepath;pagecontent) {Ok:v v;Err:e false};
     (log.info(str.concat("Created page: ";pagepath);@()));
     <0
   }el{
     if(gentype="type"){
-      let dm=file.mkdir("models")|{Ok:v v;Err:e false};
+      let dm=mt file.mkdir("models") {Ok:v v;Err:e false};
       let typepath=path.join("models";str.concat(genname;".toml"));
-      let typecontent=str.concat("name = \"";str.concat(genname;"\"\n\n[fields]\n_list = \"title, slug\"\n\n[fields.title]\ntype = \"str\"\nrequired = true\n\n[fields.slug]\ntype = \"str\"\nrequired = true\n"));
-      let tw=file.write(typepath;typecontent)|{Ok:v v;Err:e false};
+      let typecontent=str.concat("name = \"";str.concat(genname;"\"\n\n[fields]\nlist = \"title, slug\"\n\n[fields.title]\ntype = \"str\"\nrequired = true\n\n[fields.slug]\ntype = \"str\"\nrequired = true\n"));
+      let tw=mt file.write(typepath;typecontent) {Ok:v v;Err:e false};
       (log.info(str.concat("Created type: ";typepath);@()));
       <0
     }el{
       if(gentype="api"){
-        let da=file.mkdir(path.join("pages";"api"))|{Ok:v v;Err:e false};
+        let da=mt file.mkdir(path.join("pages";"api")) {Ok:v v;Err:e false};
         let apipath=path.join(path.join("pages";"api");str.concat(genname;".tk"));
         let apicontent=str.concat("m=pages.api.";str.concat(genname;";\n"));
-        let aw=file.write(apipath;apicontent)|{Ok:v v;Err:e false};
+        let aw=mt file.write(apipath;apicontent) {Ok:v v;Err:e false};
         (log.info(str.concat("Created api: ";apipath);@()));
         (log.info("Wire handler: add src/api<name>.tk with apiget/apipost/apiinit, import in main.tk, add to Makefile";@()));
         <0
       }el{
         if(gentype="island"){
-          let di=file.mkdir("islands")|{Ok:v v;Err:e false};
+          let di=mt file.mkdir("islands") {Ok:v v;Err:e false};
           let islandpath=path.join("islands";str.concat(genname;".tk"));
           let islandcontent=str.concat("m=islands.";str.concat(genname;";\n"));
-          let iw=file.write(islandpath;islandcontent)|{Ok:v v;Err:e false};
+          let iw=mt file.write(islandpath;islandcontent) {Ok:v v;Err:e false};
           (log.info(str.concat("Created island: ";islandpath);@()));
           <0
         }el{
           (log.info(str.concat("unknown gen type: ";gentype);@()));
           <1
         }
+      }
+    }
+  }
+};
+
+f=retcolon(t:$str):$str{
+  <str.concat(")";str.concat(":";t))
+};
+
+f=specstack(t:$str;name:$str):$str{
+  let hdr=str.concat("m=";str.concat(name;";\ni=stk:std.stack;\n\n"));
+  let tdef=str.concat("t=$";str.concat(name;"=stk.$stack;\n\n"));
+  let newbody=str.concat("{\n  <stk.stack.new() as $";str.concat(name;";\n};\n\n"));
+  let fnew=str.concat("f=new():$";str.concat(name;newbody));
+  let pushret=str.concat(retcolon(t);"{\n  <stk.stack.push(s as stk.$stack;val);\n};\n\n");
+  let pushsig=str.concat(";val:";str.concat(t;pushret));
+  let fpush=str.concat("f=push(s:$";str.concat(name;pushsig));
+  let popret=str.concat(retcolon(t);"{\n  <stk.stack.pop(s as stk.$stack);\n};\n\n");
+  let fpop=str.concat("f=pop(s:$";str.concat(name;popret));
+  let peekret=str.concat(retcolon(t);"{\n  <stk.stack.peek(s as stk.$stack);\n};\n\n");
+  let fpeek=str.concat("f=peek(s:$";str.concat(name;peekret));
+  let flen=str.concat("f=len(s:$";str.concat(name;str.concat(retcolon("i64");"{\n  <stk.stack.len(s as stk.$stack);\n};\n\n")));
+  let fempty=str.concat("f=empty(s:$";str.concat(name;str.concat(retcolon("i64");"{\n  <stk.stack.empty(s as stk.$stack);\n};\n")));
+  <str.concat(hdr;str.concat(tdef;str.concat(fnew;str.concat(fpush;str.concat(fpop;str.concat(fpeek;str.concat(flen;fempty)))))))
+};
+
+f=specqueue(t:$str;name:$str):$str{
+  let hdr=str.concat("m=";str.concat(name;";\ni=que:std.queue;\n\n"));
+  let tdef=str.concat("t=$";str.concat(name;"=que.$queue;\n\n"));
+  let newbody=str.concat("{\n  <que.queue.new() as $";str.concat(name;";\n};\n\n"));
+  let fnew=str.concat("f=new():$";str.concat(name;newbody));
+  let pushret=str.concat(retcolon(t);"{\n  <que.queue.push(q as que.$queue;val);\n};\n\n");
+  let pushsig=str.concat(";val:";str.concat(t;pushret));
+  let fpush=str.concat("f=push(q:$";str.concat(name;pushsig));
+  let popret=str.concat(retcolon(t);"{\n  <que.queue.pop(q as que.$queue);\n};\n\n");
+  let fpop=str.concat("f=pop(q:$";str.concat(name;popret));
+  let peekret=str.concat(retcolon(t);"{\n  <que.queue.peek(q as que.$queue);\n};\n\n");
+  let fpeek=str.concat("f=peek(q:$";str.concat(name;peekret));
+  let flen=str.concat("f=len(q:$";str.concat(name;str.concat(retcolon("i64");"{\n  <que.queue.len(q as que.$queue);\n};\n")));
+  <str.concat(hdr;str.concat(tdef;str.concat(fnew;str.concat(fpush;str.concat(fpop;str.concat(fpeek;flen))))))
+};
+
+f=specset(t:$str;name:$str):$str{
+  let hdr=str.concat("m=";str.concat(name;";\ni=st:std.set;\n\n"));
+  let tdef=str.concat("t=$";str.concat(name;"=st.$set;\n\n"));
+  let newbody=str.concat("{\n  <st.set.new() as $";str.concat(name;";\n};\n\n"));
+  let fnew=str.concat("f=new():$";str.concat(name;newbody));
+  let addret=str.concat(retcolon(t);"{\n  <st.set.add(s as st.$set;val);\n};\n\n");
+  let addsig=str.concat(";val:";str.concat(t;addret));
+  let fadd=str.concat("f=add(s:$";str.concat(name;addsig));
+  let hasret=str.concat(retcolon("i64");"{\n  <st.set.has(s as st.$set;val);\n};\n\n");
+  let hassig=str.concat(";val:";str.concat(t;hasret));
+  let fhas=str.concat("f=has(s:$";str.concat(name;hassig));
+  let remret=str.concat(retcolon(t);"{\n  <st.set.remove(s as st.$set;val);\n};\n\n");
+  let remsig=str.concat(";val:";str.concat(t;remret));
+  let fremove=str.concat("f=remove(s:$";str.concat(name;remsig));
+  let flen=str.concat("f=len(s:$";str.concat(name;str.concat(retcolon("i64");"{\n  <st.set.len(s as st.$set);\n};\n")));
+  <str.concat(hdr;str.concat(tdef;str.concat(fnew;str.concat(fadd;str.concat(fhas;str.concat(fremove;flen))))))
+};
+
+f=cligenspec(container:$str;typename:$str):i64{
+  let name=str.concat(container;typename);
+  let filename=str.concat(name;".tk");
+  if(container="stack"){
+    let content=specstack(typename;name);
+    let w=mt file.write(filename;content) {Ok:v v;Err:e false};
+    (log.info(str.concat("Created specialised: ";filename);@()));
+    <0
+  }el{
+    if(container="queue"){
+      let content=specqueue(typename;name);
+      let w=mt file.write(filename;content) {Ok:v v;Err:e false};
+      (log.info(str.concat("Created specialised: ";filename);@()));
+      <0
+    }el{
+      if(container="set"){
+        let content=specset(typename;name);
+        let w=mt file.write(filename;content) {Ok:v v;Err:e false};
+        (log.info(str.concat("Created specialised: ";filename);@()));
+        <0
+      }el{
+        (log.info(str.concat("unknown container: ";str.concat(container;", expected: stack, queue, set"));@()));
+        <1
       }
     }
   }
@@ -112,7 +199,7 @@ f=cfgdefault():$ookecfg{
 };
 
 f=runserve(projectdir:$str):i64{
-  let cfg=config.configload(path.join(projectdir;"ooke.toml"))|{Ok:v v;Err:e cfgdefault()};
+  let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {Ok:v v;Err:e cfgdefault()};
   let port=cfg.serverport;
   let workers=cfg.serverworkers;
   let output=cfg.buildoutput;
@@ -125,13 +212,13 @@ f=runserve(projectdir:$str):i64{
   (http.getstaticmime("/api/health";healthjson;"application/json"));
   (http.postjson("/api/health";healthjson));
   (log.info("api /api/health: GET+POST handlers registered (compiled module)";@()));
-  let r=serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins)|{Ok:v 0;Err:e 1};
+  let r=mt serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins) {Ok:v 0;Err:e 1};
   <r
 };
 
 f=runbuild(projectdir:$str):i64{
-  let cfg=config.configload(path.join(projectdir;"ooke.toml"))|{Ok:v v;Err:e cfgdefault()};
-  let report=build.buildrun(projectdir;cfg)|{Ok:v v;Err:e $buildreport{pagesbuilt:0;assetscopy:0;valerrors:0;valwarnings:0}};
+  let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {Ok:v v;Err:e cfgdefault()};
+  let report=mt build.buildrun(projectdir;cfg) {Ok:v v;Err:e $buildreport{pagesbuilt:0;assetscopy:0;valerrors:0;valwarnings:0}};
   (log.info(str.concat("pages built: ";str.fromint(report.pagesbuilt));@()));
   (log.info(str.concat("assets copied: ";str.fromint(report.assetscopy));@()));
   if(report.valerrors>0){
@@ -149,7 +236,7 @@ f=main():i64{
     (cliprintusage());
     <0
   }el{
-    let firstraw=args.get(1 as u64)|{Ok:v v;Err:e ""};
+    let firstraw=mt args.get(1 as u64) {Ok:v v;Err:e ""};
     if(firstraw="--help"){
       (cliprintusage());
       <0
@@ -164,7 +251,7 @@ f=main():i64{
             (log.info("usage: ooke new <name>";@()));
             <1
           }el{
-            let nameraw=args.get(2 as u64)|{Ok:v v;Err:e ""};
+            let nameraw=mt args.get(2 as u64) {Ok:v v;Err:e ""};
             <clinew(nameraw)
           }
         }el{
@@ -172,16 +259,44 @@ f=main():i64{
             <runserve(".")
           }el{
             if(cmd="build"){
-              <runbuild(".")
+              let buildarg=mt args.get(2 as u64) {Ok:v v;Err:e ""};
+              if(buildarg="--cli"){
+                let clipath=mt args.get(3 as u64) {Ok:v v;Err:e "."};
+                <run.build(clipath)
+              }el{
+                <runbuild(".")
+              }
             }el{
+              if(cmd="run"){
+                let runpath=mt args.get(2 as u64) {Ok:v v;Err:e "."};
+                let passargs=mut.@($str);
+                lp(let ri=3;ri<count;ri=ri+1){
+                  let ra=mt args.get(ri as u64) {Ok:v v;Err:e ""};
+                  passargs=passargs.append(ra)
+                };
+                <run.run(runpath;passargs)
+              }el{
               if(cmd="gen"){
                 if(count<4){
                   (log.info("usage: ooke gen <type> <name>";@()));
+                  (log.info("       ooke gen spec <container> <type>";@()));
                   <1
                 }el{
-                  let gentyperaw=args.get(2 as u64)|{Ok:v v;Err:e ""};
-                  let gennameraw=args.get(3 as u64)|{Ok:v v;Err:e ""};
-                  <cligen(gentyperaw;gennameraw)
+                  let gentyperaw=mt args.get(2 as u64) {Ok:v v;Err:e ""};
+                  if(gentyperaw="spec"){
+                    if(count<5){
+                      (log.info("usage: ooke gen spec <container> <type>";@()));
+                      (log.info("  containers: stack, queue, set";@()));
+                      <1
+                    }el{
+                      let containerraw=mt args.get(3 as u64) {Ok:v v;Err:e ""};
+                      let typenameraw=mt args.get(4 as u64) {Ok:v v;Err:e ""};
+                      <cligenspec(containerraw;typenameraw)
+                    }
+                  }el{
+                    let gennameraw=mt args.get(3 as u64) {Ok:v v;Err:e ""};
+                    <cligen(gentyperaw;gennameraw)
+                  }
                 }
               }el{
                 if(cmd="repair"){
@@ -189,7 +304,7 @@ f=main():i64{
                     (log.info("usage: ooke repair <file>";@()));
                     <1
                   }el{
-                    let repairpath=args.get(2 as u64)|{Ok:v v;Err:e ""};
+                    let repairpath=mt args.get(2 as u64) {Ok:v v;Err:e ""};
                     <repair.repairfile(repairpath;10)
                   }
                 }el{
@@ -199,6 +314,7 @@ f=main():i64{
                 }
               }
             }
+          }
           }
         }
       }

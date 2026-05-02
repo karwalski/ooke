@@ -89,7 +89,7 @@ Middleware functions transform requests or responses. They are registered via `o
 ```toke
 (* extensions/auth.tk — runs before extensions/logging.tk *)
 f=onrequest(req:$http.req):$http.req{
-  let token=http.header(req;"authorization")|{$ok:v v;$err:e ""};
+  let token=mt http.header(req;"authorization") {$ok:v v;$err:e ""};
   if(str.len(token)=0){
     <req  (* let route handler decide *)
   }el{
@@ -140,7 +140,7 @@ pages/api/
 API routes can be protected by middleware. The `onrequest` hook in an auth extension checks tokens before the route handler runs:
 
 ```toke
-(* extensions/jwt_auth.tk *)
+(* extensions/jwtauth.tk *)
 f=onrequest(req:$http.req):$http.req{
   let isapi=str.starts(req.path;"/api/");
   if(!isapi){ <req }el{
@@ -236,8 +236,8 @@ ooke applications access databases through `std.db` in route handlers:
 i=db:std.db;
 
 f=get(req:$http.req):$http.res{
-  let conn=db.open("sqlite:data.db")|{$ok:c c;$err:e <http.res.err("db error")};
-  let rows=db.query(conn;"SELECT id, name FROM items";@())|{$ok:r r;$err:e <http.res.err("query error")};
+  let conn=mt db.open("sqlite:data.db") {$ok:c c;$err:e <http.res.err("db error")};
+  let rows=mt db.query(conn;"SELECT id, name FROM items";@()) {$ok:r r;$err:e <http.res.err("query error")};
   <http.res.json(200;db.tojson(rows))
 };
 ```
@@ -261,7 +261,7 @@ Run with: `ooke migrate` (planned CLI extension).
 Server-side LLM calls from ooke handlers via `std.llm` or HTTP API:
 
 ```toke
-(* extensions/ai_summary.tk *)
+(* extensions/aisummary.tk *)
 i=http:std.http;
 i=json:std.json;
 
@@ -309,7 +309,7 @@ loke/
   content/
     docs/                 # documentation markdown
   extensions/
-    search_index.tk       # builds search index on init
+    searchindex.tk        # builds search index on init
   static/
     css/theme.css
   models/
