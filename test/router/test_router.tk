@@ -4,8 +4,7 @@ i=test:std.test;
 i=str:std.str;
 i=file:std.file;
 
-(* Create a temporary pages directory with a set of .tk page files,
-   call routerscan, and verify that the expected patterns are present. *)
+
 f=testscanbasic():bool{
   let tmp=file.tempdir()!$router.$routeerr;
   (file.mkdir(str.concat(tmp;"/blog")));
@@ -37,8 +36,7 @@ f=testscanbasic():bool{
   }
 };
 
-(* Build a static route list manually and verify that an exact URL match
-   succeeds with an empty params map. *)
+
 f=testmatchstatic():bool{
   let r=$router.$route{
     pattern:"/about";
@@ -62,8 +60,7 @@ f=testmatchstatic():bool{
   }
 };
 
-(* Build a dynamic route and verify that the captured param is extracted
-   correctly from the URL. *)
+
 f=testmatchdynamic():bool{
   let r=$router.$route{
     pattern:"/blog/:slug";
@@ -91,7 +88,7 @@ f=testmatchdynamic():bool{
   }
 };
 
-(* Verify that a URL with no matching route returns an error. *)
+
 f=testmatchnomatch():bool{
   let r=$router.$route{
     pattern:"/about";
@@ -110,7 +107,7 @@ f=testmatchnomatch():bool{
   }
 };
 
-(* Verify that the root URL "/" matches a route with pattern "/". *)
+
 f=testmatchroot():bool{
   let r=$router.$route{
     pattern:"/";
@@ -132,8 +129,7 @@ f=testmatchroot():bool{
   }
 };
 
-(* Verify that a more specific dynamic route (fewer dynamic segments)
-   is preferred over a less specific one. *)
+
 f=testmatchspecificity():bool{
   let generic=$router.$route{
     pattern:"/docs/:section/:slug";

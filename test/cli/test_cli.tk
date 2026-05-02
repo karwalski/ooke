@@ -5,7 +5,7 @@ i=test:std.test;
 i=path:std.path;
 i=ookecli:ooke.cli;
 
-(* Verify that clinew creates the expected directory structure and config file. *)
+
 f=testnewcreatesdirs():bool{
   let proj="test_ooke_proj";
   let rc=ookecli.clinew(proj);
@@ -49,7 +49,7 @@ f=testnewcreatesdirs():bool{
   <rootok&&pagesok&&templatesok&&contentok&&staticok&&tomlok&&indexok&&baseok
 };
 
-(* Verify that clinew writes a valid ooke.toml containing the project name. *)
+
 f=testnewtomlcontent():bool{
   let proj="test_ooke_toml";
   let rc=ookecli.clinew(proj);
@@ -72,7 +72,7 @@ f=testnewtomlcontent():bool{
   <ok
 };
 
-(* Verify that cligen creates a page stub at pages/<name>.tk. *)
+
 f=testgenpage():bool{
   let mkresult=file.mkdir("pages");
   mt mkresult{
@@ -97,13 +97,13 @@ f=testgenpage():bool{
   <exists&&contentok
 };
 
-(* Verify that cligen for an unknown type returns non-zero. *)
+
 f=testgenunknowntype():bool{
   let rc=ookecli.cligen("unknowntype";"foo");
   <rc==1
 };
 
-(* Verify that cligen creates an api stub under pages/api/. *)
+
 f=testgenapi():bool{
   let mkresult=file.mkdir(path.join("pages";"api"));
   mt mkresult{

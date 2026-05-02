@@ -4,14 +4,9 @@ i=test:std.test;
 i=str:std.str;
 i=file:std.file;
 
-(* ===================================================================
-   test_template.tk — unit tests for ooke.template
 
-   Run 15 tests covering: lexer, renderer, filters, escaping,
-   layout detection, block collection, partials, and the cache.
-   =================================================================== *)
 
-(* 1. Raw passthrough — a template with no delimiters returns itself. *)
+
 f=testrawpassthrough():bool{
   let src="<p>Hello, world!</p>";
   let tokens=tpl.tpllex(src);
@@ -37,7 +32,7 @@ f=testrawpassthrough():bool{
   })
 };
 
-(* 2. Simple expression substitution: {= name =} with ctx ("name":"World"). *)
+
 f=testexprsimple():bool{
   let src="Hello, {= name =}!";
   let ctx=@("name":"World");
@@ -64,7 +59,7 @@ f=testexprsimple():bool{
   })
 };
 
-(* 3. Missing key in ctx yields empty string, no crash. *)
+
 f=testexprmissingkey():bool{
   let src="{= missingkey =}";
   let ctx=@($str:$str);
@@ -90,7 +85,7 @@ f=testexprmissingkey():bool{
   })
 };
 
-(* 4. Dotted key: {= site.name =} with ctx ("site.name":"toke"). *)
+
 f=testdottedkey():bool{
   let src="Site: {= site.name =}";
   let ctx=@("site.name":"toke");
@@ -116,7 +111,7 @@ f=testdottedkey():bool{
   })
 };
 
-(* 5. Filter md: {= body | md =} with body "# Hello" should produce <h1>. *)
+
 f=testfiltermd():bool{
   let src="{= body | md =}";
   let ctx=@("body":"# Hello");
@@ -142,7 +137,7 @@ f=testfiltermd():bool{
   })
 };
 
-(* 6. Filter upper: {= name | upper =} uppercases the value. *)
+
 f=testfilterupper():bool{
   let src="{= name | upper =}";
   let ctx=@("name":"toke");
@@ -168,7 +163,7 @@ f=testfilterupper():bool{
   })
 };
 
-(* 7. Filter escape: {= text | escape =} with <script> produces &lt;script&gt;. *)
+
 f=testfilterescape():bool{
   let src="{= text | escape =}";
   let ctx=@("text":"<script>alert(1)</script>");
@@ -195,7 +190,7 @@ f=testfilterescape():bool{
   })
 };
 
-(* 8. Comment: {# this is a comment #} should not appear in output. *)
+
 f=testcommentignored():bool{
   let src="before{# this is a comment #}after";
   let ctx=@($str:$str);
@@ -223,14 +218,13 @@ f=testcommentignored():bool{
   })
 };
 
-(* 9. Layout directive: {! layout("base") !} should lex without crash.
-   We verify the directive token is present with "layout" content. *)
+
 f=testlayoutdetected():bool{
   let src="{! layout(\"base\") !}<p>child content</p>";
   let tokens=tpl.tpllex(src);
   (mt tokens{
     ok(toks){
-      (* should have at least two tokens: directive + raw *)
+      
       (test.eq(toks.len>=2;true));
       let first=toks.get(0);
       (test.eq(first.kind.directive;true));
@@ -244,19 +238,19 @@ f=testlayoutdetected():bool{
   })
 };
 
-(* 10. Block collection: block/end pair is lexed and rendered without error. *)
+
 f=testblockcollected():bool{
   let src="{! block(\"title\") !}My Title{! end !}";
   let ctx=@($str:$str);
   let tokens=tpl.tpllex(src);
   (mt tokens{
     ok(toks){
-      (* three tokens: directive(block), raw, directive(end) *)
+      
       (test.eq(toks.len;3));
       let out=tpl.tplrender(toks;ctx;"/tmp";@());
       (mt out{
         ok(s){
-          (* block content is collected and not emitted in plain render *)
+          
           <true
         };
         err(e){
@@ -272,7 +266,7 @@ f=testblockcollected():bool{
   })
 };
 
-(* 11. tplescape helper: "<b>&" produces "&lt;b&gt;&amp;". *)
+
 f=testescapehelper():bool{
   let result=tpl.tplescape("<b>&");
   (test.eq(str.contains(result;"&lt;b&gt;");true));
@@ -281,14 +275,13 @@ f=testescapehelper():bool{
   <true
 };
 
-(* 12. Lex a mixed template and verify token count and types. *)
+
 f=testlexbasic():bool{
   let src="<p>{= title =}</p>{# ignore #}{! block(\"x\") !}body{! end !}";
   let tokens=tpl.tpllex(src);
   (mt tokens{
     ok(toks){
-      (* expected: raw("<p>"), expr("title"), raw("</p>"),
-                   comment, directive(block), raw("body"), directive(end) *)
+      
       (test.eq(toks.len;7));
       let t0=toks.get(0);
       (test.eq(t0.kind.raw;true));
@@ -307,7 +300,7 @@ f=testlexbasic():bool{
   })
 };
 
-(* 13. tplrenderfile simple — write a temp .tkt file and render it. *)
+
 f=testrenderfilesimple():bool{
   let tktsrc="<h1>{= heading =}</h1><p>{= body =}</p>";
   let tktpath="/tmp/test_ooke_simple.tkt";
@@ -334,7 +327,7 @@ f=testrenderfilesimple():bool{
   })
 };
 
-(* 14. Cache hit — rendering same path twice stores tokens in cache. *)
+
 f=testcachehit():bool{
   let tktsrc="<p>{= msg =}</p>";
   let tktpath="/tmp/test_ooke_cache.tkt";
@@ -349,17 +342,17 @@ f=testcachehit():bool{
   let ctx=@("msg":"cached");
   let cache0=tpl.tplcachenew();
 
-  (* first render — lex and cache *)
+  
   let r1=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";cache0);
   (mt r1{
     ok(rr1){
       (test.eq(str.contains(rr1.output;"cached");true));
-      (* second render — should use cache; cache should contain the key *)
+      
       let r2=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";rr1.cache);
       (mt r2{
         ok(rr2){
           (test.eq(str.contains(rr2.output;"cached");true));
-          (* verify key is now present in entries *)
+          
           let hasentry=mt rr2.cache.entries.get(tktpath){
             ok(v){<true};
             err(e){<false}
@@ -380,9 +373,7 @@ f=testcachehit():bool{
   })
 };
 
-(* 15. Partial inclusion: {! partial("header") !}
-   Writes a header partial file, then renders a parent template that
-   includes it, verifying the partial content appears in output. *)
+
 f=testpartial():bool{
   let partialsrc="<header><a href=\"/\">Home</a></header>";
   let partialpath="/tmp/header.tkt";
@@ -420,7 +411,7 @@ f=testpartial():bool{
   })
 };
 
-(* ---- main: run all 15 tests ---- *)
+
 
 f=main():i64{
   let r0=testrawpassthrough();
