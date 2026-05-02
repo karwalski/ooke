@@ -12,6 +12,7 @@ i=repair:ooke.repair;
 i=apihealth:ooke.apihealth;
 i=handlers:ooke.handlers;
 i=run:ooke.run;
+i=process:std.process;
 
 t=$ookecfg{
   sitename:$str;siteurl:$str;sitelanguage:$str;
@@ -37,6 +38,7 @@ f=cliprintusage():void{
   (log.info("  ooke gen <type> <name>  scaffold component";@()));
   (log.info("  ooke gen spec <container> <type>  generate type-specialised code";@()));
   (log.info("  ooke repair <file>    run diagnostic repair";@()));
+  (log.info("  ooke compile [path]   compile per-app serve binary with handlers";@()));
   (log.info("  ooke run [path]       compile and run CLI package";@()));
   (log.info("  ooke build --cli [path]  compile CLI binary only";@()));
   (log.info("";@()));
@@ -275,6 +277,37 @@ f=main():i64{
                 };
                 <run.run(runpath;passargs)
               }el{
+              if(cmd="compile"){
+                let compilepath=mt args.get(2 as u64) {Ok:v v;Err:e "."};
+                (log.info(str.concat("generating app build for ";compilepath);@()));
+                let genh=mt process.spawn(@("sh";"scripts/gen_app_makefile.sh";compilepath)) {Ok:v v;Err:e 0};
+                if(genh=0){
+                  (log.info("failed to run gen_app_makefile.sh";@()));
+                  <1
+                }el{};
+                let genexit=mt process.wait(genh) {Ok:v v;Err:e 1};
+                if(!(genexit=0)){
+                  (log.info("Makefile generation failed";@()));
+                  <1
+                }el{};
+                (log.info("building with make -f Makefile.serve";@()));
+                let makeh=mt process.spawn(@("make";"-f";"Makefile.serve";"-C";compilepath)) {Ok:v v;Err:e 0};
+                if(makeh=0){
+                  (log.info("failed to run make";@()));
+                  <1
+                }el{};
+                let makeexit=mt process.wait(makeh) {Ok:v v;Err:e 1};
+                let makeout=mt process.stdout(makeh) {Ok:v v;Err:e ""};
+                let makeerr=mt process.stderr(makeh) {Ok:v v;Err:e ""};
+                if(str.len(makeout)>0){(log.info(makeout;@()))}el{};
+                if(str.len(makeerr)>0){(log.info(makeerr;@()))}el{};
+                if(!(makeexit=0)){
+                  (log.info("compilation failed";@()));
+                  <1
+                }el{};
+                (log.info("compile complete";@()));
+                <0
+              }el{
               if(cmd="gen"){
                 if(count<4){
                   (log.info("usage: ooke gen <type> <name>";@()));
@@ -313,6 +346,7 @@ f=main():i64{
                 }
               }
             }
+          }
           }
           }
         }
