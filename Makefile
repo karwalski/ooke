@@ -5,7 +5,7 @@
 #   2. Compile main.tk to .ll
 #   3. Link all .ll + stdlib C + vendor C into the ooke binary
 
-TKC         := /Users/matthew.watt/tk/toke/tkc
+TKC         := /Users/matthew.watt/tk/toke/toke --compile
 TOKE_ROOT   := /Users/matthew.watt/tk/toke
 TOKE_STDLIB := $(TOKE_ROOT)/src/stdlib
 TOKE_VENDOR := $(TOKE_ROOT)/stdlib/vendor
@@ -48,7 +48,9 @@ STDLIB_SRCS := \
   $(TOKE_STDLIB)/os.c \
   $(TOKE_STDLIB)/db.c \
   $(TOKE_STDLIB)/json.c \
-  $(TOKE_STDLIB)/process.c
+  $(TOKE_STDLIB)/process.c \
+  $(TOKE_STDLIB)/task.c \
+  $(TOKE_STDLIB)/collections.c
 
 # ── Vendor C sources ───────────────────────────────────────────────────────
 CMARK_SRCS := $(filter-out $(TOKE_VENDOR)/cmark/src/main.c, \
