@@ -5,7 +5,7 @@
 #   2. Compile main.tk to .ll
 #   3. Link all .ll + stdlib C + vendor C into the ooke binary
 
-TKC         := /Users/matthew.watt/tk/toke/toke --compile
+TKC         := /Users/matthew.watt/tk/toke/toke
 TOKE_ROOT   := /Users/matthew.watt/tk/toke
 TOKE_STDLIB := $(TOKE_ROOT)/src/stdlib
 TOKE_VENDOR := $(TOKE_ROOT)/stdlib/vendor
