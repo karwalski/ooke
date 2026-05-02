@@ -14,40 +14,58 @@ t=$route{pattern:$str;filepath:$str;templatepath:$str;contenttype:$str;isdynamic
 
 t=$content{slug:$str;type:$str;title:$str;meta:@($str:$str);body:$str};
 
-f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str):void{
+f=servegetjson(pattern:$str;json:$str):void{
+  (http.getstaticmime(pattern;json;"application/json"));
+  (log.info(str.concat("static json GET: ";pattern);@()))
+};
+
+f=servepostjson(pattern:$str;json:$str):void{
+  (http.postjson(pattern;json));
+  (log.info(str.concat("static json POST: ";pattern);@()))
+};
+
+f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;handledpaths:@$str):void{
   let routes=mt ookerouter.routerscan(pagesdir) {Ok:r r;Err:e @($route)};
   lp(let i=0;i<routes.len;i=i+1){
     let r=routes.get(i);
     let isdyn=r.isdynamic;
     let isapi=r.isapi;
     if(!isdyn&&!isapi){
-      let ctx=@(
-        "site.name":sitename;
-        "site.url":siteurl;
-        "site.language":sitelanguage
-      );
-      let tpath=r.templatepath;
-      let html=mt tpl.tplrenderfile(tpath;ctx;templatesdir) {Ok:h h;Err:e ""};
       let rawweb=r.pattern;
       let webpath=mut.rawweb;
       if(str.startswith(rawweb;"/api/")&&str.len(apiprefix)>0){
         let wroutename=str.trimprefix(rawweb;"/api/");
         webpath=str.concat("/api/";str.concat(apiprefix;str.concat("/";wroutename)))
       }el{};
-      if(str.len(html)>0){
-        (log.info(str.concat("reg static: ";webpath);@()));
-        (http.getstatic(webpath;html))
+      let alreadyhandled=mut.false;
+      lp(let h=0;h<handledpaths.len;h=h+1){
+        if(handledpaths.get(h)=webpath){alreadyhandled=true}el{}
+      };
+      if(alreadyhandled){
+        (log.info(str.concat("skip (dynamic handler registered): ";webpath);@()))
       }el{
-        let isapiroute=str.startswith(webpath;"/api/");
-        if(isapiroute){
-          let defaultjson=str.concat("{\"status\":\"ok\",\"endpoint\":\"";str.concat(webpath;"\"}"));
-          (log.info(str.concat("reg static api json (fallback): ";webpath);@()));
-          (http.getstaticmime(webpath;defaultjson;"application/json"));
-          (http.postecho(webpath))
+        let ctx=@(
+          "site.name":sitename;
+          "site.url":siteurl;
+          "site.language":sitelanguage
+        );
+        let tpath=r.templatepath;
+        let html=mt tpl.tplrenderfile(tpath;ctx;templatesdir) {Ok:h h;Err:e ""};
+        if(str.len(html)>0){
+          (log.info(str.concat("reg static: ";webpath);@()));
+          (http.getstatic(webpath;html))
         }el{
-          let fallbackhtml=str.concat("<html><body><p>";str.concat(webpath;"</p></body></html>"));
-          (log.info(str.concat("reg static (empty tpl fallback): ";webpath);@()));
-          (http.getstatic(webpath;fallbackhtml))
+          let isapiroute=str.startswith(webpath;"/api/");
+          if(isapiroute){
+            let defaultjson=str.concat("{\"status\":\"ok\",\"endpoint\":\"";str.concat(webpath;"\"}"));
+            (log.info(str.concat("reg static api json (fallback): ";webpath);@()));
+            (http.getstaticmime(webpath;defaultjson;"application/json"));
+            (http.postecho(webpath))
+          }el{
+            let fallbackhtml=str.concat("<html><body><p>";str.concat(webpath;"</p></body></html>"));
+            (log.info(str.concat("reg static (empty tpl fallback): ";webpath);@()));
+            (http.getstatic(webpath;fallbackhtml))
+          }
         }
       }
     }el{}
@@ -91,16 +109,27 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
         let routename=str.trimprefix(rawapi;"/api/");
         apipath=str.concat("/api/";str.concat(apiprefix;str.concat("/";routename)))
       }el{};
-      (log.info(str.concat("api route (handler via module init): ";apipath);@()))
+      let apihandled=mut.false;
+      lp(let ah=0;ah<handledpaths.len;ah=ah+1){
+        if(handledpaths.get(ah)=apipath){apihandled=true}el{}
+      };
+      if(apihandled){
+        (log.info(str.concat("skip api (dynamic handler registered): ";apipath);@()))
+      }el{
+        (log.info(str.concat("api route (no handler, static fallback): ";apipath);@()));
+        let defaultjson=str.concat("{\"status\":\"ok\",\"endpoint\":\"";str.concat(apipath;"\"}"));
+        (http.getstaticmime(apipath;defaultjson;"application/json"));
+        (http.postecho(apipath))
+      }
     }el{}
   }
 };
 
-f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;corsorigins:$str):i64!$serveerr{
+f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;corsorigins:$str;handledpaths:@$str):i64!$serveerr{
   let pagesdir=path.join(projectdir;"pages");
   let contentdir=path.join(projectdir;"content");
   let templatesdir=path.join(projectdir;"templates");
-  (serveregisterstatic(pagesdir;contentdir;templatesdir;sitename;siteurl;sitelanguage;apiprefix));
+  (serveregisterstatic(pagesdir;contentdir;templatesdir;sitename;siteurl;sitelanguage;apiprefix;handledpaths));
   if(str.len(corsorigins)>0){
     (http.setcors(corsorigins));
     (log.info(str.concat("CORS enabled: ";corsorigins);@()))

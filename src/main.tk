@@ -208,11 +208,13 @@ f=runserve(projectdir:$str):i64{
   let sitelanguage=cfg.sitelanguage;
   let apiprefix=cfg.apiprefix;
   let corsorigins=cfg.servercorsorigins;
+  let handledpaths=mut.@($str);
   let healthjson=apihealth.apigetjson();
   (http.getstaticmime("/api/health";healthjson;"application/json"));
   (http.postjson("/api/health";healthjson));
+  handledpaths=handledpaths.append("/api/health");
   (log.info("api /api/health: GET+POST handlers registered (compiled module)";@()));
-  let r=mt serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins) {Ok:v 0;Err:e 1};
+  let r=mt serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {Ok:v 0;Err:e 1};
   <r
 };
 
