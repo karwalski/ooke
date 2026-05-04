@@ -159,8 +159,10 @@ f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tl
   let uport=port as u64;
   let uworkers=workers as u64;
   if(!(tlscert="")){
+    (log.info(str.concat("mode: HTTPS (TLS) on port ";str.fromint(port));@()));
     (http.servetls(uport;tlscert;tlskey))
   }el{
+    (log.info(str.concat("mode: HTTP (no TLS certs) on port ";str.fromint(port));@()));
     (http.serveworkers(uport;uworkers))
   }
 };

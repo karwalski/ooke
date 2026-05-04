@@ -87,9 +87,13 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all clean interfaces check
+.PHONY: all dev clean interfaces check
 
 all: $(BIN)
+
+dev: $(BIN)
+	@echo "Development server: http://localhost:3000"
+	./$(BIN) serve
 
 $(IFACE_DIR):
 	mkdir -p $(IFACE_DIR)
