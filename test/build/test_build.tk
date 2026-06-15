@@ -1,0 +1,83 @@
+m=test.build;
+i=build:ooke.build;
+i=test:std.test;
+i=file:std.file;
+i=str:std.str;
+
+f=testoutputpathroot():bool{
+  let p=build.buildoutputpath("/";"build/");
+  (test.eq(p;"build/index.html"));
+  <true
+};
+
+f=testoutputpathnested():bool{
+  let p=build.buildoutputpath("/about";"build");
+  (test.eq(p;"build/about/index.html"));
+  <true
+};
+
+f=testoutputpathdeep():bool{
+  let p=build.buildoutputpath("/blog/post";"out");
+  (test.eq(p;"out/blog/post/index.html"));
+  <true
+};
+
+f=testminifycollapsespaces():bool{
+  let out=build.buildminify("<p>a    b</p>");
+  (test.eq(out;"<p>a b</p>"));
+  <true
+};
+
+f=testminifystripscomment():bool{
+  let out=build.buildminify("<p>x</p><!-- hidden -->");
+  (test.eq(str.contains(out;"hidden");false));
+  (test.eq(str.contains(out;"<p>x</p>");true));
+  <true
+};
+
+f=testminifynoop():bool{
+  let out=build.buildminify("<p>clean</p>");
+  (test.eq(out;"<p>clean</p>"));
+  <true
+};
+
+f=testinlinecssnolink():bool{
+  let html="<html><body>no stylesheet here</body></html>";
+  let out=build.buildinlinecss(html;"/tmp/test_build_tpls");
+  (test.eq(out;html));
+  <true
+};
+
+f=testinlinecssinlines():bool{
+  let dir="/tmp/test_build_css";
+  let mkr=mt file.mkdir(dir) {$ok:v true;$err:e false};
+  if(mkr=false){<false};
+  let cssw=mt file.write("/tmp/test_build_css/style.css";"body{color:red}") {$ok:v true;$err:e false};
+  if(cssw=false){<false};
+  let html="<head><link rel=\"stylesheet\" href=\"style.css\"></head>";
+  let out=build.buildinlinecss(html;dir);
+  (test.eq(str.contains(out;"<style>");true));
+  (test.eq(str.contains(out;"body{color:red}");true));
+  (test.eq(str.contains(out;"<link rel=\"stylesheet\"");false));
+  <true
+};
+
+f=testinlinecssmissingfile():bool{
+  let html="<head><link rel=\"stylesheet\" href=\"missing.css\"></head>";
+  let out=build.buildinlinecss(html;"/tmp/test_build_nodir");
+  (test.eq(out;html));
+  <true
+};
+
+f=main():i64{
+  let r0=testoutputpathroot();
+  let r1=testoutputpathnested();
+  let r2=testoutputpathdeep();
+  let r3=testminifycollapsespaces();
+  let r4=testminifystripscomment();
+  let r5=testminifynoop();
+  let r6=testinlinecssnolink();
+  let r7=testinlinecssinlines();
+  let r8=testinlinecssmissingfile();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8){<0}el{<1}
+};
