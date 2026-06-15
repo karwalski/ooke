@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "module": "ooke.main",
+  "version": "1.0.0",
+  "exports": [
+    {"kind": "func", "name": "main", "params": [], "return": "i64"}
+  ]
+}

@@ -1,95 +1,137 @@
 m=test.cli;
-i=file:std.file;
 i=str:std.str;
+i=file:std.file;
 i=test:std.test;
 i=path:std.path;
-i=ookecli:ooke.cli;
+i=cli:ooke.cli;
+i=cfgmod:ooke.config;
 
-
-f=failret(msg:str):bool{
-  (test.fail(msg));
-  <false
+f=delfile(p:$str):bool{
+  <mt file.delete(p) {$ok:v true;$err:e false}
 };
 
-
-f=testnewcreatesdirs():bool{
-  let proj="test_ooke_proj";
-  let rc=ookecli.clinew(proj);
-  if(!(rc=0)){
-    (test.fail("clinew returned non-zero"));
-    <false
-  };
-  let rootok=mt file.exists(proj) {$ok:v v;$err:e false};
-  let pagesok=mt file.exists(path.join(proj;"pages")) {$ok:v v;$err:e false};
-  let templatesok=mt file.exists(path.join(proj;"templates")) {$ok:v v;$err:e false};
-  let contentok=mt file.exists(path.join(proj;"content")) {$ok:v v;$err:e false};
-  let staticok=mt file.exists(path.join(proj;"static")) {$ok:v v;$err:e false};
-  let tomlok=mt file.exists(path.join(proj;"ooke.toml")) {$ok:v v;$err:e false};
-  let indexok=mt file.exists(path.join(path.join(proj;"pages");"index.tk")) {$ok:v v;$err:e false};
-  let baseok=mt file.exists(path.join(path.join(proj;"templates");"base.tkt")) {$ok:v v;$err:e false};
-  (file.removeall(proj));
-  <rootok&&pagesok&&templatesok&&contentok&&staticok&&tomlok&&indexok&&baseok
+f=testcfgdefault():bool{
+  let cfg=cli.cfgdefault();
+  (test.eq(cfg.sitename;"my-site"));
+  (test.eq(cfg.siteurl;""));
+  (test.eq(cfg.sitelanguage;"en"));
+  (test.eq(cfg.buildoutput;"build/"));
+  (test.eq(cfg.buildminify;true));
+  (test.eq(cfg.buildinlinecss;true));
+  (test.eq(cfg.serverport;3000));
+  (test.eq(cfg.serverworkers;0));
+  (test.eq(cfg.servercorsorigins;""));
+  (test.eq(cfg.storebackend;"flat"));
+  (test.eq(cfg.logaccess;"logs/access.log"));
+  (test.eq(cfg.logmaxlines;10000));
+  (test.eq(cfg.logmaxagedays;30));
+  (test.eq(cfg.apiprefix;""));
+  <str.eq(cfg.sitename;"my-site")&&str.eq(cfg.buildoutput;"build/")&&cfg.serverport=3000
 };
 
-
-f=testnewtomlcontent():bool{
-  let proj="test_ooke_toml";
-  let rc=ookecli.clinew(proj);
-  if(!(rc=0)){
-    (test.fail("clinew returned non-zero"));
-    <false
-  };
-  let tomlpath=path.join(proj;"ooke.toml");
-  let readresult=file.read(tomlpath);
-  let ok=mt readresult {$ok:src str.contains(src;proj)&&str.contains(src;"[site]")&&str.contains(src;"[server]");$err:e failret("could not read ooke.toml")};
-  (file.removeall(proj));
-  <ok
+f=testretcolon():bool{
+  let r=cli.retcolon("i64");
+  (test.eq(r;"):i64"));
+  <str.eq(r;"):i64")
 };
 
+f=testspecstack():bool{
+  let code=cli.specstack("i64";"intstack");
+  let okmod=str.contains(code;"m=intstack;");
+  let okimp=str.contains(code;"i=stk:std.stack;");
+  let oktype=str.contains(code;"t=$intstack=stk.$stack;");
+  let oknew=str.contains(code;"f=new():$intstack");
+  let okpush=str.contains(code;"f=push(s:$intstack;val:i64):i64");
+  let okpushbody=str.contains(code;"<stk.stack.push(s as stk.$stack;val);");
+  let okpop=str.contains(code;"f=pop(s:$intstack):i64");
+  let okpeek=str.contains(code;"f=peek(s:$intstack):i64");
+  let oklen=str.contains(code;"f=len(s:$intstack):i64");
+  let okempty=str.contains(code;"f=empty(s:$intstack):i64");
+  (test.assert(okmod;"specstack module header"));
+  (test.assert(oktype;"specstack type alias"));
+  (test.assert(okpush;"specstack push signature"));
+  (test.assert(okempty;"specstack empty signature"));
+  <okmod&&okimp&&oktype&&oknew&&okpush&&okpushbody&&okpop&&okpeek&&oklen&&okempty
+};
+
+f=testspecqueue():bool{
+  let code=cli.specqueue("$str";"strqueue");
+  let okmod=str.contains(code;"m=strqueue;");
+  let okimp=str.contains(code;"i=que:std.queue;");
+  let oktype=str.contains(code;"t=$strqueue=que.$queue;");
+  let okpush=str.contains(code;"f=push(q:$strqueue;val:$str):$str");
+  let okpushbody=str.contains(code;"<que.queue.push(q as que.$queue;val);");
+  let okpop=str.contains(code;"f=pop(q:$strqueue):$str");
+  let oklen=str.contains(code;"f=len(q:$strqueue):i64");
+  (test.assert(okmod;"specqueue module header"));
+  (test.assert(okpush;"specqueue push signature"));
+  <okmod&&okimp&&oktype&&okpush&&okpushbody&&okpop&&oklen
+};
+
+f=testspecset():bool{
+  let code=cli.specset("i64";"intset");
+  let okmod=str.contains(code;"m=intset;");
+  let okimp=str.contains(code;"i=st:std.set;");
+  let oktype=str.contains(code;"t=$intset=st.$set;");
+  let okadd=str.contains(code;"f=add(s:$intset;val:i64):i64");
+  let okhas=str.contains(code;"f=has(s:$intset;val:i64):i64");
+  let okhasbody=str.contains(code;"<st.set.has(s as st.$set;val);");
+  let okremove=str.contains(code;"f=remove(s:$intset;val:i64):i64");
+  let oklen=str.contains(code;"f=len(s:$intset):i64");
+  (test.assert(okmod;"specset module header"));
+  (test.assert(okhas;"specset has signature"));
+  <okmod&&okimp&&oktype&&okadd&&okhas&&okhasbody&&okremove&&oklen
+};
+
+f=testgenunknowntype():bool{
+  let rc=cli.cligen("unknowntype";"foo");
+  (test.eq(rc;1));
+  <rc=1
+};
+
+f=testgenspecunknown():bool{
+  let rc=cli.cligenspec("tree";"foo");
+  (test.eq(rc;1));
+  <rc=1
+};
 
 f=testgenpage():bool{
   let mkresult=file.mkdir("pages");
   let d1=mt mkresult {$ok:v 0;$err:e 0};
-  let rc=ookecli.cligen("page";"mypage");
-  if(!(rc=0)){
-    (test.fail("cligen page returned non-zero"));
-    <false
-  };
+  let rc=cli.cligen("page";"mypage");
+  (test.eq(rc;0));
   let pagepath=path.join("pages";"mypage.tk");
   let exists=mt file.exists(pagepath) {$ok:v v;$err:e false};
-  let contentok=mt file.read(pagepath) {$ok:src str.contains(src;"mypage");$err:e false};
-  (file.remove(pagepath));
-  <exists&&contentok
+  let contentok=mt file.read(pagepath) {$ok:src str.contains(src;"m=pages.mypage;");$err:e false};
+  (delfile(pagepath));
+  (test.assert(exists;"gen page file exists"));
+  (test.assert(contentok;"gen page content"));
+  <rc=0&&exists&&contentok
 };
 
-
-f=testgenunknowntype():bool{
-  let rc=ookecli.cligen("unknowntype";"foo");
-  <rc=1
-};
-
-
-f=testgenapi():bool{
-  let mkresult=file.mkdir(path.join("pages";"api"));
-  let d1=mt mkresult {$ok:v 0;$err:e 0};
-  let rc=ookecli.cligen("api";"myapi");
-  if(!(rc=0)){
-    (test.fail("cligen api returned non-zero"));
-    <false
-  };
-  let apipath=path.join(path.join("pages";"api");"myapi.tk");
-  let exists=mt file.exists(apipath) {$ok:v v;$err:e false};
-  (file.remove(apipath));
-  <exists
+f=testgenspecstackfile():bool{
+  let rc=cli.cligenspec("stack";"i64stk");
+  (test.eq(rc;0));
+  let fpath="stacki64stk.tk";
+  let exists=mt file.exists(fpath) {$ok:v v;$err:e false};
+  let contentok=mt file.read(fpath) {$ok:src str.contains(src;"t=$stacki64stk=stk.$stack;");$err:e false};
+  (delfile(fpath));
+  (test.assert(exists;"gen spec stack file exists"));
+  (test.assert(contentok;"gen spec stack file content"));
+  <rc=0&&exists&&contentok
 };
 
 f=main():i64{
-  let r0=testnewcreatesdirs();
-  let r1=testnewtomlcontent();
-  let r2=testgenpage();
-  let r3=testgenunknowntype();
-  let r4=testgenapi();
-  if(r0&&r1&&r2&&r3&&r4){
+  let r0=testcfgdefault();
+  let r1=testretcolon();
+  let r2=testspecstack();
+  let r3=testspecqueue();
+  let r4=testspecset();
+  let r5=testgenunknowntype();
+  let r6=testgenspecunknown();
+  let r7=testgenpage();
+  let r8=testgenspecstackfile();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8){
     <0
   }el{
     <1

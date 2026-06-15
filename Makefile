@@ -120,7 +120,8 @@ BASE_MODS    := config store router template validate repair run
 DERIVED_MODS := build serve
 API_MODS     := apihealth
 GEN_MODS     := handlers
-ALL_MODS     := $(BASE_MODS) $(DERIVED_MODS) $(API_MODS) $(GEN_MODS)
+CLI_MODS     := cli
+ALL_MODS     := $(BASE_MODS) $(DERIVED_MODS) $(API_MODS) $(GEN_MODS) $(CLI_MODS)
 
 OOKE_LL  := $(addprefix $(IFACE_DIR)/,$(ALL_MODS))
 OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
@@ -185,6 +186,13 @@ $(SRC)/_handlers.tk: scripts/gen_handlers.sh $(wildcard pages/**/*.tk) $(wildcar
 $(IFACE_DIR)/handlers.tki $(IFACE_DIR)/handlers: $(SRC)/_handlers.tk $(IFACE_DIR)/apihealth.tki | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/handlers _handlers.tk
 
+# ── CLI logic module (no f=main; the testable command library) ───────────
+$(IFACE_DIR)/cli.tki $(IFACE_DIR)/cli: \
+    $(SRC)/cli.tk \
+    $(IFACE_DIR)/config.tki $(IFACE_DIR)/serve.tki \
+    $(IFACE_DIR)/build.tki $(IFACE_DIR)/handlers.tki | $(IFACE_DIR)
+	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/cli cli.tk
+
 # ── main.ll ──────────────────────────────────────────────────────────────
 $(MAIN_LL): $(SRC)/main.tk $(OOKE_TKI) | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-llvm --out main.ll main.tk
@@ -201,7 +209,7 @@ check:
 	@for f in $(SRC)/config.tk $(SRC)/store.tk $(SRC)/router.tk \
 	           $(SRC)/template.tk $(SRC)/validate.tk $(SRC)/repair.tk $(SRC)/build.tk $(SRC)/serve.tk \
 	           $(SRC)/run.tk \
-	           $(SRC)/apihealth.tk $(SRC)/main.tk; do \
+	           $(SRC)/apihealth.tk $(SRC)/cli.tk $(SRC)/main.tk; do \
 	  echo "--- $$f"; \
 	  cd $(SRC) && $(TKC) --check $$(basename $$f) 2>&1 | head -5 || true; \
 	  cd ..; \

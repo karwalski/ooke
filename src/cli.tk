@@ -1,0 +1,212 @@
+m=ooke.cli;
+i=str:std.str;
+i=file:std.file;
+i=log:std.log;
+i=path:std.path;
+i=config:ooke.config;
+i=serve:ooke.serve;
+i=build:ooke.build;
+i=handlers:ooke.handlers;
+
+f=cliprintusage():void{
+  (log.info("ooke - toke CMS and web framework";@()));
+  (log.info("";@()));
+  (log.info("Usage:";@()));
+  (log.info("  ooke new <name>       scaffold a new project";@()));
+  (log.info("  ooke serve [options]  start development server";@()));
+  (log.info("  ooke build            build static HTML";@()));
+  (log.info("  ooke gen <type> <name>  scaffold component";@()));
+  (log.info("  ooke gen spec <container> <type>  generate type-specialised code";@()));
+  (log.info("  ooke repair <file>    run diagnostic repair";@()));
+  (log.info("  ooke compile [path]   compile per-app serve binary with handlers";@()));
+  (log.info("  ooke run [path]       compile and run CLI package";@()));
+  (log.info("  ooke build --cli [path]  compile CLI binary only";@()));
+  (log.info("";@()));
+  (log.info("Options:";@()));
+  (log.info("  --help       show this help";@()));
+  (log.info("  --version    print version";@()))
+};
+
+f=cliprintversion():void{
+  (log.info("ooke 0.1.1";@()))
+};
+
+f=clinew(name:$str):i64{
+  let d1=mt file.mkdir(name) {$ok:v v;$err:e false};
+  let d2=mt file.mkdir(path.join(name;"pages")) {$ok:v v;$err:e false};
+  let d3=mt file.mkdir(path.join(name;"templates")) {$ok:v v;$err:e false};
+  let d4=mt file.mkdir(path.join(name;"content")) {$ok:v v;$err:e false};
+  let d5=mt file.mkdir(path.join(name;"static")) {$ok:v v;$err:e false};
+  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[paths]\napiprefix = \"\"\n\n[log]\naccess = \"logs/access.log\"\nmaxlines = 10000\nmaxagedays = 30\n"));
+  let w1=mt file.write(path.join(name;"ooke.toml");tomlcontent) {$ok:v v;$err:e false};
+  let indexcontent="m=pages.index;\n";
+  let w2=mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {$ok:v v;$err:e false};
+  let basecontent="<!DOCTYPE html>\n<html lang=\"en\">\n<head><meta charset=\"UTF-8\"><title>{{title}}</title></head>\n<body>\n{{content}}\n</body>\n</html>\n";
+  let w3=mt file.write(path.join(path.join(name;"templates");"base.tkt");basecontent) {$ok:v v;$err:e false};
+  (log.info(str.concat("Created project: ";name);@()));
+  <0
+};
+
+f=cligen(gentype:$str;genname:$str):i64{
+  if(str.eq(gentype;"page")){
+    let pagepath=path.join("pages";str.concat(genname;".tk"));
+    let pagecontent=str.concat("m=pages.";str.concat(genname;";\n"));
+    let pw=mt file.write(pagepath;pagecontent) {$ok:v v;$err:e false};
+    (log.info(str.concat("Created page: ";pagepath);@()));
+    <0
+  }el{
+    if(str.eq(gentype;"type")){
+      let dm=mt file.mkdir("models") {$ok:v v;$err:e false};
+      let typepath=path.join("models";str.concat(genname;".toml"));
+      let typecontent=str.concat("name = \"";str.concat(genname;"\"\n\n[fields]\nlist = \"title, slug\"\n\n[fields.title]\ntype = \"str\"\nrequired = true\n\n[fields.slug]\ntype = \"str\"\nrequired = true\n"));
+      let tw=mt file.write(typepath;typecontent) {$ok:v v;$err:e false};
+      (log.info(str.concat("Created type: ";typepath);@()));
+      <0
+    }el{
+      if(str.eq(gentype;"api")){
+        let da=mt file.mkdir(path.join("pages";"api")) {$ok:v v;$err:e false};
+        let apipath=path.join(path.join("pages";"api");str.concat(genname;".tk"));
+        let apicontent=str.concat("m=pages.api.";str.concat(genname;";\n"));
+        let aw=mt file.write(apipath;apicontent) {$ok:v v;$err:e false};
+        (log.info(str.concat("Created api: ";apipath);@()));
+        (log.info("Wire handler: add src/api<name>.tk with apiget/apipost/apiinit, import in main.tk, add to Makefile";@()));
+        <0
+      }el{
+        if(str.eq(gentype;"island")){
+          let di=mt file.mkdir("islands") {$ok:v v;$err:e false};
+          let islandpath=path.join("islands";str.concat(genname;".tk"));
+          let islandcontent=str.concat("m=islands.";str.concat(genname;";\n"));
+          let iw=mt file.write(islandpath;islandcontent) {$ok:v v;$err:e false};
+          (log.info(str.concat("Created island: ";islandpath);@()));
+          <0
+        }el{
+          (log.info(str.concat("unknown gen type: ";gentype);@()));
+          <1
+        }
+      }
+    }
+  }
+};
+
+f=retcolon(t:$str):$str{
+  <str.concat(")";str.concat(":";t))
+};
+
+f=specstack(t:$str;name:$str):$str{
+  let hdr=str.concat("m=";str.concat(name;";\ni=stk:std.stack;\n\n"));
+  let tdef=str.concat("t=$";str.concat(name;"=stk.$stack;\n\n"));
+  let newbody=str.concat("{\n  <stk.stack.new() as $";str.concat(name;";\n};\n\n"));
+  let fnew=str.concat("f=new():$";str.concat(name;newbody));
+  let pushret=str.concat(retcolon(t);"{\n  <stk.stack.push(s as stk.$stack;val);\n};\n\n");
+  let pushsig=str.concat(";val:";str.concat(t;pushret));
+  let fpush=str.concat("f=push(s:$";str.concat(name;pushsig));
+  let popret=str.concat(retcolon(t);"{\n  <stk.stack.pop(s as stk.$stack);\n};\n\n");
+  let fpop=str.concat("f=pop(s:$";str.concat(name;popret));
+  let peekret=str.concat(retcolon(t);"{\n  <stk.stack.peek(s as stk.$stack);\n};\n\n");
+  let fpeek=str.concat("f=peek(s:$";str.concat(name;peekret));
+  let flen=str.concat("f=len(s:$";str.concat(name;str.concat(retcolon("i64");"{\n  <stk.stack.len(s as stk.$stack);\n};\n\n")));
+  let fempty=str.concat("f=empty(s:$";str.concat(name;str.concat(retcolon("i64");"{\n  <stk.stack.empty(s as stk.$stack);\n};\n")));
+  <str.concat(hdr;str.concat(tdef;str.concat(fnew;str.concat(fpush;str.concat(fpop;str.concat(fpeek;str.concat(flen;fempty)))))))
+};
+
+f=specqueue(t:$str;name:$str):$str{
+  let hdr=str.concat("m=";str.concat(name;";\ni=que:std.queue;\n\n"));
+  let tdef=str.concat("t=$";str.concat(name;"=que.$queue;\n\n"));
+  let newbody=str.concat("{\n  <que.queue.new() as $";str.concat(name;";\n};\n\n"));
+  let fnew=str.concat("f=new():$";str.concat(name;newbody));
+  let pushret=str.concat(retcolon(t);"{\n  <que.queue.push(q as que.$queue;val);\n};\n\n");
+  let pushsig=str.concat(";val:";str.concat(t;pushret));
+  let fpush=str.concat("f=push(q:$";str.concat(name;pushsig));
+  let popret=str.concat(retcolon(t);"{\n  <que.queue.pop(q as que.$queue);\n};\n\n");
+  let fpop=str.concat("f=pop(q:$";str.concat(name;popret));
+  let peekret=str.concat(retcolon(t);"{\n  <que.queue.peek(q as que.$queue);\n};\n\n");
+  let fpeek=str.concat("f=peek(q:$";str.concat(name;peekret));
+  let flen=str.concat("f=len(q:$";str.concat(name;str.concat(retcolon("i64");"{\n  <que.queue.len(q as que.$queue);\n};\n")));
+  <str.concat(hdr;str.concat(tdef;str.concat(fnew;str.concat(fpush;str.concat(fpop;str.concat(fpeek;flen))))))
+};
+
+f=specset(t:$str;name:$str):$str{
+  let hdr=str.concat("m=";str.concat(name;";\ni=st:std.set;\n\n"));
+  let tdef=str.concat("t=$";str.concat(name;"=st.$set;\n\n"));
+  let newbody=str.concat("{\n  <st.set.new() as $";str.concat(name;";\n};\n\n"));
+  let fnew=str.concat("f=new():$";str.concat(name;newbody));
+  let addret=str.concat(retcolon(t);"{\n  <st.set.add(s as st.$set;val);\n};\n\n");
+  let addsig=str.concat(";val:";str.concat(t;addret));
+  let fadd=str.concat("f=add(s:$";str.concat(name;addsig));
+  let hasret=str.concat(retcolon("i64");"{\n  <st.set.has(s as st.$set;val);\n};\n\n");
+  let hassig=str.concat(";val:";str.concat(t;hasret));
+  let fhas=str.concat("f=has(s:$";str.concat(name;hassig));
+  let remret=str.concat(retcolon(t);"{\n  <st.set.remove(s as st.$set;val);\n};\n\n");
+  let remsig=str.concat(";val:";str.concat(t;remret));
+  let fremove=str.concat("f=remove(s:$";str.concat(name;remsig));
+  let flen=str.concat("f=len(s:$";str.concat(name;str.concat(retcolon("i64");"{\n  <st.set.len(s as st.$set);\n};\n")));
+  <str.concat(hdr;str.concat(tdef;str.concat(fnew;str.concat(fadd;str.concat(fhas;str.concat(fremove;flen))))))
+};
+
+f=cligenspec(container:$str;typename:$str):i64{
+  let name=str.concat(container;typename);
+  let filename=str.concat(name;".tk");
+  if(str.eq(container;"stack")){
+    let content=specstack(typename;name);
+    let w=mt file.write(filename;content) {$ok:v v;$err:e false};
+    (log.info(str.concat("Created specialised: ";filename);@()));
+    <0
+  }el{
+    if(str.eq(container;"queue")){
+      let content=specqueue(typename;name);
+      let w=mt file.write(filename;content) {$ok:v v;$err:e false};
+      (log.info(str.concat("Created specialised: ";filename);@()));
+      <0
+    }el{
+      if(str.eq(container;"set")){
+        let content=specset(typename;name);
+        let w=mt file.write(filename;content) {$ok:v v;$err:e false};
+        (log.info(str.concat("Created specialised: ";filename);@()));
+        <0
+      }el{
+        (log.info(str.concat("unknown container: ";str.concat(container;", expected: stack, queue, set"));@()));
+        <1
+      }
+    }
+  }
+};
+
+f=cfgdefault():$ookecfg{
+  <$ookecfg{
+    sitename:"my-site";siteurl:"";sitelanguage:"en";
+    buildoutput:"build/";buildminify:true;buildinlinecss:true;
+    serverport:3000;serverworkers:0;servercorsorigins:"";storebackend:"flat";
+    logaccess:"logs/access.log";logmaxlines:10000;logmaxagedays:30;
+    apiprefix:""
+  }
+};
+
+f=runserve(projectdir:$str):i64{
+  let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {$ok:v v;$err:e cfgdefault()};
+  let port=cfg.serverport;
+  let workers=cfg.serverworkers;
+  let output=cfg.buildoutput;
+  let sitename=cfg.sitename;
+  let siteurl=cfg.siteurl;
+  let sitelanguage=cfg.sitelanguage;
+  let apiprefix=cfg.apiprefix;
+  let corsorigins=cfg.servercorsorigins;
+  let handledpaths=handlers.registerall();
+  (log.info(str.concat("auto-registered ";str.concat(str.fromint(handledpaths.len);" handler routes"));@()));
+  let r=mt serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {$ok:v 0;$err:e 1};
+  <r
+};
+
+f=runbuild(projectdir:$str):i64{
+  let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {$ok:v v;$err:e cfgdefault()};
+  let report=mt build.buildrun(projectdir;cfg) {$ok:v v;$err:e $buildreport{pagesbuilt:0;assetscopy:0;valerrors:0;valwarnings:0}};
+  (log.info(str.concat("pages built: ";str.fromint(report.pagesbuilt));@()));
+  (log.info(str.concat("assets copied: ";str.fromint(report.assetscopy));@()));
+  if(report.valerrors>0){
+    (log.info(str.concat("validation errors: ";str.fromint(report.valerrors));@()))
+  }el{};
+  if(report.valwarnings>0){
+    (log.info(str.concat("validation warnings: ";str.fromint(report.valwarnings));@()))
+  }el{};
+  <0
+};
