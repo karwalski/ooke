@@ -1,6 +1,6 @@
 ---
 source_file: "router.tk"
-source_hash: "29c4883c3bd9913961075cc6839a124a465157f70568b1bf8ccbf704643c39f5"
+source_hash: "3bbdfa08f5592e6b0270a55b327d87e50cba237b75179132e1e2ddcc0edab2d2"
 compiler_version: "0.3.9"
 generated_at: "2026-06-15T00:00:00Z"
 format_version: "1.0"

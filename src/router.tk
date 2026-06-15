@@ -101,9 +101,7 @@ f=routertrymatch(route:$route;url:$str):$routematch!$routeerr{
     if(str.startswith(pseg;":")){
       captures=captures.set(str.trimprefix(pseg;":");useg)
     }el{
-      let samelen=str.len(pseg)=str.len(useg);
-      let samebody=str.len(pseg)=0||str.indexof(pseg;useg)=0;
-      if(!(samelen&&samebody)){
+      if(!str.eq(pseg;useg)){
         (file.listall("")!$routeerr)
       }el{}
     }

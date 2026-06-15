@@ -78,7 +78,17 @@ f=storetryparsejson(src:$str):$content{
 f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str{
   let sql=mut."CREATE TABLE IF NOT EXISTS ";
   sql=str.concat(sql;modelname);
-  sql=str.concat(sql;"(id INTEGER PRIMARY KEY;slug TEXT UNIQUE;body TEXT)");
+  sql=str.concat(sql;"(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,body TEXT");
+  let ks=fields.keys();
+  lp(let i=0;i<ks.len;i=i+1){
+    let k=ks.get(i);
+    let ft=fields.get(k);
+    let coltype=mut."TEXT";
+    if(str.eq(ft;"bool")){coltype="INTEGER"}el{};
+    if(str.eq(ft;"int")){coltype="INTEGER"}el{};
+    sql=str.concat(sql;str.concat(",";str.concat(k;str.concat(" ";coltype))))
+  };
+  sql=str.concat(sql;")");
   <sql
 };
 
