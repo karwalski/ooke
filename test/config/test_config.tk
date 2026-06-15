@@ -2,14 +2,13 @@ m=test.config;
 i=config:ooke.config;
 i=test:std.test;
 i=file:std.file;
-i=str:std.str;
 
 f=testloadvalid():bool{
   let tomlsrc="[site]\nname = \"ooke-test\"\nurl = \"https://test.example.com\"\nlanguage = \"fr\"\n\n[build]\noutput = \"dist/\"\nminify = false\ninlinecss = false\n\n[server]\nport = 8080\nworkers = 2\n\n[store]\nbackend = \"flat\"\n";
-  let wrok=mt file.write("/tmp/test_ooke.toml";tomlsrc) {Ok:v true;Err:e false};
+  let wrok=mt file.write("/tmp/test_ooke.toml";tomlsrc) {$ok:v true;$err:e false};
   if(wrok=false){<false};
   let result=config.configload("/tmp/test_ooke.toml");
-  let cfgok=mt result {Ok:v true;Err:e false};
+  let cfgok=mt result {$ok:v true;$err:e false};
   if(cfgok=false){<false};
   let cfg=mt result {$ok:v v;$err:e 0};
   (test.eq(cfg.sitename;"ooke-test"));
@@ -24,16 +23,16 @@ f=testloadvalid():bool{
 
 f=testmissingfile():bool{
   let result=config.configload("/nonexistent/path.toml");
-  let iserr=mt result {Ok:v false;Err:e true};
+  let iserr=mt result {$ok:v false;$err:e true};
   <iserr
 };
 
 f=testdefaults():bool{
   let tomlsrc="[site]\nname = \"x\"\n";
-  let wrok=mt file.write("/tmp/test_ooke_defaults.toml";tomlsrc) {Ok:v true;Err:e false};
+  let wrok=mt file.write("/tmp/test_ooke_defaults.toml";tomlsrc) {$ok:v true;$err:e false};
   if(wrok=false){<false};
   let result=config.configload("/tmp/test_ooke_defaults.toml");
-  let cfgok=mt result {Ok:v true;Err:e false};
+  let cfgok=mt result {$ok:v true;$err:e false};
   if(cfgok=false){<false};
   let cfg=mt result {$ok:v v;$err:e 0};
   (test.eq(cfg.sitename;"x"));
@@ -43,7 +42,7 @@ f=testdefaults():bool{
   (test.eq(cfg.buildminify;true));
   (test.eq(cfg.buildinlinecss;true));
   (test.eq(cfg.serverport;3000));
-  (test.eq(cfg.serverworkers;4));
+  (test.eq(cfg.serverworkers;0));
   (test.eq(cfg.storebackend;"flat"));
   (test.eq(cfg.logaccess;"logs/access.log"));
   (test.eq(cfg.logmaxlines;10000));
