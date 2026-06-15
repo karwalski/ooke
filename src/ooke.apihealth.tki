@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "module": "ooke.apihealth",
+  "version": "1.0.0",
+  "exports": [
+    {"kind": "func", "name": "apigetjson", "params": [], "return": "str"},
+    {"kind": "func", "name": "get", "params": ["i64"], "return": "i64"}
+  ]
+}

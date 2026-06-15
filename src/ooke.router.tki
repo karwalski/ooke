@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "module": "ooke.router",
+  "version": "1.0.0",
+  "exports": [
+    {"kind": "type", "name": "route", "fields": [{"name": "pattern", "type": "str"}, {"name": "filepath", "type": "str"}, {"name": "templatepath", "type": "str"}, {"name": "contenttype", "type": "str"}, {"name": "isdynamic", "type": "bool"}, {"name": "isapi", "type": "bool"}, {"name": "params", "type": "@"}]},
+    {"kind": "type", "name": "routematch", "fields": [{"name": "route", "type": "route"}, {"name": "params", "type": "@"}]},
+    {"kind": "type", "name": "routeerr", "fields": [{"name": "msg", "type": "str"}]},
+    {"kind": "func", "name": "routederivepattern", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "routederivetemplate", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "routederivedtype", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "routerscan", "params": ["str"], "return": "@"},
+    {"kind": "func", "name": "routertrymatch", "params": ["route", "str"], "return": "routematch"},
+    {"kind": "func", "name": "routecountdynamic", "params": ["str"], "return": "i64"},
+    {"kind": "func", "name": "routermatch", "params": ["@", "str"], "return": "routematch"}
+  ]
+}

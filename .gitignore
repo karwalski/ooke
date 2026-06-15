@@ -16,3 +16,7 @@ build/
 
 # agent worktrees / local
 .claude/
+
+# published interface contracts (committed; --emit-interface is flaky, see 113.B.19)
+!src/ooke.*.tki
+src/ooke/

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "module": "ooke.cli",
+  "version": "1.0.0",
+  "exports": [
+    {"kind": "func", "name": "cliprintusage", "params": [], "return": "void"},
+    {"kind": "func", "name": "cliprintversion", "params": [], "return": "void"},
+    {"kind": "func", "name": "clinew", "params": ["str"], "return": "i64"},
+    {"kind": "func", "name": "cligen", "params": ["str", "str"], "return": "i64"},
+    {"kind": "func", "name": "retcolon", "params": ["str"], "return": "str"},
+    {"kind": "func", "name": "specstack", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "specqueue", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "specset", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "cligenspec", "params": ["str", "str"], "return": "i64"},
+    {"kind": "func", "name": "cfgdefault", "params": [], "return": "ookecfg"},
+    {"kind": "func", "name": "runserve", "params": ["str"], "return": "i64"},
+    {"kind": "func", "name": "runbuild", "params": ["str"], "return": "i64"},
+    {"kind": "func", "name": "main", "params": [], "return": "i64"}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "module": "ooke.build",
+  "version": "1.0.0",
+  "exports": [
+    {"kind": "type", "name": "builderr", "fields": [{"name": "msg", "type": "str"}]},
+    {"kind": "type", "name": "buildreport", "fields": [{"name": "pagesbuilt", "type": "i64"}, {"name": "assetscopy", "type": "i64"}, {"name": "valerrors", "type": "i64"}, {"name": "valwarnings", "type": "i64"}]},
+    {"kind": "func", "name": "buildoutputpath", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "buildpage", "params": ["str", "str", "str", "str", "str", "str", "str"], "return": "void"},
+    {"kind": "func", "name": "buildinlinecssonce", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "buildinlinecss", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "buildminify", "params": ["str"], "return": "str"},
+    {"kind": "func", "name": "buildcopyassets", "params": ["str", "str"], "return": "i64"},
+    {"kind": "func", "name": "buildrun", "params": ["str", "ookecfg"], "return": "buildreport"}
+  ]
+}

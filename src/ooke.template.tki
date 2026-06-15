@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "module": "ooke.template",
+  "version": "1.0.0",
+  "exports": [
+    {"kind": "type", "name": "tokenkind", "fields": [{"name": "raw", "type": "bool"}, {"name": "expr", "type": "bool"}, {"name": "directive", "type": "bool"}, {"name": "comment", "type": "bool"}]},
+    {"kind": "type", "name": "token", "fields": [{"name": "kind", "type": "tokenkind"}, {"name": "content", "type": "str"}]},
+    {"kind": "type", "name": "tplerr", "fields": [{"name": "msg", "type": "str"}]},
+    {"kind": "type", "name": "block", "fields": [{"name": "name", "type": "str"}, {"name": "content", "type": "str"}]},
+    {"kind": "type", "name": "tplcache", "fields": [{"name": "entries", "type": "@"}]},
+    {"kind": "type", "name": "renderresult", "fields": [{"name": "output", "type": "str"}, {"name": "cache", "type": "tplcache"}]},
+    {"kind": "func", "name": "tplescape", "params": ["str"], "return": "str"},
+    {"kind": "func", "name": "tplapplyfilter", "params": ["str", "str"], "return": "str"},
+    {"kind": "func", "name": "tplresolveexpr", "params": ["str", "@"], "return": "str"},
+    {"kind": "func", "name": "tpllex", "params": ["str"], "return": "@"},
+    {"kind": "func", "name": "tpldirectivename", "params": ["str"], "return": "str"},
+    {"kind": "func", "name": "tpldirectivearg", "params": ["str"], "return": "str"},
+    {"kind": "func", "name": "tplfindblock", "params": ["@", "str"], "return": "str"},
+    {"kind": "func", "name": "tplislandparse", "params": ["str"], "return": "@"},
+    {"kind": "func", "name": "tplrender", "params": ["@", "@", "str", "@"], "return": "str"},
+    {"kind": "func", "name": "tplrenderfile", "params": ["str", "@", "str"], "return": "str"},
+    {"kind": "func", "name": "tplcachenew", "params": [], "return": "tplcache"},
+    {"kind": "func", "name": "tplcacheget", "params": ["tplcache", "str"], "return": "@"},
+    {"kind": "func", "name": "tplrenderfilecached", "params": ["str", "@", "str", "tplcache"], "return": "renderresult"}
+  ]
+}
