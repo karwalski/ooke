@@ -1,0 +1,89 @@
+m=test.run;
+i=run:ooke.run;
+i=test:std.test;
+i=file:std.file;
+i=path:std.path;
+i=str:std.str;
+
+f=testloadclicfg():bool{
+  let dir="/tmp/ooke_run_test_load";
+  let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
+  let tomlsrc="[package]\nname = \"mysite\"\nentry = \"src/app.tk\"\n";
+  let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
+  if(wrok=false){<false};
+  let result=run.loadclicfg(dir);
+  let ok=mt result {$ok:v true;$err:e false};
+  if(ok=false){<false};
+  let cfg=mt result {$ok:v v;$err:e 0};
+  (test.eq(cfg.name;"mysite"));
+  (test.eq(cfg.entry;"src/app.tk"));
+  <true
+};
+
+f=testloadclicfgdefaults():bool{
+  let dir="/tmp/ooke_run_test_defaults";
+  let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
+  let tomlsrc="[other]\nx = 1\n";
+  let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
+  if(wrok=false){<false};
+  let result=run.loadclicfg(dir);
+  let cfg=mt result {$ok:v v;$err:e 0};
+  (test.eq(cfg.name;"app"));
+  (test.eq(cfg.entry;"src/main.tk"));
+  <true
+};
+
+f=testloadclicfgmissing():bool{
+  let result=run.loadclicfg("/nonexistent/ooke/project");
+  let iserr=mt result {$ok:v false;$err:e true};
+  <iserr
+};
+
+f=testruncompilemissingentry():bool{
+  let dir="/tmp/ooke_run_test_compile";
+  let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
+  let tomlsrc="[package]\nname = \"app\"\nentry = \"src/does_not_exist.tk\"\n";
+  let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
+  if(wrok=false){<false};
+  let cfgresult=run.loadclicfg(dir);
+  let cfg=mt cfgresult {$ok:v v;$err:e 0};
+  let result=run.runcompile(dir;cfg);
+  let nobin=mt result {$ok:v str.len(v)=0;$err:e true};
+  <nobin
+};
+
+f=testrunmissingentry():bool{
+  let dir="/tmp/ooke_run_test_run";
+  let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
+  let tomlsrc="[package]\nname = \"app\"\nentry = \"src/does_not_exist.tk\"\n";
+  let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
+  if(wrok=false){<false};
+  let rc=run.run(dir;@());
+  (test.eq(rc;1));
+  <true
+};
+
+f=testbuildmissingentry():bool{
+  let dir="/tmp/ooke_run_test_build";
+  let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
+  let tomlsrc="[package]\nname = \"app\"\nentry = \"src/does_not_exist.tk\"\n";
+  let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
+  if(wrok=false){<false};
+  let rc=run.build(dir);
+  (test.eq(rc;1));
+  <true
+};
+
+f=main():i64{
+  let r0=testloadclicfg();
+  let r1=testloadclicfgdefaults();
+  let r2=testloadclicfgmissing();
+  let r3=testruncompilemissingentry();
+  let r4=testrunmissingentry();
+  let r5=testbuildmissingentry();
+  if(r0&&r1&&r2&&r3&&r4&&r5){
+    <0
+  }el{
+    <1
+  }
+};

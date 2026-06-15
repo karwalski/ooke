@@ -27,7 +27,7 @@ f=routederivepattern(filepath:$str;pagesdir:$str):$str{
   let out=mut."";
   lp(let i=0;i<segs.len;i=i+1){
     let seg=segs.get(i);
-    let mapped=mt str.matchbracket(seg) {Ok:name str.concat(":";name);Err:e seg};
+    let mapped=mt str.matchbracket(seg) {$ok:name str.concat(":";name);$err:e seg};
     out=str.concat(out;str.concat("/";mapped))
   };
   let result=mut.out;
@@ -44,8 +44,7 @@ f=routederivepattern(filepath:$str;pagesdir:$str):$str{
 f=routederivetemplate(filepath:$str;pagesdir:$str):$str{
   let rel=str.trimprefix(filepath;pagesdir);
   let noext=str.trimsuffix(rel;".tk");
-  let result=str.concat("templates/";str.concat(noext;".tkt"));
-  <result
+  <str.concat("templates/";str.concat(noext;".tkt"))
 };
 
 f=routederivedtype(filepath:$str;pagesdir:$str):$str{
@@ -72,20 +71,15 @@ f=routerscan(pagesdir:$str):@$route!$routeerr{
   let routes=mut.@($route);
   lp(let i=0;i<allfiles.len;i=i+1){
     let p=allfiles.get(i);
-    let ext=path.ext(p);
-    if(ext=".tk"){
+    if(path.ext(p)=".tk"){
       let pattern=routederivepattern(p;pagesdir);
-      let templatepath=routederivetemplate(p;pagesdir);
-      let contenttype=routederivedtype(p;pagesdir);
-      let isdynamic=str.contains(pattern;":");
-      let isapi=str.contains(p;"/api/")||str.startswith(p;"api/");
       let r=$route{
         pattern:pattern;
         filepath:p;
-        templatepath:templatepath;
-        contenttype:contenttype;
-        isdynamic:isdynamic;
-        isapi:isapi;
+        templatepath:routederivetemplate(p;pagesdir);
+        contenttype:routederivedtype(p;pagesdir);
+        isdynamic:str.contains(pattern;":");
+        isapi:str.contains(p;"/api/")||str.startswith(p;"api/");
         params:@()
       };
       routes=routes.append(r)
@@ -104,12 +98,12 @@ f=routertrymatch(route:$route;url:$str):$routematch!$routeerr{
   lp(let i=0;i<patsegs.len;i=i+1){
     let pseg=patsegs.get(i);
     let useg=urlsegs.get(i);
-    let isparam=str.startswith(pseg;":");
-    if(isparam){
-      let paramname=str.trimprefix(pseg;":");
-      captures=captures.set(paramname;useg)
+    if(str.startswith(pseg;":")){
+      captures=captures.set(str.trimprefix(pseg;":");useg)
     }el{
-      if(!(pseg=useg)){
+      let samelen=str.len(pseg)=str.len(useg);
+      let samebody=str.len(pseg)=0||str.indexof(pseg;useg)=0;
+      if(!(samelen&&samebody)){
         (file.listall("")!$routeerr)
       }el{}
     }
@@ -121,8 +115,7 @@ f=routecountdynamic(pattern:$str):i64{
   let segs=str.split(pattern;"/");
   let count=mut.0;
   lp(let i=0;i<segs.len;i=i+1){
-    let seg=segs.get(i);
-    if(str.startswith(seg;":")){
+    if(str.startswith(segs.get(i);":")){
       count=count+1
     }el{}
   };
@@ -142,8 +135,7 @@ f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
     let r=routes.get(i);
     if(!r.isdynamic){
       if(foundidx<0){
-        let result=routertrymatch(r;normurl);
-        let val=mt result {Ok:m m;Err:e defmatch};
+        let val=mt routertrymatch(r;normurl) {$ok:m m;$err:e defmatch};
         if(!(val.route.pattern="")){
           foundmatch=val;
           foundidx=i
@@ -156,8 +148,7 @@ f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
     let r=routes.get(j);
     if(r.isdynamic){
       if(foundidx<0||foundmatch.route.isdynamic){
-        let result=routertrymatch(r;normurl);
-        let val=mt result {Ok:m m;Err:e defmatch};
+        let val=mt routertrymatch(r;normurl) {$ok:m m;$err:e defmatch};
         if(!(val.route.pattern="")){
           let dyncount=routecountdynamic(r.pattern);
           if(dyncount<bestdyncount){

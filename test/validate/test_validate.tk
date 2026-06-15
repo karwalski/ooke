@@ -1,0 +1,132 @@
+m=test.validate;
+i=validate:ooke.validate;
+i=test:std.test;
+i=file:std.file;
+
+f=writemodel():bool{
+  let src="name = \"post\"\n\n[fields]\nlist = \"title, views, published\"\n\n[fields.title]\ntype = \"str\"\nrequired = true\n\n[fields.views]\ntype = \"int\"\nrequired = false\n\n[fields.published]\ntype = \"bool\"\nrequired = false\n";
+  let ok=mt file.write("/tmp/test_validate_post.toml";src) {$ok:v true;$err:e false};
+  <ok
+};
+
+f=testloadmodel():bool{
+  if(writemodel()=false){<false};
+  let r=validate.validateloadmodel("/tmp/";"test_validate_post");
+  let ok=mt r {$ok:v true;$err:e false};
+  if(ok=false){<false};
+  let m=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
+  (test.eq(m.name;"post"));
+  (test.eq(m.fields.len as i64;3));
+  (test.eq(m.fields.get(0).name;"title"));
+  (test.eq(m.fields.get(0).fieldtype;"str"));
+  (test.eq(m.fields.get(0).required;true));
+  (test.eq(m.fields.get(1).name;"views"));
+  (test.eq(m.fields.get(1).fieldtype;"int"));
+  (test.eq(m.fields.get(1).required;false));
+  (test.eq(m.fields.get(2).fieldtype;"bool"));
+  <true
+};
+
+f=testloadmodelmissing():bool{
+  let r=validate.validateloadmodel("/nonexistent/";"nope");
+  let iserr=mt r {$ok:v false;$err:e true};
+  <iserr
+};
+
+f=testcontentvalid():bool{
+  if(writemodel()=false){<false};
+  let r=validate.validateloadmodel("/tmp/";"test_validate_post");
+  let model=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
+  let meta=mut.@($str:$str);
+  meta=meta.set("title";"Hello");
+  meta=meta.set("views";"42");
+  meta=meta.set("published";"true");
+  let res=validate.validatecontent(model;meta;"posts/hello.md");
+  (test.eq(res.errors.len as i64;0));
+  (test.eq(res.warnings.len as i64;0));
+  <true
+};
+
+f=testcontentmissingrequired():bool{
+  if(writemodel()=false){<false};
+  let r=validate.validateloadmodel("/tmp/";"test_validate_post");
+  let model=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
+  let meta=mut.@($str:$str);
+  meta=meta.set("views";"7");
+  let res=validate.validatecontent(model;meta;"posts/bad.md");
+  (test.eq(res.errors.len as i64;1));
+  (test.eq(res.errors.get(0).field;"title"));
+  <true
+};
+
+f=testcontentbadint():bool{
+  if(writemodel()=false){<false};
+  let r=validate.validateloadmodel("/tmp/";"test_validate_post");
+  let model=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
+  let meta=mut.@($str:$str);
+  meta=meta.set("title";"Hi");
+  meta=meta.set("views";"notanumber");
+  let res=validate.validatecontent(model;meta;"posts/badint.md");
+  (test.eq(res.errors.len as i64;1));
+  (test.eq(res.errors.get(0).field;"views"));
+  <true
+};
+
+f=testcontentbadbool():bool{
+  if(writemodel()=false){<false};
+  let r=validate.validateloadmodel("/tmp/";"test_validate_post");
+  let model=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
+  let meta=mut.@($str:$str);
+  meta=meta.set("title";"Hi");
+  meta=meta.set("published";"maybe");
+  let res=validate.validatecontent(model;meta;"posts/badbool.md");
+  (test.eq(res.errors.len as i64;1));
+  (test.eq(res.errors.get(0).field;"published"));
+  <true
+};
+
+f=testempty():bool{
+  let res=validate.validateempty();
+  (test.eq(res.errors.len as i64;0));
+  (test.eq(res.warnings.len as i64;0));
+  <true
+};
+
+f=testmerge():bool{
+  let a=mut.validate.validateempty();
+  let ae=mut.a.errors;
+  ae=ae.append($valerror{filepath:"a.md";field:"x";msg:"err a"});
+  a=$valresult{errors:ae;warnings:a.warnings};
+  let b=mut.validate.validateempty();
+  let be=mut.b.errors;
+  be=be.append($valerror{filepath:"b.md";field:"y";msg:"err b"});
+  b=$valresult{errors:be;warnings:b.warnings};
+  let merged=validate.validatemerge(a;b);
+  (test.eq(merged.errors.len as i64;2));
+  (test.eq(merged.errors.get(0).field;"x"));
+  (test.eq(merged.errors.get(1).field;"y"));
+  <true
+};
+
+f=testlogresult():bool{
+  let res=validate.validateempty();
+  (validate.validatelogresult(res));
+  <true
+};
+
+f=main():i64{
+  let r0=testloadmodel();
+  let r1=testloadmodelmissing();
+  let r2=testcontentvalid();
+  let r3=testcontentmissingrequired();
+  let r4=testcontentbadint();
+  let r5=testcontentbadbool();
+  let r6=testempty();
+  let r7=testmerge();
+  let r8=testlogresult();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8){
+    <0
+  }el{
+    <1
+  }
+};

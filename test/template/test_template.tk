@@ -183,13 +183,15 @@ f=testcachehit():bool{
   let ctx=@("msg":"cached");
   let cache0=tpl.tplcachenew();
   let r1=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";cache0);
-  let rr1=mt r1 {$ok:r r;$err:e failret(e.msg)};
-  (test.eq(str.contains(rr1.output;"cached");true));
-  let r2=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";rr1.cache);
-  let rr2=mt r2 {$ok:r r;$err:e failret(e.msg)};
-  (test.eq(str.contains(rr2.output;"cached");true));
-  let hasentry=mt rr2.cache.entries.get(tktpath) {$ok:v true;$err:e false};
+  let out1=mt r1 {$ok:r r.output;$err:e failret(e.msg)};
+  (test.eq(str.contains(out1;"cached");true));
+  let cache1=mt r1 {$ok:r r.cache;$err:e cache0};
+  let toks=tpl.tplcacheget(cache1;tktpath);
+  let hasentry=mt toks {$ok:t true;$err:e false};
   (test.eq(hasentry;true));
+  let r2=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";cache1);
+  let out2=mt r2 {$ok:r r.output;$err:e failret(e.msg)};
+  (test.eq(str.contains(out2;"cached");true));
   <true
 };
 

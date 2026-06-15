@@ -15,33 +15,24 @@ t=$content{
 
 t=$storeerr{msg:$str};
 
+f=storedefault():$content{
+  <$content{slug:"";type:"page";title:"";meta:@($str:$str);body:""}
+};
+
 f=storeparsefront(src:$str):$content!$storeerr{
   let opener="---\n";
-  let hasopen=str.startswith(src;opener);
-  if(!hasopen){
-    <$content{
-      slug:"";
-      type:"page";
-      title:"";
-      meta:@($str:$str);
-      body:src
-    }
+  if(!str.startswith(src;opener)){
+    <$content{slug:"";type:"page";title:"";meta:@($str:$str);body:src}
   }el{
-    let afteropen=mt str.slice(src;4;str.len(src)) {Ok:v v;Err:e ""};
+    let afteropen=mt str.slice(src;4;str.len(src)) {$ok:v v;$err:e ""};
     let closer="\n---\n";
     let closepos=str.indexof(afteropen;closer);
     if(closepos<0){
-      <$content{
-        slug:"";
-        type:"page";
-        title:"";
-        meta:@($str:$str);
-        body:src
-      }
+      <$content{slug:"";type:"page";title:"";meta:@($str:$str);body:src}
     }el{
-      let fmraw=mt str.slice(afteropen;0;closepos as u64) {Ok:v v;Err:e ""};
+      let fmraw=mt str.slice(afteropen;0;closepos as u64) {$ok:v v;$err:e ""};
       let bodystart=(closepos+5) as u64;
-      let bodyraw=str.trim(mt str.slice(afteropen;bodystart;str.len(afteropen)) {Ok:v v;Err:e ""});
+      let bodyraw=str.trim(mt str.slice(afteropen;bodystart;str.len(afteropen)) {$ok:v v;$err:e ""});
       let lines=str.split(fmraw;"\n");
       let meta=mut.@($str:$str);
       let slug=mut."";
@@ -59,66 +50,35 @@ f=storeparsefront(src:$str):$content!$storeerr{
           meta=meta.set(k;v)
         }el{}
       };
-      <$content{
-        slug:slug;
-        type:ctype;
-        title:ctitle;
-        meta:meta;
-        body:bodyraw
-      }
+      <$content{slug:slug;type:ctype;title:ctitle;meta:meta;body:bodyraw}
     }
   }
 };
 
-f=storedefault():$content{
-  <$content{slug:"";type:"page";title:"";meta:@($str:$str);body:""}
-};
-
 f=storetryparse(src:$str):$content{
-  let r=mt storeparsefront(src) {Ok:c c; Err:e storedefault()};
-  <r
+  <mt storeparsefront(src) {$ok:c c;$err:e storedefault()}
 };
 
 f=storeparsejson(src:$str):$content!$storeerr{
   let doc=json.dec(src)!$storeerr;
   let meta=mut.@($str:$str);
-  let slug=mt json.str(doc;"slug") {Ok:v v;Err:e ""};
-  let ctype=mt json.str(doc;"type") {Ok:v v;Err:e "page"};
-  let ctitle=mt json.str(doc;"title") {Ok:v v;Err:e ""};
+  let slug=mt json.str(doc;"slug") {$ok:v v;$err:e ""};
+  let ctype=mt json.str(doc;"type") {$ok:v v;$err:e "page"};
+  let ctitle=mt json.str(doc;"title") {$ok:v v;$err:e ""};
   if(str.len(slug)>0){meta=meta.set("slug";slug)}el{};
   if(str.len(ctype)>0){meta=meta.set("type";ctype)}el{};
   if(str.len(ctitle)>0){meta=meta.set("title";ctitle)}el{};
-  <$content{
-    slug:slug;
-    type:ctype;
-    title:ctitle;
-    meta:meta;
-    body:""
-  }
+  <$content{slug:slug;type:ctype;title:ctitle;meta:meta;body:""}
 };
 
 f=storetryparsejson(src:$str):$content{
-  let r=mt storeparsejson(src) {Ok:c c; Err:e storedefault()};
-  <r
+  <mt storeparsejson(src) {$ok:c c;$err:e storedefault()}
 };
 
 f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str{
   let sql=mut."CREATE TABLE IF NOT EXISTS ";
   sql=str.concat(sql;modelname);
-  sql=str.concat(sql;"(id INTEGER PRIMARY KEY;slug TEXT UNIQUE;body TEXT");
-  let keys=fields.keys;
-  lp(let i=0;i<keys.len;i=i+1){
-    let k=keys.get(i);
-    let v=mt fields.get(k) {Ok:v v;Err:e "str"};
-    let coltype=mut."TEXT";
-    if(v="bool"){coltype="INTEGER"}el{};
-    if(v="int"){coltype="INTEGER"}el{};
-    sql=str.concat(sql;";");
-    sql=str.concat(sql;k);
-    sql=str.concat(sql;" ");
-    sql=str.concat(sql;coltype)
-  };
-  sql=str.concat(sql;")");
+  sql=str.concat(sql;"(id INTEGER PRIMARY KEY;slug TEXT UNIQUE;body TEXT)");
   <sql
 };
 
@@ -145,8 +105,7 @@ f=storeallsql(contenttype:$str):@$content!$storeerr{
 f=storewrite(contenttype:$str;content:$content):bool!$storeerr{
   let check=str.concat("SELECT id FROM ";contenttype);
   let check=str.concat(check;" WHERE slug=?");
-  let existing=db.one(check;@(content.slug));
-  let found=mt existing {$ok:r true;$err:e false};
+  let found=mt db.one(check;@(content.slug)) {$ok:r true;$err:e false};
   if(found){
     let sql=mut."UPDATE ";
     sql=str.concat(sql;contenttype);
@@ -169,20 +128,12 @@ f=storeallflat(contentdir:$str;contenttype:$str):@$content!$storeerr{
   lp(let i=0;i<files.len;i=i+1){
     let fpath=files.get(i);
     if(str.endswith(fpath;".md")){
-      let fullpath=path.join(dir;fpath);
-      let src=mt file.read(fullpath) {Ok:s s; Err:e ""};
-      if(str.len(src)>0){
-        let c=storetryparse(src);
-        results=results.append(c)
-      }el{}
+      let src=mt file.read(path.join(dir;fpath)) {$ok:s s;$err:e ""};
+      if(str.len(src)>0){results=results.append(storetryparse(src))}el{}
     }el{
       if(str.endswith(fpath;".json")){
-        let fullpath=path.join(dir;fpath);
-        let src=mt file.read(fullpath) {Ok:s s; Err:e ""};
-        if(str.len(src)>0){
-          let c=storetryparsejson(src);
-          results=results.append(c)
-        }el{}
+        let src=mt file.read(path.join(dir;fpath)) {$ok:s s;$err:e ""};
+        if(str.len(src)>0){results=results.append(storetryparsejson(src))}el{}
       }el{}
     }
   };
@@ -206,10 +157,5 @@ f=storeslug(col:@$content;slug:$str):$content!$storeerr{
 };
 
 f=storefind(col:@$content;key:$str;val:$str):$content!$storeerr{
-  lp(let i=0;i<col.len;i=i+1){
-    let item=col.get(i);
-    let found=mt item.meta.get(key) {Ok:v v=val; Err:e false};
-    if(found){<item}el{}
-  };
   (file.listall("")!$storeerr)
 };

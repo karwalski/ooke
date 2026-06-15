@@ -4,61 +4,149 @@ i=test:std.test;
 i=file:std.file;
 i=str:std.str;
 
-f=testparsefrontmatter():bool{
+f=testdefault():bool{
+  let c=store.storedefault();
+  (test.eq(c.slug;""));
+  (test.eq(c.type;"page"));
+  (test.eq(c.title;""));
+  (test.eq(c.body;""));
+  (test.eq(c.meta.len;0));
+  <true
+};
+
+f=testparsefront():bool{
   let src="---\nslug: hello-world\ntype: post\ntitle: Hello World\n---\n# Hello\n\nThis is the body.\n";
   let result=store.storeparsefront(src);
-  let cok=mt result {Ok:v true;Err:e false};
-  if(cok=false){<false};
-  let c=mt result {$ok:v v;$err:e 0};
+  let ok=mt result {$ok:v true;$err:e false};
+  if(ok=false){<false};
+  let c=mt result {$ok:v v;$err:e store.storedefault()};
   (test.eq(c.slug;"hello-world"));
   (test.eq(c.type;"post"));
+  (test.eq(c.title;"Hello World"));
   (test.eq(str.contains(c.body;"Hello")&&str.contains(c.body;"body");true));
+  <true
+};
+
+f=testparsefrontnofront():bool{
+  let src="# Just a heading\n\nNo front matter here.\n";
+  let result=store.storeparsefront(src);
+  let c=mt result {$ok:v v;$err:e store.storedefault()};
+  (test.eq(c.slug;""));
+  (test.eq(c.type;"page"));
+  (test.eq(c.body;src));
+  <true
+};
+
+f=testtryparse():bool{
+  let c=store.storetryparse("---\nslug: a\n---\nbody\n");
+  (test.eq(c.slug;"a"));
+  let d=store.storetryparse("plain body");
+  (test.eq(d.slug;""));
+  (test.eq(d.body;"plain body"));
+  <true
+};
+
+f=testparsejson():bool{
+  let src="{\"slug\":\"news\",\"type\":\"post\",\"title\":\"Big News\"}";
+  let result=store.storeparsejson(src);
+  let ok=mt result {$ok:v true;$err:e false};
+  if(ok=false){<false};
+  let c=mt result {$ok:v v;$err:e store.storedefault()};
+  (test.eq(c.slug;"news"));
+  (test.eq(c.type;"post"));
+  (test.eq(c.title;"Big News"));
+  <true
+};
+
+f=testparsejsoninvalid():bool{
+  let result=store.storeparsejson("not json");
+  let iserr=mt result {$ok:v false;$err:e true};
+  <iserr
+};
+
+f=testtryparsejson():bool{
+  let c=store.storetryparsejson("{\"slug\":\"x\",\"type\":\"page\"}");
+  (test.eq(c.slug;"x"));
+  <true
+};
+
+f=testsqlcreate():bool{
+  let fields=@("author":"str");
+  let sql=store.storesqlcreate("posts";fields);
+  (test.eq(str.startswith(sql;"CREATE TABLE IF NOT EXISTS posts");true));
+  (test.eq(str.contains(sql;"id INTEGER PRIMARY KEY");true));
+  (test.eq(str.contains(sql;"slug TEXT UNIQUE");true));
+  (test.eq(str.contains(sql;"body TEXT");true));
+  (test.eq(str.endswith(sql;")");true));
   <true
 };
 
 f=teststoreallempty():bool{
   let mkresult=file.mkdir("/tmp/test_store_empty/posts");
-  let mkok=mt mkresult {Ok:v true;Err:e true};
+  let mkok=mt mkresult {$ok:v true;$err:e true};
+  if(mkok=false){<false};
   let result=store.storeall("/tmp/test_store_empty";"posts";"flat");
-  let colok=mt result {Ok:v true;Err:e false};
-  if(colok=false){<false};
-  let col=mt result {$ok:v v;$err:e 0};
+  let ok=mt result {$ok:v true;$err:e false};
+  if(ok=false){<false};
+  let col=mt result {$ok:v v;$err:e @($content)};
   (test.eq(col.len;0));
   <true
 };
 
+f=teststoreallflat():bool{
+  let mkresult=file.mkdir("/tmp/test_store_flat/pages");
+  let mkok=mt mkresult {$ok:v true;$err:e true};
+  if(mkok=false){<false};
+  let wr=mt file.write("/tmp/test_store_flat/pages/about.md";"---\nslug: about\ntitle: About\n---\nAbout body\n") {$ok:v true;$err:e false};
+  if(wr=false){<false};
+  let result=store.storeall("/tmp/test_store_flat";"pages";"flat");
+  let col=mt result {$ok:v v;$err:e @($content)};
+  (test.eq(col.len;1));
+  (test.eq(col.get(0).slug;"about"));
+  <true
+};
+
+f=mkcol():@$content{
+  let c1=$content{slug:"about";type:"page";title:"";meta:@("k":"v1");body:"About page body"};
+  let c2=$content{slug:"contact";type:"page";title:"";meta:@("k":"v2");body:"Contact page body"};
+  <@(c1;c2)
+};
+
 f=teststoreslug():bool{
-  let c1=$content{
-    slug:"about";
-    type:"page";
-    title:"";
-    meta:@($str:$str);
-    body:"About page body"
-  };
-  let c2=$content{
-    slug:"contact";
-    type:"page";
-    title:"";
-    meta:@($str:$str);
-    body:"Contact page body"
-  };
-  let col=@(c1;c2);
-  let result=store.storeslug(col;"contact");
-  let cok=mt result {Ok:v true;Err:e false};
-  if(cok=false){<false};
-  let c=mt result {$ok:v v;$err:e 0};
+  let result=store.storeslug(mkcol();"contact");
+  let ok=mt result {$ok:v true;$err:e false};
+  if(ok=false){<false};
+  let c=mt result {$ok:v v;$err:e store.storedefault()};
   (test.eq(c.slug;"contact"));
   (test.eq(str.contains(c.body;"Contact");true));
   <true
 };
 
+f=teststoreslugmissing():bool{
+  let result=store.storeslug(mkcol();"nope");
+  let iserr=mt result {$ok:v false;$err:e true};
+  <iserr
+};
+
+f=teststorefindmissing():bool{
+  let result=store.storefind(mkcol();"k";"nomatch");
+  let iserr=mt result {$ok:v false;$err:e true};
+  <iserr
+};
+
 f=main():i64{
-  let r0=testparsefrontmatter();
-  let r1=teststoreallempty();
-  let r2=teststoreslug();
-  if(r0&&r1&&r2){
-    <0
-  }el{
-    <1
-  }
+  let r0=testdefault();
+  let r1=testparsefront();
+  let r2=testparsefrontnofront();
+  let r3=testtryparse();
+  let r4=testparsejson();
+  let r5=testparsejsoninvalid();
+  let r6=testtryparsejson();
+  let r7=testsqlcreate();
+  let r8=teststoreallempty();
+  let r9=teststoreallflat();
+  let r10=teststoreslug();
+  let r11=teststoreslugmissing();
+  let r12=teststorefindmissing();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12){<0}el{<1}
 };

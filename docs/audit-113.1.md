@@ -165,3 +165,47 @@ via the published API).
 
 **P0 (113.B.1/.2/.3) gate the serve + CLI rebuild** and should land first.
 `std.db/file/path/log` need no Track B work.
+
+---
+
+## 6. Empirical addendum (2026-06-15) — static audit corrected by testing
+
+Per the "test each function" rule, the audit's static findings were verified
+against the live compiler (`toke 0.3.9`) before any Track B work. Several
+conclusions changed:
+
+- **`str` naming (113.B.3) is NOT a functional blocker.** `s.fromint(42)`,
+  `s.toint("42")`, and `s.eq(a;b)` all compile cleanly through the published
+  `import std.str`. The `.tki`'s `from_int`/`to_int` (underscore) entries are
+  *uncallable in v0.3* — the lexer rejects underscores (E1003: "to_int -> toint").
+  The resolver/codegen already alias the no-underscore names ooke uses. So this
+  is **`.tki` hygiene** (publish the v0.3-legal names, drop the stale underscore
+  ones), not a blocker.
+- **`http` naming (113.B.2) is NOT a functional blocker either.**
+  `http.serveworkers(...)` resolves cleanly despite `http.tki` only listing
+  `http.serve_workers` (underscore, uncallable). Same pattern → `.tki` hygiene.
+- **All 12 ooke modules pass `tkc --check`** today. The only non-clean results
+  are `W1020` (foreign-keyword *warnings*) and `E2030` (unresolved sibling
+  `ooke.*` import) — and E2030 only fires when checking a file in isolation; it
+  resolves in a full build (the Makefile's `test-check` excludes E2030 for this
+  reason).
+
+**Reframing of the effort.** ooke's current source already *is* pure toke and
+already compiles against current toke core, consuming only the published stdlib
+API. So Epic 113 is **not** a "make it compile in toke" effort — that was done in
+Epic 56. The real value is three things:
+1. **Clean-room quality rebuild** to toke's design goals (small/multiple files,
+   single canonical patterns, `.tkc.md` companions, test-per-function) — the
+   explicit ask.
+2. **toke-core interface hygiene** (Track B): fix `.tki` files to publish the
+   v0.3-callable names and the wrappers that already exist but are unexported,
+   so the published contract matches reality. Mostly **non-blocking**, do
+   opportunistically.
+3. **Genuine core bugs/gaps**: `process.spawn` argv contract (113.B.6, real
+   correctness/security bug), swallowed `toml`/`json` errors, dead exports
+   (`md.renderfile`, `args.all`). These are the highest-value Track B items.
+
+**Revised Track B priority:** 113.B.6 (process.spawn bug) → P1-real;
+113.B.1 (publish missing http wrappers) → P2 (only matters where ooke needs an
+unexported one — verify per call); 113.B.2/.3 (naming) → P3 hygiene;
+113.B.9/.10 (casing/error-union) → confirm empirically before treating as work.

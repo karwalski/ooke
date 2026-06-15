@@ -1,0 +1,26 @@
+m=test.apihealth;
+i=apihealth:ooke.apihealth;
+i=test:std.test;
+
+f=testapigetjson():bool{
+  let body=apihealth.apigetjson();
+  let want="{\"status\":\"ok\",\"service\":\"ooke\"}";
+  (test.eq(body;want));
+  <body=want
+};
+
+f=testget():bool{
+  let res=apihealth.get(0);
+  (test.ok(res));
+  <!(res=0)
+};
+
+f=main():i64{
+  let r0=testapigetjson();
+  let r1=testget();
+  if(r0&&r1){
+    <0
+  }el{
+    <1
+  }
+};
