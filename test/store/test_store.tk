@@ -1,0 +1,64 @@
+m=test.store;
+i=store:ooke.store;
+i=test:std.test;
+i=file:std.file;
+i=str:std.str;
+
+f=testparsefrontmatter():bool{
+  let src="---\nslug: hello-world\ntype: post\ntitle: Hello World\n---\n# Hello\n\nThis is the body.\n";
+  let result=store.storeparsefront(src);
+  let cok=mt result {Ok:v true;Err:e false};
+  if(cok=false){<false};
+  let c=mt result {$ok:v v;$err:e 0};
+  (test.eq(c.slug;"hello-world"));
+  (test.eq(c.type;"post"));
+  (test.eq(str.contains(c.body;"Hello")&&str.contains(c.body;"body");true));
+  <true
+};
+
+f=teststoreallempty():bool{
+  let mkresult=file.mkdir("/tmp/test_store_empty/posts");
+  let mkok=mt mkresult {Ok:v true;Err:e true};
+  let result=store.storeall("/tmp/test_store_empty";"posts";"flat");
+  let colok=mt result {Ok:v true;Err:e false};
+  if(colok=false){<false};
+  let col=mt result {$ok:v v;$err:e 0};
+  (test.eq(col.len;0));
+  <true
+};
+
+f=teststoreslug():bool{
+  let c1=$content{
+    slug:"about";
+    type:"page";
+    title:"";
+    meta:@($str:$str);
+    body:"About page body"
+  };
+  let c2=$content{
+    slug:"contact";
+    type:"page";
+    title:"";
+    meta:@($str:$str);
+    body:"Contact page body"
+  };
+  let col=@(c1;c2);
+  let result=store.storeslug(col;"contact");
+  let cok=mt result {Ok:v true;Err:e false};
+  if(cok=false){<false};
+  let c=mt result {$ok:v v;$err:e 0};
+  (test.eq(c.slug;"contact"));
+  (test.eq(str.contains(c.body;"Contact");true));
+  <true
+};
+
+f=main():i64{
+  let r0=testparsefrontmatter();
+  let r1=teststoreallempty();
+  let r2=teststoreslug();
+  if(r0&&r1&&r2){
+    <0
+  }el{
+    <1
+  }
+};

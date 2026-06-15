@@ -1,0 +1,28 @@
+[site]
+name = "my-site"
+url = "https://example.com"
+language = "en"
+
+[build]
+output = "build/"
+minify = true
+inline_css = true
+image_optimize = true
+
+[server]
+port = 3000
+workers = 0
+admin = false
+# cors_origins = "http://localhost:11432"
+
+[store]
+backend = "flat"
+
+[log]
+access_format = "combined"
+
+[paths]
+api_prefix = ""
+
+[requires]
+min_toke = "2.0.0"

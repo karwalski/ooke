@@ -1,0 +1,215 @@
+m=ooke.store;
+i=file:std.file;
+i=str:std.str;
+i=path:std.path;
+i=json:std.json;
+i=db:std.db;
+
+t=$content{
+  slug:$str;
+  type:$str;
+  title:$str;
+  meta:@($str:$str);
+  body:$str
+};
+
+t=$storeerr{msg:$str};
+
+f=storeparsefront(src:$str):$content!$storeerr{
+  let opener="---\n";
+  let hasopen=str.startswith(src;opener);
+  if(!hasopen){
+    <$content{
+      slug:"";
+      type:"page";
+      title:"";
+      meta:@($str:$str);
+      body:src
+    }
+  }el{
+    let afteropen=mt str.slice(src;4;str.len(src)) {Ok:v v;Err:e ""};
+    let closer="\n---\n";
+    let closepos=str.indexof(afteropen;closer);
+    if(closepos<0){
+      <$content{
+        slug:"";
+        type:"page";
+        title:"";
+        meta:@($str:$str);
+        body:src
+      }
+    }el{
+      let fmraw=mt str.slice(afteropen;0;closepos as u64) {Ok:v v;Err:e ""};
+      let bodystart=(closepos+5) as u64;
+      let bodyraw=str.trim(mt str.slice(afteropen;bodystart;str.len(afteropen)) {Ok:v v;Err:e ""});
+      let lines=str.split(fmraw;"\n");
+      let meta=mut.@($str:$str);
+      let slug=mut."";
+      let ctype=mut."page";
+      let ctitle=mut."";
+      lp(let i=0;i<lines.len;i=i+1){
+        let line=str.trim(lines.get(i));
+        let kv=str.split(line;":");
+        if(!kv.len<2){
+          let k=str.trim(kv.get(0));
+          let v=str.trim(kv.get(1));
+          if(k="slug"){slug=v}el{};
+          if(k="type"){ctype=v}el{};
+          if(k="title"){ctitle=v}el{};
+          meta=meta.set(k;v)
+        }el{}
+      };
+      <$content{
+        slug:slug;
+        type:ctype;
+        title:ctitle;
+        meta:meta;
+        body:bodyraw
+      }
+    }
+  }
+};
+
+f=storedefault():$content{
+  <$content{slug:"";type:"page";title:"";meta:@($str:$str);body:""}
+};
+
+f=storetryparse(src:$str):$content{
+  let r=mt storeparsefront(src) {Ok:c c; Err:e storedefault()};
+  <r
+};
+
+f=storeparsejson(src:$str):$content!$storeerr{
+  let doc=json.dec(src)!$storeerr;
+  let meta=mut.@($str:$str);
+  let slug=mt json.str(doc;"slug") {Ok:v v;Err:e ""};
+  let ctype=mt json.str(doc;"type") {Ok:v v;Err:e "page"};
+  let ctitle=mt json.str(doc;"title") {Ok:v v;Err:e ""};
+  if(str.len(slug)>0){meta=meta.set("slug";slug)}el{};
+  if(str.len(ctype)>0){meta=meta.set("type";ctype)}el{};
+  if(str.len(ctitle)>0){meta=meta.set("title";ctitle)}el{};
+  <$content{
+    slug:slug;
+    type:ctype;
+    title:ctitle;
+    meta:meta;
+    body:""
+  }
+};
+
+f=storetryparsejson(src:$str):$content{
+  let r=mt storeparsejson(src) {Ok:c c; Err:e storedefault()};
+  <r
+};
+
+f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str{
+  let sql=mut."CREATE TABLE IF NOT EXISTS ";
+  sql=str.concat(sql;modelname);
+  sql=str.concat(sql;"(id INTEGER PRIMARY KEY;slug TEXT UNIQUE;body TEXT");
+  let keys=fields.keys;
+  lp(let i=0;i<keys.len;i=i+1){
+    let k=keys.get(i);
+    let v=mt fields.get(k) {Ok:v v;Err:e "str"};
+    let coltype=mut."TEXT";
+    if(v="bool"){coltype="INTEGER"}el{};
+    if(v="int"){coltype="INTEGER"}el{};
+    sql=str.concat(sql;";");
+    sql=str.concat(sql;k);
+    sql=str.concat(sql;" ");
+    sql=str.concat(sql;coltype)
+  };
+  sql=str.concat(sql;")");
+  <sql
+};
+
+f=storeallsql(contenttype:$str):@$content!$storeerr{
+  let sql=str.concat("SELECT id,slug,title,type,body FROM ";contenttype);
+  let rows=db.many(sql;@())!$storeerr;
+  let results=mut.@($content);
+  lp(let i=0;i<rows.len;i=i+1){
+    let r=rows.get(i);
+    let slug=mt row.str(r;"slug") {$ok:s s;$err:e ""};
+    let ctype=mt row.str(r;"type") {$ok:s s;$err:e "page"};
+    let ctitle=mt row.str(r;"title") {$ok:s s;$err:e ""};
+    let body=mt row.str(r;"body") {$ok:s s;$err:e ""};
+    let meta=mut.@($str:$str);
+    if(str.len(slug)>0){meta=meta.set("slug";slug)}el{};
+    if(str.len(ctype)>0){meta=meta.set("type";ctype)}el{};
+    if(str.len(ctitle)>0){meta=meta.set("title";ctitle)}el{};
+    let c=$content{slug:slug;type:ctype;title:ctitle;meta:meta;body:body};
+    results=results.append(c)
+  };
+  <results
+};
+
+f=storewrite(contenttype:$str;content:$content):bool!$storeerr{
+  let check=str.concat("SELECT id FROM ";contenttype);
+  let check=str.concat(check;" WHERE slug=?");
+  let existing=db.one(check;@(content.slug));
+  let found=mt existing {$ok:r true;$err:e false};
+  if(found){
+    let sql=mut."UPDATE ";
+    sql=str.concat(sql;contenttype);
+    sql=str.concat(sql;" SET title=?,type=?,body=? WHERE slug=?");
+    db.exec(sql;@(content.title;content.type;content.body;content.slug))!$storeerr;
+    <true
+  }el{
+    let sql=mut."INSERT INTO ";
+    sql=str.concat(sql;contenttype);
+    sql=str.concat(sql;"(slug,title,type,body) VALUES(?,?,?,?)");
+    db.exec(sql;@(content.slug;content.title;content.type;content.body))!$storeerr;
+    <true
+  }
+};
+
+f=storeallflat(contentdir:$str;contenttype:$str):@$content!$storeerr{
+  let dir=path.join(contentdir;contenttype);
+  let files=file.listall(dir)!$storeerr;
+  let results=mut.@($content);
+  lp(let i=0;i<files.len;i=i+1){
+    let fpath=files.get(i);
+    if(str.endswith(fpath;".md")){
+      let fullpath=path.join(dir;fpath);
+      let src=mt file.read(fullpath) {Ok:s s; Err:e ""};
+      if(str.len(src)>0){
+        let c=storetryparse(src);
+        results=results.append(c)
+      }el{}
+    }el{
+      if(str.endswith(fpath;".json")){
+        let fullpath=path.join(dir;fpath);
+        let src=mt file.read(fullpath) {Ok:s s; Err:e ""};
+        if(str.len(src)>0){
+          let c=storetryparsejson(src);
+          results=results.append(c)
+        }el{}
+      }el{}
+    }
+  };
+  <results
+};
+
+f=storeall(contentdir:$str;contenttype:$str;backend:$str):@$content!$storeerr{
+  if(backend="sqlite"){
+    <storeallsql(contenttype)!$storeerr
+  }el{
+    <storeallflat(contentdir;contenttype)!$storeerr
+  }
+};
+
+f=storeslug(col:@$content;slug:$str):$content!$storeerr{
+  lp(let i=0;i<col.len;i=i+1){
+    let item=col.get(i);
+    if(item.slug=slug){<item}el{}
+  };
+  (file.listall("")!$storeerr)
+};
+
+f=storefind(col:@$content;key:$str;val:$str):$content!$storeerr{
+  lp(let i=0;i<col.len;i=i+1){
+    let item=col.get(i);
+    let found=mt item.meta.get(key) {Ok:v v=val; Err:e false};
+    if(found){<item}el{}
+  };
+  (file.listall("")!$storeerr)
+};

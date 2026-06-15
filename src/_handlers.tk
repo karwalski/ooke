@@ -1,0 +1,14 @@
+m=ooke.handlers;
+i=http:std.http;
+i=apihealth:ooke.apihealth;
+
+f=hapihealthget(req:i64):i64{
+  <apihealth.get(req)
+};
+
+f=registerall():@$str{
+  let paths=mut.@($str);
+  (http.get("/api/health";&hapihealthget));
+  paths=paths.append("/api/health");
+  <paths
+};

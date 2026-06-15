@@ -1,0 +1,9 @@
+{! layout("base") !}
+{! block("title") !}{! yield("page_title") !}{! end !}
+{! block("content") !}
+
+<article style="max-width:640px;margin:40px auto;font-family:system-ui,sans-serif;padding:0 20px">
+  {! yield("body") !}
+</article>
+
+{! end !}
