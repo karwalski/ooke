@@ -1,0 +1,26 @@
+m=test.handlers;
+i=handlers:ooke.handlers;
+i=test:std.test;
+
+f=testhapihealthget():bool{
+  let res=handlers.hapihealthget(0);
+  (test.ok(res));
+  <!(res=0)
+};
+
+f=testregisterall():bool{
+  let paths=handlers.registerall();
+  (test.eq(paths.len;1));
+  (test.eq(paths.get(0);"/api/health"));
+  <(paths.len=1)&&(paths.get(0)="/api/health")
+};
+
+f=main():i64{
+  let r0=testhapihealthget();
+  let r1=testregisterall();
+  if(r0&&r1){
+    <0
+  }el{
+    <1
+  }
+};

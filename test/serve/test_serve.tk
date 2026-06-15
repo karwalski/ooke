@@ -1,0 +1,90 @@
+m=test.serve;
+i=serve:ooke.serve;
+i=test:std.test;
+i=file:std.file;
+i=path:std.path;
+i=str:std.str;
+
+f=mkfixture(root:$str):bool{
+  let pages=path.join(root;"pages");
+  let pagesapi=path.join(pages;"api");
+  let pagesblog=path.join(pages;"blog");
+  let tpls=path.join(root;"templates");
+  let tplsapi=path.join(tpls;"api");
+  let tplsblog=path.join(tpls;"blog");
+  let contentblog=path.join(path.join(root;"content");"blog");
+  let m0=mt file.mkdir(pagesapi) {$ok:v v;$err:e false};
+  let m1=mt file.mkdir(pagesblog) {$ok:v v;$err:e false};
+  let m2=mt file.mkdir(tplsapi) {$ok:v v;$err:e false};
+  let m3=mt file.mkdir(tplsblog) {$ok:v v;$err:e false};
+  let m4=mt file.mkdir(contentblog) {$ok:v v;$err:e false};
+
+  let w0=mt file.write(path.join(pages;"index.tk");"m=p.index;\nf=get():i64{<0};\n") {$ok:v true;$err:e false};
+  let w1=mt file.write(path.join(pagesapi;"hello.tk");"m=p.api.hello;\nf=post():i64{<0};\n") {$ok:v true;$err:e false};
+  let w2=mt file.write(path.join(pagesblog;"[slug].tk");"m=p.blog.slug;\nf=get():i64{<0};\n") {$ok:v true;$err:e false};
+
+  let w3=mt file.write(path.join(tpls;"index.tkt");"<html><body>home {{ site.name }}</body></html>") {$ok:v true;$err:e false};
+  let w4=mt file.write(path.join(tplsblog;"[slug].tkt");"<html><body>{{ title }}: {{ body }}</body></html>") {$ok:v true;$err:e false};
+
+  let w5=mt file.write(path.join(contentblog;"post1.md");"---\nslug: post1\ntitle: First Post\ntype: blog\n---\nhello body") {$ok:v true;$err:e false};
+
+  <w0&&w1&&w2&&w3&&w4&&w5
+};
+
+f=testregisternoprefix():bool{
+  let root="/tmp/ooke_serve_noprefix";
+  let mk=mkfixture(root);
+  if(mk=false){<false};
+  let pages=path.join(root;"pages");
+  let content=path.join(root;"content");
+  let tpls=path.join(root;"templates");
+  let handled=@($str);
+  (serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"";handled));
+  (test.eq(1;1));
+  <true
+};
+
+f=testregisterwithprefix():bool{
+  let root="/tmp/ooke_serve_prefix";
+  let mk=mkfixture(root);
+  if(mk=false){<false};
+  let pages=path.join(root;"pages");
+  let content=path.join(root;"content");
+  let tpls=path.join(root;"templates");
+  let handled=@($str);
+  (serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"v1";handled));
+  (test.eq(1;1));
+  <true
+};
+
+f=testregisterdedup():bool{
+  let root="/tmp/ooke_serve_dedup";
+  let mk=mkfixture(root);
+  if(mk=false){<false};
+  let pages=path.join(root;"pages");
+  let content=path.join(root;"content");
+  let tpls=path.join(root;"templates");
+  let handled=@("/";"/api/hello");
+  (serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"";handled));
+  (test.eq(1;1));
+  <true
+};
+
+f=testservejson():bool{
+  (serve.servegetjson("/api/status";"{\"status\":\"ok\"}"));
+  (serve.servepostjson("/api/submit";"{\"ok\":true}"));
+  (test.eq(1;1));
+  <true
+};
+
+f=main():i64{
+  let r0=testregisternoprefix();
+  let r1=testregisterwithprefix();
+  let r2=testregisterdedup();
+  let r3=testservejson();
+  if(r0&&r1&&r2&&r3){
+    <0
+  }el{
+    <1
+  }
+};

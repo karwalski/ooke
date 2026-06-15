@@ -21,7 +21,7 @@ f=servepostjson(pattern:$str;json:$str):void{
 };
 
 f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;handledpaths:@$str):void{
-  let routes=mt ookerouter.routerscan(pagesdir) {Ok:r r;Err:e @($route)};
+  let routes=mt ookerouter.routerscan(pagesdir) {$ok:r r;$err:e @($route)};
   lp(let i=0;i<routes.len;i=i+1){
     let r=routes.get(i);
     let isdyn=r.isdynamic;
@@ -46,7 +46,7 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
           "site.language":sitelanguage
         );
         let tpath=r.templatepath;
-        let html=mt tpl.tplrenderfile(tpath;ctx;templatesdir) {Ok:h h;Err:e ""};
+        let html=mt tpl.tplrenderfile(tpath;ctx;templatesdir) {$ok:h h;$err:e ""};
         if(str.len(html)>0){
           (log.info(str.concat("reg static: ";webpath);@()));
           (http.getstatic(webpath;html))
@@ -71,7 +71,7 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
     let isapi2=routes.get(j).isapi;
     if(isdyn2&&!isapi2){
       let ctype=routes.get(j).contenttype;
-      let col=mt store.storeall(contentdir;ctype;"flat") {Ok:c c;Err:e @()};
+      let col=mt store.storeall(contentdir;ctype;"flat") {$ok:c c;$err:e @()};
       lp(let k=0;k<col.len;k=k+1){
         let slug=col.get(k).slug;
         let body=col.get(k).body;
@@ -84,7 +84,7 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
           "body":body;
           "title":title
         );
-        let html2=mt tpl.tplrenderfile(routes.get(j).templatepath;ctx2;templatesdir) {Ok:h h;Err:e ""};
+        let html2=mt tpl.tplrenderfile(routes.get(j).templatepath;ctx2;templatesdir) {$ok:h h;$err:e ""};
         if(str.len(html2)>0){
           let fullurl=str.replace(routes.get(j).pattern;":slug";slug);
           (log.info(str.concat("reg dyn: ";fullurl);@()));
@@ -139,7 +139,7 @@ f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tl
       "site.language":sitelanguage;
       "request.path":"(unknown)"
     );
-    let nfhtml=mt tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir) {Ok:h h;Err:e ""};
+    let nfhtml=mt tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir) {$ok:h h;$err:e ""};
     if(str.len(nfhtml)>0){
       (http.setnotfound(nfhtml));
       (log.info("custom 404 registered from templates/errors/404.tkt";@()))
