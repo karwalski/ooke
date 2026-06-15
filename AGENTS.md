@@ -46,6 +46,27 @@ When a required capability does not exist, is ooke-shaped, or is buggy:
    (module + `.tki` + `tk_*_w` wrapper, C-backed where a true primitive is
    needed) so every toke program benefits — then unblock the ooke story.
 
+### NO WORKAROUNDS — fix toke core (hard rule)
+
+When you hit a toke **compiler / build / codegen / runtime** bug while rebuilding
+a module, you MUST NOT work around it (no avoiding the buggy construct, no
+restructuring the test to dodge it, no degraded reimplementation). Instead:
+
+1. **STOP** at the blocking point and **capture your partial work so it can be
+   resumed**: return the module source as far as you got, a one-paragraph
+   "resume note" (what is done, what remains, the exact next step), and which
+   functions are verified vs unverified.
+2. **File a precise bug report**: a minimal toke reproducer, the exact command,
+   observed-vs-expected behaviour, and your best root-cause pointer (file:line
+   in the toke compiler if you can find it).
+3. Mark the story **blocked** on a new/existing Track B (113.B) item. Do **not**
+   mark it done, and do **not** commit a workaround.
+
+The core toke bug will be fixed (compiler/build/codegen/run), then your story
+will be **resumed from your partial work** and finished cleanly. Workarounds are
+forbidden: they create degraded code and hide root-of-trust bugs. Faithful,
+clean, efficient code is the only acceptable output.
+
 C-backed stdlib *in toke core* is fine and expected. The invariant is only about
 *where* native code lives (toke, never ooke) and *how* ooke consumes it (the
 published API, never directly).
