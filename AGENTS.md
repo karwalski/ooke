@@ -2,7 +2,7 @@
 ## Claude Code Operating Specification — ooke (pure-toke rebuild)
 
 **Version:** 2.0
-**Repository:** toke-ooke-pure (rebuild of ooke)
+**Repository:** toke-ooke (rebuild of ooke)
 **Project:** ooke — CMS and web framework built on toke
 **Language:** toke only (compiled via tkc)
 **Governing decision:** `toke/docs/decisions/ADR-0005.md`
@@ -97,7 +97,7 @@ published API, never directly).
 ## 4. Repository Structure
 
 ```
-toke-ooke-pure/
+toke-ooke/
 ├── src/            ooke framework source (.tk + .tki + .tkc.md companions)
 ├── pages/          example/scaffold pages
 ├── templates/      example/scaffold templates (.tkt)
