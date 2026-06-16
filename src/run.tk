@@ -23,7 +23,8 @@ f=loadclicfg(projectdir:$str):$clicfg!$runerr{
 f=runcompile(projectdir:$str;cfg:$clicfg):$str!$runerr{
   let entrypath=path.join(projectdir;cfg.entry);
   if(!file.exists(entrypath)){
-    !$runerr{msg:str.concat("entry point not found: ";entrypath)}
+    (log.info(str.concat("entry point not found: ";entrypath);@()));
+    <""
   }el{};
   let outbin=path.join(projectdir;str.concat("build/";cfg.name));
   let builddir=path.join(projectdir;"build");
@@ -31,7 +32,8 @@ f=runcompile(projectdir:$str;cfg:$clicfg):$str!$runerr{
   (log.info(str.concat("compiling ";str.concat(entrypath;str.concat(" -> ";outbin)));@()));
   let h=mt process.spawn(@("tkc";entrypath;"--out";outbin)) {$ok:v v;$err:e 0};
   if(h=0){
-    !$runerr{msg:"failed to spawn tkc"}
+    (log.info("failed to spawn tkc";@()));
+    <""
   }el{};
   let ecode=mt process.wait(h) {$ok:v v;$err:e 0-1};
   let errout=mt process.stderr(h) {$ok:v v;$err:e ""};
