@@ -1,6 +1,6 @@
 ---
 source_file: "store.tk"
-source_hash: "f798d2863f2f32bc5a54a0f5804cc630963ccdb8f6be2cb4cdeeeffe84a0632b"
+source_hash: "fef9271e2768bda3336229a7f53327a3ba8a4756b9a002796f701fde8e71060d"
 compiler_version: "0.3.9"
 generated_at: "2026-06-15T00:00:00Z"
 format_version: "1.0"

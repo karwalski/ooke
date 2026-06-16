@@ -167,5 +167,10 @@ f=storeslug(col:@$content;slug:$str):$content!$storeerr{
 };
 
 f=storefind(col:@$content;key:$str;val:$str):$content!$storeerr{
+  lp(let i=0;i<col.len;i=i+1){
+    let item=col.get(i);
+    let mv=item.meta.get(key);
+    if(str.eq(mv;val)){<item}el{}
+  };
   (file.listall("")!$storeerr)
 };
