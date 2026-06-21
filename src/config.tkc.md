@@ -103,10 +103,14 @@ one record-literal return. No loops, no recursion, no mutable state.
   variant names (toke-spec-prompt.md: "Variants are `$lowercase`"). The previous
   source used the non-canonical `Ok`/`Err`; both compile, but `$ok`/`$err` is
   the spec form (Track B 113.B.9).
-- **Schema reconciliation deferred (113.2a).** This module is behaviourally
-  faithful to the reference: it reads `inlinecss`/`corsorigins`/`access`, while
-  the shipped `ooke.toml` uses snake_case `inline_css`/`cors_origins`/
-  `access_format`, and `[log].access_format` (a format) differs from this
-  module's `logaccess` (a path). Reconciling the authoritative config schema is
-  story 113.2a — not silently changed here.
+- **Schema reconciled (113.2a).** Config keys use the **no-underscore**
+  convention project-wide (matches toke's Profile-1 identifier rules — `_` is
+  outside the charset, E1003 — so the TOML key string equals the toke field
+  token 1:1, eliminating the silent-ignore drift class). Keys: `inlinecss`,
+  `corsorigins`, `apiprefix`, `[log].accessformat`. The `[log]` key is now
+  `accessformat` (default `"combined"`), matching the real stdlib capability
+  `tk_log_accessformat_w`; the old dead `access` *path* read was removed.
+  Wiring `accessformat` into serve startup is a separate follow-up story — not
+  done here. The no-op `imageoptimize` key was dropped (no image-optimize
+  feature exists).
 - **Dropped the unused `std.str` import** the reference module carried.

@@ -28,7 +28,7 @@ f=cliprintusage():void{
 };
 
 f=cliprintversion():void{
-  (log.info("ooke 0.1.1";@()))
+  (log.info("ooke 2.0.0";@()))
 };
 
 f=clinew(name:$str):i64{
@@ -37,7 +37,7 @@ f=clinew(name:$str):i64{
   let d3=mt file.mkdir(path.join(name;"templates")) {$ok:v v;$err:e false};
   let d4=mt file.mkdir(path.join(name;"content")) {$ok:v v;$err:e false};
   let d5=mt file.mkdir(path.join(name;"static")) {$ok:v v;$err:e false};
-  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[paths]\napiprefix = \"\"\n\n[log]\naccess = \"logs/access.log\"\nmaxlines = 10000\nmaxagedays = 30\n"));
+  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[paths]\napiprefix = \"\"\n\n[log]\naccessformat = \"combined\"\nmaxlines = 10000\nmaxagedays = 30\n"));
   let w1=mt file.write(path.join(name;"ooke.toml");tomlcontent) {$ok:v v;$err:e false};
   let indexcontent="m=pages.index;\n";
   let w2=mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {$ok:v v;$err:e false};
@@ -176,7 +176,7 @@ f=cfgdefault():$ookecfg{
     sitename:"my-site";siteurl:"";sitelanguage:"en";
     buildoutput:"build/";buildminify:true;buildinlinecss:true;
     serverport:3000;serverworkers:0;servercorsorigins:"";storebackend:"flat";
-    logaccess:"logs/access.log";logmaxlines:10000;logmaxagedays:30;
+    logaccessformat:"combined";logmaxlines:10000;logmaxagedays:30;
     apiprefix:""
   }
 };

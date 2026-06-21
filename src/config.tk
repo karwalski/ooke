@@ -13,7 +13,7 @@ t=$ookecfg{
   serverworkers:i64;
   servercorsorigins:$str;
   storebackend:$str;
-  logaccess:$str;
+  logaccessformat:$str;
   logmaxlines:i64;
   logmaxagedays:i64;
   apiprefix:$str
@@ -46,7 +46,7 @@ f=configload(path:$str):$ookecfg!$configerr{
 
   let storebackend=mt toml.str(store;"backend") {$ok:v v;$err:e "flat"};
 
-  let logaccess=mt toml.str(log;"access") {$ok:v v;$err:e "logs/access.log"};
+  let logaccessformat=mt toml.str(log;"accessformat") {$ok:v v;$err:e "combined"};
   let logmaxlines=mt toml.i64(log;"maxlines") {$ok:v v;$err:e 10000};
   let logmaxagedays=mt toml.i64(log;"maxagedays") {$ok:v v;$err:e 30};
 
@@ -63,7 +63,7 @@ f=configload(path:$str):$ookecfg!$configerr{
     serverworkers:serverworkers;
     servercorsorigins:servercorsorigins;
     storebackend:storebackend;
-    logaccess:logaccess;
+    logaccessformat:logaccessformat;
     logmaxlines:logmaxlines;
     logmaxagedays:logmaxagedays;
     apiprefix:apiprefix

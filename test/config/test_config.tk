@@ -15,6 +15,7 @@ f=testloadvalid():bool{
   (test.eq(cfg.siteurl;"https://test.example.com"));
   (test.eq(cfg.sitelanguage;"fr"));
   (test.eq(cfg.buildoutput;"dist/"));
+  (test.eq(cfg.buildinlinecss;false));
   (test.eq(cfg.serverport;8080));
   (test.eq(cfg.serverworkers;2));
   (test.eq(cfg.storebackend;"flat"));
@@ -44,7 +45,7 @@ f=testdefaults():bool{
   (test.eq(cfg.serverport;3000));
   (test.eq(cfg.serverworkers;0));
   (test.eq(cfg.storebackend;"flat"));
-  (test.eq(cfg.logaccess;"logs/access.log"));
+  (test.eq(cfg.logaccessformat;"combined"));
   (test.eq(cfg.logmaxlines;10000));
   (test.eq(cfg.logmaxagedays;30));
   <true

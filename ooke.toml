@@ -6,23 +6,22 @@ language = "en"
 [build]
 output = "build/"
 minify = true
-inline_css = true
-image_optimize = true
+inlinecss = true
 
 [server]
 port = 3000
 workers = 0
 admin = false
-# cors_origins = "http://localhost:11432"
+# corsorigins = "http://localhost:11432"
 
 [store]
 backend = "flat"
 
 [log]
-access_format = "combined"
+accessformat = "combined"
 
 [paths]
-api_prefix = ""
+apiprefix = ""
 
 [requires]
-min_toke = "2.0.0"
+mintoke = "2.0.0"

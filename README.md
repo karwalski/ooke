@@ -186,7 +186,6 @@ language = "en"
 output = "build/"
 minify = true
 inlinecss = true
-imageoptimize = true
 
 [server]
 port = 3000
