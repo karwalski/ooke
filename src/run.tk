@@ -31,13 +31,13 @@ f=runcompile(projectdir:$str;cfg:$clicfg):$str!$runerr{
   let mkr=mt file.mkdir(builddir) {$ok:v v;$err:e false};
   (log.info(str.concat("compiling ";str.concat(entrypath;str.concat(" -> ";outbin)));@()));
   let h=mt process.spawn(@("tkc";entrypath;"--out";outbin)) {$ok:v v;$err:e 0};
-  if(h=0){
+  if(h==0){
     (log.info("failed to spawn tkc";@()));
     <""
   }el{};
   let ecode=mt process.wait(h) {$ok:v v;$err:e 0-1};
   let errout=mt process.stderr(h) {$ok:v v;$err:e ""};
-  if(!(ecode=0)){
+  if(!(ecode==0)){
     (log.info(str.concat("tkc error: ";errout);@()));
     <""
   }el{};
@@ -58,7 +58,7 @@ f=runexec(binpath:$str;passargs:@$str):i64{
   };
   (log.info(str.concat("running ";binpath);@()));
   let h=mt process.spawn(cmdparts) {$ok:v v;$err:e 0};
-  if(h=0){
+  if(h==0){
     (log.info("failed to spawn binary";@()));
     <1
   }el{};
@@ -77,7 +77,7 @@ f=runexec(binpath:$str;passargs:@$str):i64{
 f=run(projectdir:$str;passargs:@$str):i64{
   let cfg=mt loadclicfg(projectdir) {$ok:v v;$err:e $clicfg{name:"app";entry:"src/main.tk"}};
   let binpath=mt runcompile(projectdir;cfg) {$ok:v v;$err:e ""};
-  if(str.len(binpath)=0){
+  if(str.len(binpath)==0){
     (log.info("compilation failed, aborting run";@()));
     <1
   }el{};
@@ -87,7 +87,7 @@ f=run(projectdir:$str;passargs:@$str):i64{
 f=build(projectdir:$str):i64{
   let cfg=mt loadclicfg(projectdir) {$ok:v v;$err:e $clicfg{name:"app";entry:"src/main.tk"}};
   let binpath=mt runcompile(projectdir;cfg) {$ok:v v;$err:e ""};
-  if(str.len(binpath)=0){
+  if(str.len(binpath)==0){
     (log.info("compilation failed";@()));
     <1
   }el{};

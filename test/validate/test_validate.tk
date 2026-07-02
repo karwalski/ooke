@@ -10,10 +10,10 @@ f=writemodel():bool{
 };
 
 f=testloadmodel():bool{
-  if(writemodel()=false){<false};
+  if(writemodel()==false){<false};
   let r=validate.validateloadmodel("/tmp/";"test_validate_post");
   let ok=mt r {$ok:v true;$err:e false};
-  if(ok=false){<false};
+  if(ok==false){<false};
   let m=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
   (test.eq(m.name;"post"));
   (test.eq(m.fields.len as i64;3));
@@ -34,7 +34,7 @@ f=testloadmodelmissing():bool{
 };
 
 f=testcontentvalid():bool{
-  if(writemodel()=false){<false};
+  if(writemodel()==false){<false};
   let r=validate.validateloadmodel("/tmp/";"test_validate_post");
   let model=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
   let meta=mut.@($str:$str);
@@ -48,7 +48,7 @@ f=testcontentvalid():bool{
 };
 
 f=testcontentmissingrequired():bool{
-  if(writemodel()=false){<false};
+  if(writemodel()==false){<false};
   let r=validate.validateloadmodel("/tmp/";"test_validate_post");
   let model=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
   let meta=mut.@($str:$str);
@@ -60,7 +60,7 @@ f=testcontentmissingrequired():bool{
 };
 
 f=testcontentbadint():bool{
-  if(writemodel()=false){<false};
+  if(writemodel()==false){<false};
   let r=validate.validateloadmodel("/tmp/";"test_validate_post");
   let model=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
   let meta=mut.@($str:$str);
@@ -73,7 +73,7 @@ f=testcontentbadint():bool{
 };
 
 f=testcontentbadbool():bool{
-  if(writemodel()=false){<false};
+  if(writemodel()==false){<false};
   let r=validate.validateloadmodel("/tmp/";"test_validate_post");
   let model=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
   let meta=mut.@($str:$str);

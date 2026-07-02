@@ -33,19 +33,19 @@ f=tplescape(s:$str):$str{
 
 f=tplapplyfilter(val:$str;filtername:$str):$str{
   let fname=str.trim(filtername);
-  if(fname="md"){
+  if(fname=="md"){
     <md.render(val)
   }el{
-    if(fname="escape"){
+    if(fname=="escape"){
       <tplescape(val)
     }el{
-      if(fname="upper"){
+      if(fname=="upper"){
         <str.upper(val)
       }el{
-        if(fname="lower"){
+        if(fname=="lower"){
           <str.lower(val)
         }el{
-          if(fname="trim"){
+          if(fname=="trim"){
             <str.trim(val)
           }el{
             <val
@@ -84,7 +84,7 @@ f=tpllex(src:$str):@$token!$tplerr{
   lp(let ii=0;running;ii=ii+1){
     let rem=remaining;
     let rlen=str.len(rem);
-    if(rlen=0){
+    if(rlen==0){
       running=false
     }el{
       let posexpr=str.indexof(rem;"{=");
@@ -128,10 +128,10 @@ f=tpllex(src:$str):@$token!$tplerr{
         let afteropen=mt str.slice(rem;bestpos+2;rlen) {$ok:v v;$err:e ""};
 
         let closedelim=mut."";
-        if(besttype="expr"){
+        if(besttype=="expr"){
           closedelim="=}"
         }el{
-          if(besttype="dir"){
+          if(besttype=="dir"){
             closedelim="!}"
           }el{
             closedelim="#}"
@@ -148,11 +148,11 @@ f=tpllex(src:$str):@$token!$tplerr{
           let inner=mt str.slice(afteropen;0;closepos) {$ok:v v;$err:e ""};
           let afterclose=mt str.slice(afteropen;closepos+2;str.len(afteropen)) {$ok:v v;$err:e ""};
 
-          if(besttype="expr"){
+          if(besttype=="expr"){
             let tok=$token{kind:exprkind;content:inner};
             tokens=tokens.append(tok)
           }el{
-            if(besttype="dir"){
+            if(besttype=="dir"){
               let tok=$token{kind:dirkind;content:inner};
               tokens=tokens.append(tok)
             }el{
@@ -196,7 +196,7 @@ f=tpldirectivearg(content:$str):$str{
       if(tlen>1){
         let first=mt str.slice(t;0;1) {$ok:v v;$err:e ""};
         let last=mt str.slice(t;tlen-1;tlen) {$ok:v v;$err:e ""};
-        if(first="\""&&last="\""){
+        if(first=="\""&&last=="\""){
           <mt str.slice(t;1;tlen-1) {$ok:v v;$err:e t}
         }el{
           <t
@@ -211,7 +211,7 @@ f=tpldirectivearg(content:$str):$str{
 f=tplfindblock(blocks:@$block;name:$str):$str{
   lp(let i=0;i<blocks.len;i=i+1){
     let b=blocks.get(i);
-    if(b.name=name){
+    if(b.name==name){
       <b.content
     }el{}
   };
@@ -296,15 +296,15 @@ f=tplrender(
       let dname=tpldirectivename(tok.content);
       let darg=tpldirectivearg(tok.content);
 
-      if(dname="layout"){
+      if(dname=="layout"){
         layoutname=darg
       }el{
-        if(dname="block"){
+        if(dname=="block"){
           inblock=true;
           currentblockname=darg;
           currentblockbuf=""
         }el{
-          if(dname="end"){
+          if(dname=="end"){
             if(inblock){
               let b=$block{name:currentblockname;content:currentblockbuf};
               collectedblocks=collectedblocks.append(b);
@@ -313,7 +313,7 @@ f=tplrender(
               currentblockbuf=""
             }el{}
           }el{
-            if(dname="var"){
+            if(dname=="var"){
               let vargot=ctx.get(darg);
               let varval=mt vargot {$ok:v v;$err:e ""};
               if(inblock){
@@ -322,13 +322,13 @@ f=tplrender(
                 buf=str.concat(buf;varval)
               }
             }el{
-            if(dname="yield"){
+            if(dname=="yield"){
               let blockcontent=tplfindblock(blocks;darg);
               if(str.len(blockcontent)>0){
                 buf=str.concat(buf;blockcontent)
               }el{}
             }el{
-              if(dname="partial"){
+              if(dname=="partial"){
                 let partialpath=path.join(templatesdir;str.concat(darg;".tkt"));
                 let psrcr=file.read(partialpath);
                 let partialsrc=mt psrcr {$ok:s s;$err:e ""};
@@ -342,7 +342,7 @@ f=tplrender(
                   }
                 }el{}
               }el{
-                if(dname="island"){
+                if(dname=="island"){
                   let iparse=tplislandparse(tok.content);
                   let inameg=iparse.get("name");
                   let iname=mt inameg {$ok:v v;$err:e ""};

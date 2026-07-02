@@ -26,7 +26,7 @@ f=testcfgdefault():bool{
   (test.eq(cfg.logmaxlines;10000));
   (test.eq(cfg.logmaxagedays;30));
   (test.eq(cfg.apiprefix;""));
-  <str.eq(cfg.sitename;"my-site")&&str.eq(cfg.buildoutput;"build/")&&cfg.serverport=3000
+  <str.eq(cfg.sitename;"my-site")&&str.eq(cfg.buildoutput;"build/")&&cfg.serverport==3000
 };
 
 f=testretcolon():bool{
@@ -86,13 +86,13 @@ f=testspecset():bool{
 f=testgenunknowntype():bool{
   let rc=cli.cligen("unknowntype";"foo");
   (test.eq(rc;1));
-  <rc=1
+  <rc==1
 };
 
 f=testgenspecunknown():bool{
   let rc=cli.cligenspec("tree";"foo");
   (test.eq(rc;1));
-  <rc=1
+  <rc==1
 };
 
 f=testgenpage():bool{
@@ -106,7 +106,7 @@ f=testgenpage():bool{
   (delfile(pagepath));
   (test.assert(exists;"gen page file exists"));
   (test.assert(contentok;"gen page content"));
-  <rc=0&&exists&&contentok
+  <rc==0&&exists&&contentok
 };
 
 f=testgenspecstackfile():bool{
@@ -118,7 +118,7 @@ f=testgenspecstackfile():bool{
   (delfile(fpath));
   (test.assert(exists;"gen spec stack file exists"));
   (test.assert(contentok;"gen spec stack file content"));
-  <rc=0&&exists&&contentok
+  <rc==0&&exists&&contentok
 };
 
 f=main():i64{

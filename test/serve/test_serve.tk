@@ -34,7 +34,7 @@ f=mkfixture(root:$str):bool{
 f=testregisternoprefix():bool{
   let root="/tmp/ooke_serve_noprefix";
   let mk=mkfixture(root);
-  if(mk=false){<false};
+  if(mk==false){<false};
   let pages=path.join(root;"pages");
   let content=path.join(root;"content");
   let tpls=path.join(root;"templates");
@@ -47,7 +47,7 @@ f=testregisternoprefix():bool{
 f=testregisterwithprefix():bool{
   let root="/tmp/ooke_serve_prefix";
   let mk=mkfixture(root);
-  if(mk=false){<false};
+  if(mk==false){<false};
   let pages=path.join(root;"pages");
   let content=path.join(root;"content");
   let tpls=path.join(root;"templates");
@@ -60,7 +60,7 @@ f=testregisterwithprefix():bool{
 f=testregisterdedup():bool{
   let root="/tmp/ooke_serve_dedup";
   let mk=mkfixture(root);
-  if(mk=false){<false};
+  if(mk==false){<false};
   let pages=path.join(root;"pages");
   let content=path.join(root;"content");
   let tpls=path.join(root;"templates");

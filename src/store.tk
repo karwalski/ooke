@@ -44,9 +44,9 @@ f=storeparsefront(src:$str):$content!$storeerr{
         if(!kv.len<2){
           let k=str.trim(kv.get(0));
           let v=str.trim(kv.get(1));
-          if(k="slug"){slug=v}el{};
-          if(k="type"){ctype=v}el{};
-          if(k="title"){ctitle=v}el{};
+          if(k=="slug"){slug=v}el{};
+          if(k=="type"){ctype=v}el{};
+          if(k=="title"){ctitle=v}el{};
           meta=meta.set(k;v)
         }el{}
       };
@@ -151,7 +151,7 @@ f=storeallflat(contentdir:$str;contenttype:$str):@$content!$storeerr{
 };
 
 f=storeall(contentdir:$str;contenttype:$str;backend:$str):@$content!$storeerr{
-  if(backend="sqlite"){
+  if(backend=="sqlite"){
     <storeallsql(contenttype)!$storeerr
   }el{
     <storeallflat(contentdir;contenttype)!$storeerr
@@ -161,7 +161,7 @@ f=storeall(contentdir:$str;contenttype:$str;backend:$str):@$content!$storeerr{
 f=storeslug(col:@$content;slug:$str):$content!$storeerr{
   lp(let i=0;i<col.len;i=i+1){
     let item=col.get(i);
-    if(item.slug=slug){<item}el{}
+    if(item.slug==slug){<item}el{}
   };
   (file.listall("")!$storeerr)
 };

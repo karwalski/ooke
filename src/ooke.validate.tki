@@ -4,12 +4,12 @@
   "version": "1.0.0",
   "exports": [
     {"kind": "type", "name": "fielddef", "fields": [{"name": "name", "type": "str"}, {"name": "fieldtype", "type": "str"}, {"name": "required", "type": "bool"}]},
-    {"kind": "type", "name": "modeldef", "fields": [{"name": "name", "type": "str"}, {"name": "fields", "type": "@"}]},
+    {"kind": "type", "name": "modeldef", "fields": [{"name": "name", "type": "str"}, {"name": "fields", "type": "[fielddef]"}]},
     {"kind": "type", "name": "valerror", "fields": [{"name": "filepath", "type": "str"}, {"name": "field", "type": "str"}, {"name": "msg", "type": "str"}]},
-    {"kind": "type", "name": "valresult", "fields": [{"name": "errors", "type": "@"}, {"name": "warnings", "type": "@"}]},
+    {"kind": "type", "name": "valresult", "fields": [{"name": "errors", "type": "[valerror]"}, {"name": "warnings", "type": "[valerror]"}]},
     {"kind": "type", "name": "validateerr", "fields": [{"name": "msg", "type": "str"}]},
-    {"kind": "func", "name": "validateloadmodel", "params": ["str", "str"], "return": "modeldef"},
-    {"kind": "func", "name": "validatecontent", "params": ["modeldef", "@", "str"], "return": "valresult"},
+    {"kind": "func", "name": "validateloadmodel", "params": ["str", "str"], "return": "modeldef", "error": "validateerr"},
+    {"kind": "func", "name": "validatecontent", "params": ["modeldef", "[str:str]", "str"], "return": "valresult"},
     {"kind": "func", "name": "validatelogresult", "params": ["valresult"], "return": "void"},
     {"kind": "func", "name": "validatemerge", "params": ["valresult", "valresult"], "return": "valresult"},
     {"kind": "func", "name": "validateempty", "params": [], "return": "valresult"}

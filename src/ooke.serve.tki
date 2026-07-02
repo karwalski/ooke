@@ -6,7 +6,7 @@
     {"kind": "type", "name": "serveerr", "fields": [{"name": "msg", "type": "str"}]},
     {"kind": "func", "name": "servegetjson", "params": ["str", "str"], "return": "void"},
     {"kind": "func", "name": "servepostjson", "params": ["str", "str"], "return": "void"},
-    {"kind": "func", "name": "serveregisterstatic", "params": ["str", "str", "str", "str", "str", "str", "str", "@"], "return": "void"},
-    {"kind": "func", "name": "serverun", "params": ["str", "i64", "i64", "str", "str", "str", "str", "str", "str", "str", "str", "@"], "return": "i64"}
+    {"kind": "func", "name": "serveregisterstatic", "params": ["str", "str", "str", "str", "str", "str", "str", "[str]"], "return": "void"},
+    {"kind": "func", "name": "serverun", "params": ["str", "i64", "i64", "str", "str", "str", "str", "str", "str", "str", "str", "[str]"], "return": "i64", "error": "serveerr"}
   ]
 }

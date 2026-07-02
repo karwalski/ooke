@@ -5,10 +5,10 @@
   "exports": [
     {"kind": "type", "name": "runerr", "fields": [{"name": "msg", "type": "str"}]},
     {"kind": "type", "name": "clicfg", "fields": [{"name": "name", "type": "str"}, {"name": "entry", "type": "str"}]},
-    {"kind": "func", "name": "loadclicfg", "params": ["str"], "return": "clicfg"},
-    {"kind": "func", "name": "runcompile", "params": ["str", "clicfg"], "return": "str"},
-    {"kind": "func", "name": "runexec", "params": ["str", "@"], "return": "i64"},
-    {"kind": "func", "name": "run", "params": ["str", "@"], "return": "i64"},
+    {"kind": "func", "name": "loadclicfg", "params": ["str"], "return": "clicfg", "error": "runerr"},
+    {"kind": "func", "name": "runcompile", "params": ["str", "clicfg"], "return": "str", "error": "runerr"},
+    {"kind": "func", "name": "runexec", "params": ["str", "[str]"], "return": "i64"},
+    {"kind": "func", "name": "run", "params": ["str", "[str]"], "return": "i64"},
     {"kind": "func", "name": "build", "params": ["str"], "return": "i64"}
   ]
 }

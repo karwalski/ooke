@@ -34,7 +34,7 @@ f=routederivepattern(filepath:$str;pagesdir:$str):$str{
   if(str.endswith(out;"/index")){
     result=str.trimsuffix(out;"/index")
   }el{};
-  if(result=""){
+  if(result==""){
     <"/"
   }el{
     <result
@@ -55,7 +55,7 @@ f=routederivedtype(filepath:$str;pagesdir:$str):$str{
     let parts=mut."";
     lp(let i=0;i<segs.len-1;i=i+1){
       let seg=segs.get(i);
-      if(i=0){
+      if(i==0){
         parts=seg
       }el{
         parts=str.concat(parts;str.concat("/";seg))
@@ -71,7 +71,7 @@ f=routerscan(pagesdir:$str):@$route!$routeerr{
   let routes=mut.@($route);
   lp(let i=0;i<allfiles.len;i=i+1){
     let p=allfiles.get(i);
-    if(path.ext(p)=".tk"){
+    if(path.ext(p)==".tk"){
       let pattern=routederivepattern(p;pagesdir);
       let r=$route{
         pattern:pattern;
@@ -91,7 +91,7 @@ f=routerscan(pagesdir:$str):@$route!$routeerr{
 f=routertrymatch(route:$route;url:$str):$routematch!$routeerr{
   let urlsegs=str.split(url;"/");
   let patsegs=str.split(route.pattern;"/");
-  if(!(urlsegs.len=patsegs.len)){
+  if(!(urlsegs.len==patsegs.len)){
     (file.listall("")!$routeerr)
   }el{};
   let captures=mut.@($str:$str);
@@ -122,7 +122,7 @@ f=routecountdynamic(pattern:$str):i64{
 
 f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
   let normurl=mut.url;
-  if(str.endswith(url;"/")&&!(url="/")){
+  if(str.endswith(url;"/")&&!(url=="/")){
     normurl=str.trimsuffix(url;"/")
   }el{};
   let defroute=$route{pattern:"";filepath:"";templatepath:"";contenttype:"";isdynamic:false;isapi:false;params:@()};
@@ -134,7 +134,7 @@ f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
     if(!r.isdynamic){
       if(foundidx<0){
         let val=mt routertrymatch(r;normurl) {$ok:m m;$err:e defmatch};
-        if(!(val.route.pattern="")){
+        if(!(val.route.pattern=="")){
           foundmatch=val;
           foundidx=i
         }el{}
@@ -147,7 +147,7 @@ f=routermatch(routes:@$route;url:$str):$routematch!$routeerr{
     if(r.isdynamic){
       if(foundidx<0||foundmatch.route.isdynamic){
         let val=mt routertrymatch(r;normurl) {$ok:m m;$err:e defmatch};
-        if(!(val.route.pattern="")){
+        if(!(val.route.pattern=="")){
           let dyncount=routecountdynamic(r.pattern);
           if(dyncount<bestdyncount){
             foundmatch=val;

@@ -51,9 +51,9 @@ f=testinlinecssnolink():bool{
 f=testinlinecssinlines():bool{
   let dir="/tmp/test_build_css";
   let mkr=mt file.mkdir(dir) {$ok:v true;$err:e false};
-  if(mkr=false){<false};
+  if(mkr==false){<false};
   let cssw=mt file.write("/tmp/test_build_css/style.css";"body{color:red}") {$ok:v true;$err:e false};
-  if(cssw=false){<false};
+  if(cssw==false){<false};
   let html="<head><link rel=\"stylesheet\" href=\"style.css\"></head>";
   let out=build.buildinlinecss(html;dir);
   (test.eq(str.contains(out;"<style>");true));

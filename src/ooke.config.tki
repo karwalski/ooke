@@ -5,6 +5,6 @@
   "exports": [
     {"kind": "type", "name": "ookecfg", "fields": [{"name": "sitename", "type": "str"}, {"name": "siteurl", "type": "str"}, {"name": "sitelanguage", "type": "str"}, {"name": "buildoutput", "type": "str"}, {"name": "buildminify", "type": "bool"}, {"name": "buildinlinecss", "type": "bool"}, {"name": "serverport", "type": "i64"}, {"name": "serverworkers", "type": "i64"}, {"name": "servercorsorigins", "type": "str"}, {"name": "storebackend", "type": "str"}, {"name": "logaccessformat", "type": "str"}, {"name": "logmaxlines", "type": "i64"}, {"name": "logmaxagedays", "type": "i64"}, {"name": "apiprefix", "type": "str"}]},
     {"kind": "type", "name": "configerr", "fields": [{"name": "msg", "type": "str"}]},
-    {"kind": "func", "name": "configload", "params": ["str"], "return": "ookecfg"}
+    {"kind": "func", "name": "configload", "params": ["str"], "return": "ookecfg", "error": "configerr"}
   ]
 }

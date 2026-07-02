@@ -10,10 +10,10 @@ f=testloadclicfg():bool{
   let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
   let tomlsrc="[package]\nname = \"mysite\"\nentry = \"src/app.tk\"\n";
   let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
-  if(wrok=false){<false};
+  if(wrok==false){<false};
   let result=run.loadclicfg(dir);
   let ok=mt result {$ok:v true;$err:e false};
-  if(ok=false){<false};
+  if(ok==false){<false};
   let cfg=mt result {$ok:v v;$err:e 0};
   (test.eq(cfg.name;"mysite"));
   (test.eq(cfg.entry;"src/app.tk"));
@@ -25,7 +25,7 @@ f=testloadclicfgdefaults():bool{
   let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
   let tomlsrc="[other]\nx = 1\n";
   let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
-  if(wrok=false){<false};
+  if(wrok==false){<false};
   let result=run.loadclicfg(dir);
   let cfg=mt result {$ok:v v;$err:e 0};
   (test.eq(cfg.name;"app"));
@@ -44,11 +44,11 @@ f=testruncompilemissingentry():bool{
   let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
   let tomlsrc="[package]\nname = \"app\"\nentry = \"src/does_not_exist.tk\"\n";
   let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
-  if(wrok=false){<false};
+  if(wrok==false){<false};
   let cfgresult=run.loadclicfg(dir);
   let cfg=mt cfgresult {$ok:v v;$err:e 0};
   let result=run.runcompile(dir;cfg);
-  let nobin=mt result {$ok:v str.len(v)=0;$err:e true};
+  let nobin=mt result {$ok:v str.len(v)==0;$err:e true};
   <nobin
 };
 
@@ -57,7 +57,7 @@ f=testrunmissingentry():bool{
   let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
   let tomlsrc="[package]\nname = \"app\"\nentry = \"src/does_not_exist.tk\"\n";
   let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
-  if(wrok=false){<false};
+  if(wrok==false){<false};
   let rc=run.run(dir;@());
   (test.eq(rc;1));
   <true
@@ -68,7 +68,7 @@ f=testbuildmissingentry():bool{
   let mkr=mt file.mkdir(dir) {$ok:v v;$err:e false};
   let tomlsrc="[package]\nname = \"app\"\nentry = \"src/does_not_exist.tk\"\n";
   let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
-  if(wrok=false){<false};
+  if(wrok==false){<false};
   let rc=run.build(dir);
   (test.eq(rc;1));
   <true

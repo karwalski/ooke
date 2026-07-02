@@ -22,13 +22,13 @@ f=repairfile(filepath:$str;maxiters:i64):i64{
   let mi=maxiters;
   (log.info(str.concat("repair: checking ";filepath);@()));
   let h=mt process.spawn(@("tkc";"--check";filepath)) {$ok:v v;$err:e 0};
-  if(h=0){
+  if(h==0){
     (log.info("repair: failed to spawn tkc";@()));
     <1
   }el{};
   let ecode=mt process.wait(h) {$ok:v v;$err:e 0-1};
   let errout=mt process.stderr(h) {$ok:v v;$err:e ""};
-  if(str.len(errout)=0){
+  if(str.len(errout)==0){
     (log.info("repair: clean";@()));
     <0
   }el{

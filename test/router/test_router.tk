@@ -4,30 +4,30 @@ i=str:std.str;
 i=file:std.file;
 
 f=testderivepattern():bool{
-  if(!(router.routederivepattern("pages/index.tk";"pages/")="/")){<false};
-  if(!(router.routederivepattern("pages/about.tk";"pages/")="/about")){<false};
-  if(!(router.routederivepattern("pages/blog/[slug].tk";"pages/")="/blog/:slug")){<false};
-  if(!(router.routederivepattern("pages/blog/index.tk";"pages/")="/blog")){<false};
+  if(!(router.routederivepattern("pages/index.tk";"pages/")=="/")){<false};
+  if(!(router.routederivepattern("pages/about.tk";"pages/")=="/about")){<false};
+  if(!(router.routederivepattern("pages/blog/[slug].tk";"pages/")=="/blog/:slug")){<false};
+  if(!(router.routederivepattern("pages/blog/index.tk";"pages/")=="/blog")){<false};
   <true
 };
 
 f=testderivetemplate():bool{
-  if(!(router.routederivetemplate("pages/about.tk";"pages/")="templates/about.tkt")){<false};
-  if(!(router.routederivetemplate("pages/blog/[slug].tk";"pages/")="templates/blog/[slug].tkt")){<false};
+  if(!(router.routederivetemplate("pages/about.tk";"pages/")=="templates/about.tkt")){<false};
+  if(!(router.routederivetemplate("pages/blog/[slug].tk";"pages/")=="templates/blog/[slug].tkt")){<false};
   <true
 };
 
 f=testderivedtype():bool{
-  if(!(router.routederivedtype("pages/about.tk";"pages/")="")){<false};
-  if(!(router.routederivedtype("pages/blog/post.tk";"pages/")="blog")){<false};
-  if(!(router.routederivedtype("pages/docs/guide/intro.tk";"pages/")="docs/guide")){<false};
+  if(!(router.routederivedtype("pages/about.tk";"pages/")=="")){<false};
+  if(!(router.routederivedtype("pages/blog/post.tk";"pages/")=="blog")){<false};
+  if(!(router.routederivedtype("pages/docs/guide/intro.tk";"pages/")=="docs/guide")){<false};
   <true
 };
 
 f=testcountdynamic():bool{
-  if(!(router.routecountdynamic("/about")=0)){<false};
-  if(!(router.routecountdynamic("/blog/:slug")=1)){<false};
-  if(!(router.routecountdynamic("/docs/:section/:slug")=2)){<false};
+  if(!(router.routecountdynamic("/about")==0)){<false};
+  if(!(router.routecountdynamic("/blog/:slug")==1)){<false};
+  if(!(router.routecountdynamic("/docs/:section/:slug")==2)){<false};
   <true
 };
 
@@ -40,7 +40,7 @@ f=testscanbasic():bool{
   (file.write(str.concat(tmp;"/blog/[slug].tk");""));
   let result=router.routerscan(tmp);
   let rok=mt result {$ok:v true;$err:e false};
-  if(rok=false){<false};
+  if(rok==false){<false};
   let routes=mt result {$ok:v v;$err:e 0};
   let foundroot=mut.false;
   let foundabout=mut.false;
@@ -48,9 +48,9 @@ f=testscanbasic():bool{
   let foundblogdynamic=mut.false;
   lp(let i=0;i<routes.len;i=i+1){
     let r=routes.get(i);
-    if(r.pattern="/"){foundroot=true}el{};
-    if(r.pattern="/about"){foundabout=true}el{};
-    if(r.pattern="/blog/:slug"){
+    if(r.pattern=="/"){foundroot=true}el{};
+    if(r.pattern=="/about"){foundabout=true}el{};
+    if(r.pattern=="/blog/:slug"){
       foundblog=true;
       foundblogdynamic=r.isdynamic
     }el{}
@@ -83,7 +83,7 @@ f=testtrymatchok():bool{
     params:@()
   };
   let result=router.routertrymatch(r;"/blog/hello");
-  <mt result {$ok:v v.route.pattern="/blog/:slug";$err:e false}
+  <mt result {$ok:v v.route.pattern=="/blog/:slug";$err:e false}
 };
 
 f=testmatchstatic():bool{
@@ -97,7 +97,7 @@ f=testmatchstatic():bool{
     params:@()
   };
   let result=router.routermatch(@(r);"/about");
-  <mt result {$ok:v v.route.pattern="/about";$err:e false}
+  <mt result {$ok:v v.route.pattern=="/about";$err:e false}
 };
 
 f=testmatchdynamic():bool{
@@ -111,7 +111,7 @@ f=testmatchdynamic():bool{
     params:@()
   };
   let result=router.routermatch(@(r);"/blog/hello-world");
-  <mt result {$ok:v v.route.pattern="/blog/:slug";$err:e false}
+  <mt result {$ok:v v.route.pattern=="/blog/:slug";$err:e false}
 };
 
 f=testmatchnomatch():bool{
@@ -153,7 +153,7 @@ f=testmatchtrailingslash():bool{
     params:@()
   };
   let result=router.routermatch(@(r);"/about/");
-  <mt result {$ok:v v.route.pattern="/about";$err:e false}
+  <mt result {$ok:v v.route.pattern=="/about";$err:e false}
 };
 
 f=testmatchspecificity():bool{
@@ -176,7 +176,7 @@ f=testmatchspecificity():bool{
     params:@()
   };
   let result=router.routermatch(@(generic;specific);"/docs/about/overview");
-  <mt result {$ok:v v.route.pattern="/docs/about/:slug";$err:e false}
+  <mt result {$ok:v v.route.pattern=="/docs/about/:slug";$err:e false}
 };
 
 f=main():i64{

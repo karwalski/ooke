@@ -6,13 +6,13 @@ f=testapigetjson():bool{
   let body=apihealth.apigetjson();
   let want="{\"status\":\"ok\",\"service\":\"ooke\"}";
   (test.eq(body;want));
-  <body=want
+  <body==want
 };
 
 f=testget():bool{
   let res=apihealth.get(0);
   (test.ok(res));
-  <!(res=0)
+  <!(res==0)
 };
 
 f=main():i64{

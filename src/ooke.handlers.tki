@@ -4,6 +4,6 @@
   "version": "1.0.0",
   "exports": [
     {"kind": "func", "name": "hapihealthget", "params": ["i64"], "return": "i64"},
-    {"kind": "func", "name": "registerall", "params": [], "return": "@"}
+    {"kind": "func", "name": "registerall", "params": [], "return": "[str]"}
   ]
 }

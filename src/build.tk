@@ -13,7 +13,7 @@ t=$builderr{msg:$str};
 t=$buildreport{pagesbuilt:i64;assetscopy:i64;valerrors:i64;valwarnings:i64};
 
 f=buildoutputpath(pattern:$str;outputdir:$str):$str{
-  if(pattern="/"){
+  if(pattern=="/"){
     <str.concat(outputdir;"index.html")
   }el{
     let stripped=str.trimprefix(pattern;"/");
@@ -41,7 +41,7 @@ f=buildinlinecssonce(html:$str;templatesdir:$str):$str{
   }el{
     let afterlink=str.slice(html;pos as u64;str.len(html));
     let afterlink2=mt afterlink {$ok:v v;$err:e ""};
-    if(str.len(afterlink2)=0){
+    if(str.len(afterlink2)==0){
       <html
     }el{
       let hrefmarker="href=\"";
@@ -52,7 +52,7 @@ f=buildinlinecssonce(html:$str;templatesdir:$str):$str{
         let start=(hrefpos+6) as u64;
         let afterhref=str.slice(afterlink2;start;str.len(afterlink2));
         let afterhref2=mt afterhref {$ok:v v;$err:e ""};
-        if(str.len(afterhref2)=0){
+        if(str.len(afterhref2)==0){
           <html
         }el{
           let closequote=str.indexof(afterhref2;"\"");
@@ -63,7 +63,7 @@ f=buildinlinecssonce(html:$str;templatesdir:$str):$str{
             let hrefval2=mt hrefval {$ok:v v;$err:e ""};
             let csspath=path.join(templatesdir;hrefval2);
             let csscontent=mt file.read(csspath) {$ok:c c;$err:e ""};
-            if(str.len(csscontent)=0){
+            if(str.len(csscontent)==0){
               <html
             }el{
               let tagend=str.indexof(afterlink2;">");
@@ -88,7 +88,7 @@ f=buildinlinecss(html:$str;templatesdir:$str):$str{
   let running=mut.true;
   lp(let ii=0;running;ii=ii+1){
     let next=buildinlinecssonce(result;templatesdir);
-    if(next=result){
+    if(next==result){
       running=false
     }el{
       result=next
@@ -102,7 +102,7 @@ f=buildminify(html:$str):$str{
   let running=mut.true;
   lp(let ii=0;running;ii=ii+1){
     let replaced=str.replace(s;"  ";" ");
-    if(replaced=s){
+    if(replaced==s){
       running=false
     }el{
       s=replaced
@@ -116,7 +116,7 @@ f=buildminify(html:$str):$str{
     }el{
       let afteropen=str.slice(s;openpos as u64+4;str.len(s));
       let afteropen2=mt afteropen {$ok:v v;$err:e ""};
-      if(str.len(afteropen2)=0){
+      if(str.len(afteropen2)==0){
         running2=false
       }el{
         let closepos=str.indexof(afteropen2;"-->");

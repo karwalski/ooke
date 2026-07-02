@@ -18,7 +18,7 @@ f=testparsefront():bool{
   let src="---\nslug: hello-world\ntype: post\ntitle: Hello World\n---\n# Hello\n\nThis is the body.\n";
   let result=store.storeparsefront(src);
   let ok=mt result {$ok:v true;$err:e false};
-  if(ok=false){<false};
+  if(ok==false){<false};
   let c=mt result {$ok:v v;$err:e store.storedefault()};
   (test.eq(c.slug;"hello-world"));
   (test.eq(c.type;"post"));
@@ -50,7 +50,7 @@ f=testparsejson():bool{
   let src="{\"slug\":\"news\",\"type\":\"post\",\"title\":\"Big News\"}";
   let result=store.storeparsejson(src);
   let ok=mt result {$ok:v true;$err:e false};
-  if(ok=false){<false};
+  if(ok==false){<false};
   let c=mt result {$ok:v v;$err:e store.storedefault()};
   (test.eq(c.slug;"news"));
   (test.eq(c.type;"post"));
@@ -84,10 +84,10 @@ f=testsqlcreate():bool{
 f=teststoreallempty():bool{
   let mkresult=file.mkdir("/tmp/test_store_empty/posts");
   let mkok=mt mkresult {$ok:v true;$err:e true};
-  if(mkok=false){<false};
+  if(mkok==false){<false};
   let result=store.storeall("/tmp/test_store_empty";"posts";"flat");
   let ok=mt result {$ok:v true;$err:e false};
-  if(ok=false){<false};
+  if(ok==false){<false};
   let col=mt result {$ok:v v;$err:e @($content)};
   (test.eq(col.len;0));
   <true
@@ -96,9 +96,9 @@ f=teststoreallempty():bool{
 f=teststoreallflat():bool{
   let mkresult=file.mkdir("/tmp/test_store_flat/pages");
   let mkok=mt mkresult {$ok:v true;$err:e true};
-  if(mkok=false){<false};
+  if(mkok==false){<false};
   let wr=mt file.write("/tmp/test_store_flat/pages/about.md";"---\nslug: about\ntitle: About\n---\nAbout body\n") {$ok:v true;$err:e false};
-  if(wr=false){<false};
+  if(wr==false){<false};
   let result=store.storeall("/tmp/test_store_flat";"pages";"flat");
   let col=mt result {$ok:v v;$err:e @($content)};
   (test.eq(col.len;1));
@@ -115,7 +115,7 @@ f=mkcol():@$content{
 f=teststoreslug():bool{
   let result=store.storeslug(mkcol();"contact");
   let ok=mt result {$ok:v true;$err:e false};
-  if(ok=false){<false};
+  if(ok==false){<false};
   let c=mt result {$ok:v v;$err:e store.storedefault()};
   (test.eq(c.slug;"contact"));
   (test.eq(str.contains(c.body;"Contact");true));

@@ -65,7 +65,7 @@ f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
   lp(let i=0;i<model.fields.len;i=i+1){
     let fd=model.fields.get(i);
     let val=mt meta.get(fd.name) {$ok:v v;$err:e ""};
-    if(str.len(val)=0){
+    if(str.len(val)==0){
       if(fd.required){
         errors=errors.append($valerror{
           filepath:filepath;
@@ -74,7 +74,7 @@ f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
         })
       }el{}
     }el{
-      if(fd.fieldtype="int"){
+      if(fd.fieldtype=="int"){
         let isnum=mt str.toint(val) {$ok:v true;$err:e false};
         if(!isnum){
           errors=errors.append($valerror{
@@ -84,8 +84,8 @@ f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
           })
         }el{}
       }el{
-        if(fd.fieldtype="bool"){
-          let isbool=val="true"||val="false";
+        if(fd.fieldtype=="bool"){
+          let isbool=val=="true"||val=="false";
           if(!isbool){
             errors=errors.append($valerror{
               filepath:filepath;
