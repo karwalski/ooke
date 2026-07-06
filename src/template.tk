@@ -36,19 +36,23 @@ f=tplapplyfilter(val:$str;filtername:$str):$str{
   if(fname=="md"){
     <md.render(val)
   }el{
-    if(fname=="escape"){
-      <tplescape(val)
+    if(fname=="raw"){
+      <val
     }el{
-      if(fname=="upper"){
-        <str.upper(val)
+      if(fname=="escape"){
+        <tplescape(val)
       }el{
-        if(fname=="lower"){
-          <str.lower(val)
+        if(fname=="upper"){
+          <tplescape(str.upper(val))
         }el{
-          if(fname=="trim"){
-            <str.trim(val)
+          if(fname=="lower"){
+            <tplescape(str.lower(val))
           }el{
-            <val
+            if(fname=="trim"){
+              <tplescape(str.trim(val))
+            }el{
+              <tplescape(val)
+            }
           }
         }
       }
@@ -67,7 +71,8 @@ f=tplresolveexpr(expr:$str;ctx:@($str:$str)):$str{
     <tplapplyfilter(val;filter)
   }el{
     let vgot2=ctx.get(trimmed);
-    <mt vgot2 {$ok:v v;$err:e ""}
+    let raw=mt vgot2 {$ok:v v;$err:e ""};
+    <tplescape(raw)
   }
 };
 
@@ -315,7 +320,8 @@ f=tplrender(
           }el{
             if(dname=="var"){
               let vargot=ctx.get(darg);
-              let varval=mt vargot {$ok:v v;$err:e ""};
+              let varraw=mt vargot {$ok:v v;$err:e ""};
+              let varval=tplescape(varraw);
               if(inblock){
                 currentblockbuf=str.concat(currentblockbuf;varval)
               }el{
