@@ -69,7 +69,8 @@ STDLIB_SRCS := \
   $(TOKE_STDLIB)/llm.c \
   $(TOKE_STDLIB)/llm_tool.c \
   $(TOKE_STDLIB)/sse.c \
-  $(TOKE_STDLIB)/template.c
+  $(TOKE_STDLIB)/template.c \
+  $(TOKE_STDLIB)/capabilities.c
 
 # Glue files (i64-ABI wrappers)
 STDLIB_SRCS += \

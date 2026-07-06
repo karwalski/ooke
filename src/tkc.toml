@@ -1,0 +1,14 @@
+# tkc.toml — compiler config for the ooke binary (compiled from this dir, src/).
+# Capability grant set (ADR-0010) baked into ooke-toke. ooke is a single binary
+# covering all subcommands (new/build/serve/run/compile/repair), so the grant
+# set is the union of what every subcommand needs:
+#   fs_read  — ooke.toml, pages/ content/ templates/ models/ static/, serve root
+#   fs_write — build/ output tree, new/gen scaffolding
+#   net      — ooke serve (http.serveworkers listener)
+#   process_spawn — ooke run/compile/repair (spawns tkc, make, built child binary)
+[capabilities]
+fs_read = true
+fs_write = true
+net = true
+process_spawn = true
+enforce = true
