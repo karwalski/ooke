@@ -28,7 +28,7 @@ STDLIB_C="$S/tk_runtime.c $S/args.c $S/args_glue.c $S/str.c $S/str_glue.c \
   $S/log.c $S/log_glue.c $S/json.c $S/json_glue.c $S/encoding.c $S/encoding_glue.c \
   $S/md.c $S/md_glue.c $S/math.c $S/math_glue.c $S/process.c $S/process_glue.c \
   $S/http.c $S/http2.c $S/net.c $S/ws.c $S/router.c $S/acme.c $S/proxy.c $S/cache.c \
-  $S/content.c $S/security.c $S/metrics.c $S/server_ops.c $S/ws_server.c $S/hooks.c \
+  $S/content.c $S/metrics.c $S/server_ops.c $S/ws_server.c $S/hooks.c \
   $S/tk_web_glue.c $S/tk_test.c $S/test_glue.c $S/db.c $S/db_glue.c \
   $S/csv.c $S/csv_glue.c $S/template.c $S/template_glue.c $S/auth.c $S/encrypt.c \
   $S/html.c $S/svg.c $S/canvas.c $S/chart.c $S/dashboard.c $S/dataframe.c \

@@ -36,7 +36,7 @@ STDLIB_C="\
   $TOKE_STDLIB/http.c $TOKE_STDLIB/http2.c \
   $TOKE_STDLIB/net.c $TOKE_STDLIB/ws.c $TOKE_STDLIB/router.c \
   $TOKE_STDLIB/acme.c $TOKE_STDLIB/proxy.c $TOKE_STDLIB/cache.c \
-  $TOKE_STDLIB/content.c $TOKE_STDLIB/security.c $TOKE_STDLIB/metrics.c \
+  $TOKE_STDLIB/content.c $TOKE_STDLIB/metrics.c \
   $TOKE_STDLIB/server_ops.c $TOKE_STDLIB/ws_server.c $TOKE_STDLIB/hooks.c \
   $TOKE_STDLIB/tk_web_glue.c \
   $TOKE_STDLIB/tk_test.c $TOKE_STDLIB/test_glue.c \

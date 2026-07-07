@@ -34,7 +34,6 @@ STDLIB_SRCS := \
   $(TOKE_STDLIB)/proxy.c \
   $(TOKE_STDLIB)/cache.c \
   $(TOKE_STDLIB)/content.c \
-  $(TOKE_STDLIB)/security.c \
   $(TOKE_STDLIB)/metrics.c \
   $(TOKE_STDLIB)/server_ops.c \
   $(TOKE_STDLIB)/ws_server.c \
