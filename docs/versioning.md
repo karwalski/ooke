@@ -151,10 +151,12 @@ Gate status as of 2026-09-19:
 | 134.17 assertions are real | done — every one proved able to fail, by mutation |
 | 134.7 / 134.16 floor | done — floor measured for build *and* behaviour |
 | 134.13 RSS leak | superseded → 127.65; diagnosed as **not ooke's** |
-| **134.24 `ooke build` aborts on API routes** | **OPEN, P0 — and `ooke new` scaffolds one** |
+| 134.24 `ooke build` aborts on API routes | fixed 2026-09-19, verified end to end |
+| **134.15 toke has never cut a v0.4 version** | **OPEN, P1 — owner decision** |
 
-**134.24 is why the artefact prepared by 134.10 is a release *candidate* and not
-a release.** See `docs/release-notes-3.0.0.md`.
+**134.15 is why the artefact prepared by 134.10 is a release *candidate* and not
+a release**: ooke cannot express its one hard dependency as a version, only as a
+commit. See `docs/release-notes-3.0.0.md`.
 
 ## 4. The compatibility promise
 
@@ -188,11 +190,10 @@ ooke's suite could be run against an older compiler. See §1.
   134.7).
 - **ooke**: released 2.0.0 is not the ooke this repo builds and is not what loke
   should target. Wait for **3.0.0**. Story 134.10 has prepared the artefact and
-  the instructions; what 3.0.0 now waits on is **134.24**, a P0 defect that makes
-  `ooke build` abort on any project containing an API route — which is every
-  project `ooke new` creates. Until that is fixed, what exists is a release
-  candidate: buildable, testable, documented, and unable to build the project it
-  scaffolds. See `docs/release-notes-3.0.0.md` and `docs/install.md`.
+  the instructions, and the P0 that blocked it (134.24) was fixed and verified
+  while it was being prepared. What 3.0.0 now waits on is **134.15** — an owner
+  decision in *toke*, not a defect in ooke. See `docs/release-notes-3.0.0.md`
+  and `docs/install.md`.
 
 ## 6. A method note, because it changed a result
 

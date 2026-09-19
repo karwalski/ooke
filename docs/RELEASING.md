@@ -35,9 +35,10 @@ Pushing the tag **is** the publish. There is no separate upload.
 
 ## Before tagging 3.0.0 rather than a candidate
 
-- **134.24 must be fixed.** `ooke build` aborts on any project with an API
-  route, and `ooke new` scaffolds one. A GA release whose scaffold cannot be
-  built is not a release.
+- **134.15 is the remaining blocker, and it is an owner decision in toke.**
+  ooke can only pin its dependency as a commit until toke cuts a version for
+  the v0.4 break. Decide that, then this is 3.0.0. (134.24, the P0 that
+  previously blocked it, was fixed and verified on 2026-09-19.)
 - Drop the `-rc.1` suffix in exactly two places — `VERSION` and the string
   `src/cli.tk` prints. `make check-ooke-version` fails if they disagree, so the
   build will catch a half-done bump.

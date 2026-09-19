@@ -5,9 +5,10 @@ been published; see `docs/RELEASING.md`.
 
 ## 3.0.0-rc.1 — unreleased (prepared 2026-09-19, story 134.10)
 
-Release **candidate**, not a release. One open P0 (134.24) stops `ooke build`
-working on the project `ooke new` creates. Read
-`docs/release-notes-3.0.0.md` before adopting.
+Release **candidate**, not a release — because toke has never cut a version for
+the v0.4 break (story 134.15, owner decision), so this release can only pin its
+one hard dependency as a git commit. Read `docs/release-notes-3.0.0.md` before
+adopting.
 
 ### Breaking, relative to 2.0.0
 
@@ -55,6 +56,16 @@ breaks a 2.0.0-era consumer.
 - **`tkc --check` coverage 28/30 → 30/30**; lint warnings 96 → 2, errors 0;
   all 63 string-concatenation chains converted to the canonical form.
   (134.2, 134.3)
+- **`ooke build` aborted on any project containing an API route**, and `ooke
+  new` scaffolded one — so the first thing an adopter did produced a project
+  that could not be built. `routerscan` set an is-API flag the build never
+  read, and the CLI wrapper discarded the error and logged the single word
+  "build failed". Both halves fixed, and API routes are now reported as
+  deliberately excluded from the static build. (134.24)
+- **`ooke new` scaffolded one template where the route it also scaffolds needs
+  two**, and that template used `{{title}}`/`{{content}}` — not ooke template
+  syntax — so both would have reached the browser verbatim. It now writes
+  `base.tkt` and `index.tkt`. (134.24)
 - **The version gate was decorative** — it compared major versions only,
   restated the floor in a second place, and was a prerequisite of nothing. It
   now reads `ooke.toml` as the single source of truth and gates `make` and
@@ -72,8 +83,9 @@ breaks a 2.0.0-era consumer.
 
 ### Known defects
 
-See `docs/release-notes-3.0.0.md`. The short list: **134.24 (P0)**, 134.22,
-134.23, and toke's unreleased-version problem (134.15).
+See `docs/release-notes-3.0.0.md`. The short list: **134.15** (toke has no
+usable released version — you must pin a commit), 134.22 and 134.23 (both
+minor), and the caveats on ooke's internal module surface (134.11).
 
 ## 2.0.0 — 2026-06-21
 

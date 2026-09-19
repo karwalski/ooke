@@ -5,41 +5,58 @@
 
 ## Why this is a candidate and not 3.0.0
 
-Every quality gate 3.0.0 was waiting on is now green — the suite runs and is
-honest (134.5, 134.17), the sources check and lint clean (134.2, 134.3), the
-toke floor is measured for build *and* behaviour (134.7, 134.16), and the RSS
-leak turned out not to be ooke's (134.13 → toke 127.65).
+Every quality gate 3.0.0 was waiting on is green. The suite runs and is honest
+(134.5, 134.17), the sources check and lint clean (134.2, 134.3), the toke
+floor is measured for build *and* behaviour (134.7, 134.16), the RSS leak
+turned out not to be ooke's (134.13 → toke 127.65), and **134.24 — the P0 that
+made this a candidate in the first place — was fixed while this release was
+being prepared** (see below).
 
-One defect is not, and it is the first thing a new adopter hits.
+What keeps the `-rc.1` is **134.15, and it is not ooke's to fix**: toke has
+never cut a version for the v0.4 break, so this release cannot express its own
+dependency as a version. It pins a commit instead. An adopter can use that, but
+a general release whose single hard requirement is "a git SHA on somebody's
+main branch" is a candidate. The owner decision in 134.15 is what turns this
+into 3.0.0; `docs/RELEASING.md` says what changes when it does.
+
+Secondarily: 134.24's fix is hours old and its story row is still open pending
+close-out. It is verified here (below) but not yet signed off.
 
 ## Known defects a consumer will meet
 
-### 134.24 — `ooke build` aborts on any project with an API route, and `ooke new` scaffolds one. **P0, OPEN**
+### 134.24 — `ooke build` aborted on any project with an API route. **FIXED, verify before you trust this note**
 
-`routerscan` sets a flag marking a route as an API handler and the build never
-reads it, so the handler is rendered as a template and the build aborts.
+This was the P0 that made 3.0.0 a candidate, and it is fixed:
+`routerscan` set a flag marking a route as an API handler and the build never
+read it, so the handler was rendered as a template and the build aborted with
+the single word `build failed`. Both halves are repaired — the flag is read,
+and the wrapper reports the error it already had.
 
-Reproduced on this candidate, from a fresh scaffold:
+Reproduced as broken, then as fixed, on a scaffold from this candidate:
 
+    # before (ooke-toke built at 57f1915^^)
     $ ooke new demosite && cd demosite && ooke build
-    {"level":"error","msg":"build failed"}
-    $ echo $?
-    1
+    {"level":"error","msg":"build failed"}      # exit 1, and that is the whole diagnostic
 
-The exit status is correct; the message is the whole diagnostic. The CLI
-wrapper discards the error it already has and logs one word, so you are told
-nothing about which route, which file, or why.
+    # after
+    $ ooke new demosite && cd demosite && ooke build
+    {"level":"info","msg":"pages built: 1"}
+    {"level":"info","msg":"assets copied: 0"}   # exit 0, build/index.html written
 
-Bisected across four builds: works at `81b4fb3` and `b663797`, fails from
-`e7a6f60`. But 134.2 **exposed** it rather than causing it — changing a `:void`
-return to `:i64` made an error that had previously been swallowed start
-propagating. The defect is older than the commit that reveals it, and
-134.8's result of 195 pages at exit 0 no longer reproduces.
+And with an API route present, which is the case the defect was named for:
 
-**What works meanwhile:** `ooke serve` (dynamic serving, including API routes),
-`ooke new`, `ooke repair`, `ooke gen`, the template engine, the store, and the
-whole module surface the tests cover. It is static generation of a project
-containing an API route that fails. A project with no API route builds.
+    $ cp .../api/hello.tk pages/api/hello.tk && ooke build
+    {"level":"info","msg":"build: 1 api route(s) under pages/api/ are request
+     handlers, not pages — they are served by `ooke serve` and are not rendered
+     into the static build"}                    # exit 0
+
+A second defect was fixed in the same area and is worth knowing about because
+it changes what `ooke new` writes: the scaffold produced **one** template,
+`templates/base.tkt`, while the route it also scaffolds (`pages/index.tk`, i.e.
+`/`) derives `templates/index.tkt`. That template was not a layout either — it
+used `{{title}}` and `{{content}}`, which are not ooke template syntax, so both
+would have been served to the browser verbatim. `ooke new` now writes
+`base.tkt` (the shell) and `index.tkt` (the page), in ooke's own convention.
 
 ### 134.15 — toke has never cut a version for the v0.4 break. **P1, OPEN, owner decision**
 

@@ -73,8 +73,12 @@ The product is `./ooke-toke`. Rename it to `ooke` on your PATH.
 never executed, and until 134.17 its assertions could not fail. Both are fixed;
 running it tells you something now.
 
-**`ooke build` on that scaffold currently fails.** That is story 134.24, a known
-open P0 — see `docs/release-notes-3.0.0.md` before you build anything on it.
+    cd demosite && ../ooke-toke build      # exit 0, writes build/index.html
+
+That last line failed until 2026-09-19 (story 134.24, fixed): `ooke build`
+aborted on any project with an API route, and the scaffold was missing a
+template. Both are repaired; the check is here because it is the shortest
+end-to-end proof that your install works.
 
 ## 5. From a release tarball instead
 

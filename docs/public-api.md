@@ -9,7 +9,7 @@ Story 134.10. Semver applies to §1 and to nothing else. If it is not listed in
 
 | Command | Contract |
 |---|---|
-| `ooke new <name>` | scaffolds `ooke.toml`, `pages/index.tk`, `templates/base.tkt` |
+| `ooke new <name>` | scaffolds `ooke.toml`, `pages/index.tk`, `templates/base.tkt`, `templates/index.tkt` |
 | `ooke serve [options]` | serves the project in the working directory |
 | `ooke build` | renders the project to the `[build] output` directory |
 | `ooke compile [path]` | per-app serve binary with handlers compiled in |
@@ -20,8 +20,9 @@ Story 134.10. Semver applies to §1 and to nothing else. If it is not listed in
 | `--help`, `--version` | on every command; `--version` prints `ooke <VERSION>` |
 
 Exit status is part of the contract: **0 on success, non-zero on failure.**
-`ooke build` exits 1 when the build fails (its *message* is uninformative —
-story 134.24).
+`ooke build` exits 1 with a diagnostic naming the cause, and reports API routes
+under `pages/api/` as deliberately excluded from the static build rather than
+failing on them (story 134.24).
 
 `--help` being answered before dispatch is itself a 3.0.0 fix: `ooke serve
 --help` used to start a server (story 134.19).
