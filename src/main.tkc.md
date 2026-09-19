@@ -40,6 +40,7 @@ command's exit code (0 success, non-zero failure).
 |---------|-----------|
 | (none) / `--help` | print usage, exit 0 |
 | `--version` | print version, exit 0 |
+| `<cmd> --help` / `-h` / `help` | `cli.cliprintcmdusage(cmd)`, exit 0 — checked **before** dispatch, so no command can act on a help request (story 134.19) |
 | `new <name>` | `cli.clinew` (usage error → 1) |
 | `serve` | `cli.runserve(".")` |
 | `build` | `cli.runbuild(".")` |

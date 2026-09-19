@@ -36,6 +36,12 @@ logic was moved here as `ooke.cli` and the entry kept as `ooke.main`.
 ## Functions
 
 - `cliprintusage(): void` — print the help/usage banner.
+- `cliishelp(arg: $str): bool` — is this argument a request for help
+  (`--help`, `-h`, `help`)? Story 134.19.
+- `cliprintcmdusage(cmd: $str): i64` — print the help for one command; falls
+  back to `cliprintusage` for an unrecognised command. `main.tk` calls this
+  before dispatch so that, e.g., `ooke serve --help` prints help instead of
+  binding a port (story 134.19).
 - `cliprintversion(): void` — print the version string.
 - `clinew(name: $str): i64` — scaffold a new project tree (`pages/`,
   `templates/`, `content/`, `static/`, `ooke.toml`, a starter page and base

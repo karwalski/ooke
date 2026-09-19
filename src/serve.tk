@@ -22,8 +22,24 @@ f=servepostjson(pattern:$str;json:$str):i64{
   <0
 };
 
-f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;handledpaths:@$str):i64{
-  let routes=mt ookerouter.routerscan(pagesdir) {$ok:r r;$err:e @($route)};
+(* Story 134.18. This used to be
+     `let routes=mt ookerouter.routerscan(pagesdir) {$ok:r r;$err:e @($route)};`
+   which turned a failed scan into an EMPTY route set. The server then came up
+   with zero routes, answered 404 for every path, and reported itself healthy —
+   the worst shape a failure can take, because nothing upstream can see it. The
+   scan error now propagates, and serverun refuses to start on it. *)
+f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;handledpaths:@$str):i64!$serveerr{
+  let scan=ookerouter.routerscan(pagesdir);
+  (* The reason is logged HERE, from data this function holds, because reading
+     `e.msg` off a struct-style error payload traps RT005 — toke 127.78, open
+     and confirmed still live. When that is fixed, carry routerscan's own
+     message through instead of restating the directory. *)
+  let scanfailed=mt scan {$ok:r false;$err:e true};
+  if(scanfailed){
+    (log.error(str.concat("route scan failed, refusing to start: ";pagesdir);@()));
+    <$serveerr{msg:str.concat("route scan failed: ";pagesdir)}
+  }el{};
+  let routes=mt scan {$ok:r r;$err:e @($route)};
   lp(let i=0;i<routes.len;i=i+1){
     let r=routes.get(i);
     let isdyn=r.isdynamic;
@@ -128,7 +144,9 @@ f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tl
   let pagesdir=path.join(projectdir;"pages");
   let contentdir=path.join(projectdir;"content");
   let templatesdir=path.join(projectdir;"templates");
-  (serveregisterstatic(pagesdir;contentdir;templatesdir;sitename;siteurl;sitelanguage;apiprefix;handledpaths));
+  (* A route scan that fails must stop the server, not be served as a 404
+     for everything (story 134.18). Nothing is bound before this point. *)
+  (serveregisterstatic(pagesdir;contentdir;templatesdir;sitename;siteurl;sitelanguage;apiprefix;handledpaths)!$serveerr);
   if(str.len(corsorigins)>0){
     (http.setcors(corsorigins));
     (log.info(str.concat("CORS enabled: ";corsorigins);@()))

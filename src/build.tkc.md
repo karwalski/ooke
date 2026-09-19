@@ -73,7 +73,35 @@ Summary of a completed build, returned by `buildrun`.
 
 **Error handling:** None; total function.
 
-### `buildpage(templatepath: $str; pattern: $str; sitename: $str; siteurl: $str; sitelanguage: $str; buildoutput: $str; templatesdir: $str): void!$builderr`
+### `buildfinish(html: $str; templatesdir: $str; doinlinecss: bool; dominify: bool): $str`
+
+**Purpose:** Apply the `[build]` output transforms to one rendered page. This is
+the single place `[build].inlinecss` and `[build].minify` are honoured.
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `html` | `$str` | The rendered page. |
+| `templatesdir` | `$str` | Templates root, used to resolve stylesheet hrefs. |
+| `doinlinecss` | `bool` | `[build].inlinecss` — inline linked stylesheets. |
+| `dominify` | `bool` | `[build].minify` — collapse whitespace, strip comments. |
+
+**Returns:** `$str` — the transformed page; `html` unchanged when both flags are
+false.
+
+**Logic:** Inlining runs first: it replaces the `<link rel="stylesheet">` with a
+`<style>` block, so it must precede minification, which collapses the
+whitespace around it.
+
+**Error handling:** None; delegates to the total `buildinlinecss` and
+`buildminify`.
+
+**Story 134.20.** Before this function existed both settings were parsed into
+`$ookecfg` and read by nothing — `buildminify` and `buildinlinecss` were
+defined, documented and unit-tested, but never called on the build path.
+
+### `buildpage(templatepath: $str; pattern: $str; sitename: $str; siteurl: $str; sitelanguage: $str; buildoutput: $str; templatesdir: $str; doinlinecss: bool; dominify: bool): void!$builderr`
 
 **Purpose:** Render one static page from its template and write it to disk.
 
@@ -88,6 +116,8 @@ Summary of a completed build, returned by `buildrun`.
 | `sitelanguage` | `$str` | `site.language` context value. |
 | `buildoutput` | `$str` | Build output directory. |
 | `templatesdir` | `$str` | Templates root for template resolution. |
+| `doinlinecss` | `bool` | `[build].inlinecss`, passed to `buildfinish`. |
+| `dominify` | `bool` | `[build].minify`, passed to `buildfinish`. |
 
 **Returns:** `void!$builderr`.
 
@@ -217,8 +247,9 @@ file does not abort the whole copy.
 3. `pagescount` is a mutable `0`; `allval` is a mutable `$valresult` initialised
    to `validate.validateempty()`.
 4. **Static pass:** loop `i` over routes; for each non-dynamic route
-   (`!routes.get(i).isdynamic`), call `buildpage(...)` (propagating `$builderr`)
-   and increment `pagescount`.
+   (`!routes.get(i).isdynamic`), call `buildpage(...)` (propagating `$builderr`,
+   and passing `config.buildinlinecss` / `config.buildminify`) and increment
+   `pagescount`.
 5. **Dynamic pass:** loop `j` over routes; for each dynamic route
    (`routes.get(j).isdynamic`):
    a. `ctype = routes.get(j).contenttype`.
@@ -233,7 +264,9 @@ file does not abort the whole copy.
       merge `allval = validate.validatemerge(allval; vr)`. Build a context map
       with `site.*`, `slug`, `body`, `title`. Render
       `tpl.tplrenderfile(routes.get(j).templatepath; ctx; templatesdir)` (matched
-      to `""` on error). If the rendered HTML is non-empty: substitute `:slug`
+      to `""` on error), then pass it through `buildfinish` with
+      `config.buildinlinecss` / `config.buildminify`. If the resulting HTML is
+      non-empty: substitute `:slug`
       with `slug` in the route pattern via `str.replace`, compute the output path
       with `buildoutputpath`, mkdir its parent, `file.write` (error matched to a
       bool), and increment `pagescount` on success.

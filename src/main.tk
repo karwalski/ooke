@@ -23,6 +23,12 @@ f=main():i64{
         <0
       }el{
         let cmd=firstraw;
+        (* Story 134.19. A help request is answered before any command runs.
+           `ooke serve --help` used to reach runserve and bind a port. *)
+        let secondraw=mt args.get(2 as u64) {$ok:v v;$err:e ""};
+        if(cli.cliishelp(secondraw)){
+          <cli.cliprintcmdusage(cmd)
+        }el{};
         if(str.eq(cmd;"new")){
           if(count<3){
             (log.info("usage: ooke new <name>";@()));

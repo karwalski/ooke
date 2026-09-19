@@ -22,13 +22,28 @@ f=buildoutputpath(pattern:$str;outputdir:$str):$str{
   }
 };
 
-f=buildpage(templatepath:$str;pattern:$str;sitename:$str;siteurl:$str;sitelanguage:$str;buildoutput:$str;templatesdir:$str):i64!$builderr{
+(* Story 134.20. `[build].minify` and `[build].inlinecss` were parsed into
+   $ookecfg and then read by nothing: buildminify and buildinlinecss were
+   defined, documented and unit-tested, but never called on the build path, so
+   both settings did nothing. Every page the builder writes now goes through
+   here, which is the single place the two flags are honoured. Order matters:
+   inlining replaces the <link> with a <style> block, so it must run before
+   minification collapses the whitespace around it. *)
+f=buildfinish(html:$str;templatesdir:$str;doinlinecss:bool;dominify:bool):$str{
+  let out=mut.html;
+  if(doinlinecss){out=buildinlinecss(out;templatesdir)}el{};
+  if(dominify){out=buildminify(out)}el{};
+  <out
+};
+
+f=buildpage(templatepath:$str;pattern:$str;sitename:$str;siteurl:$str;sitelanguage:$str;buildoutput:$str;templatesdir:$str;doinlinecss:bool;dominify:bool):i64!$builderr{
   let ctx=@(
     "site.name":sitename;
     "site.url":siteurl;
     "site.language":sitelanguage
   );
-  let html=tpl.tplrenderfile(templatepath;ctx;templatesdir)!$builderr;
+  let rendered=tpl.tplrenderfile(templatepath;ctx;templatesdir)!$builderr;
+  let html=buildfinish(rendered;templatesdir;doinlinecss;dominify);
   let outpath=buildoutputpath(pattern;buildoutput);
   let parentdir=path.dir(outpath);
   (file.mkdir(parentdir)!$builderr);
@@ -173,7 +188,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
   lp(let i=0;i<routes.len;i=i+1){
     let isdyn=routes.get(i).isdynamic;
     if(!isdyn){
-      let bp=buildpage(routes.get(i).templatepath;routes.get(i).pattern;config.sitename;config.siteurl;config.sitelanguage;config.buildoutput;templatesdir)!$builderr;
+      let bp=buildpage(routes.get(i).templatepath;routes.get(i).pattern;config.sitename;config.siteurl;config.sitelanguage;config.buildoutput;templatesdir;config.buildinlinecss;config.buildminify)!$builderr;
       pagescount=pagescount+1
     }el{}
   };
@@ -209,7 +224,8 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
           "body":body;
           "title":title
         );
-        let html=mt tpl.tplrenderfile(routes.get(j).templatepath;ctx;templatesdir) {$ok:h h;$err:e ""};
+        let renderedhtml=mt tpl.tplrenderfile(routes.get(j).templatepath;ctx;templatesdir) {$ok:h h;$err:e ""};
+        let html=buildfinish(renderedhtml;templatesdir;config.buildinlinecss;config.buildminify);
         if(str.len(html)==0&&str.len(slug)>0){
           (log.error(str.join("";@("build: render produced no output for ";routes.get(j).templatepath;" slug=";slug));@()));
           skippedcount=skippedcount+1
@@ -241,7 +257,8 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
       "site.language":config.sitelanguage;
       "request.path":"(unknown)"
     );
-    let nfhtml=mt tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir) {$ok:h h;$err:e ""};
+    let nfrendered=mt tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir) {$ok:h h;$err:e ""};
+    let nfhtml=buildfinish(nfrendered;templatesdir;config.buildinlinecss;config.buildminify);
     if(str.len(nfhtml)>0){
       let nfpath=str.concat(config.buildoutput;"404.html");
       let nfwrite=mt file.write(nfpath;nfhtml) {$ok:v true;$err:e false};

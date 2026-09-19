@@ -28,6 +28,67 @@ f=cliprintusage():i64{
   <0
 };
 
+(* Story 134.19. `ooke serve --help` used to fall through to runserve and bind
+   a port: asking a command for help started a server. cliishelp answers "is
+   this argument a request for help", and cliprintcmdusage prints the help for
+   one command, so main.tk can answer a help request before it dispatches. *)
+f=cliishelp(arg:$str):bool{
+  <str.eq(arg;"--help")||str.eq(arg;"-h")||str.eq(arg;"help")
+};
+
+f=cliprintcmdusage(cmd:$str):i64{
+  if(str.eq(cmd;"serve")){
+    (log.info("ooke serve — start the development server";@()));
+    (log.info("";@()));
+    (log.info("Usage: ooke serve";@()));
+    (log.info("";@()));
+    (log.info("Serves the project in the current directory. Port, workers,";@()));
+    (log.info("CORS origins and the API prefix all come from ooke.toml.";@()));
+    <0
+  }el{};
+  if(str.eq(cmd;"build")){
+    (log.info("ooke build — build the static site into [build].output";@()));
+    (log.info("";@()));
+    (log.info("Usage: ooke build";@()));
+    (log.info("       ooke build --cli [path]   compile the CLI binary only";@()));
+    <0
+  }el{};
+  if(str.eq(cmd;"new")){
+    (log.info("ooke new — scaffold a new project";@()));
+    (log.info("";@()));
+    (log.info("Usage: ooke new <name>";@()));
+    <0
+  }el{};
+  if(str.eq(cmd;"gen")){
+    (log.info("ooke gen — scaffold a component";@()));
+    (log.info("";@()));
+    (log.info("Usage: ooke gen <type> <name>";@()));
+    (log.info("       ooke gen spec <container> <type>";@()));
+    (log.info("  types:      page, type";@()));
+    (log.info("  containers: stack, queue, set";@()));
+    <0
+  }el{};
+  if(str.eq(cmd;"repair")){
+    (log.info("ooke repair — run diagnostic repair over a file";@()));
+    (log.info("";@()));
+    (log.info("Usage: ooke repair <file>";@()));
+    <0
+  }el{};
+  if(str.eq(cmd;"run")){
+    (log.info("ooke run — compile and run the CLI package";@()));
+    (log.info("";@()));
+    (log.info("Usage: ooke run [path] [args...]";@()));
+    <0
+  }el{};
+  if(str.eq(cmd;"compile")){
+    (log.info("ooke compile — compile a per-app serve binary with handlers";@()));
+    (log.info("";@()));
+    (log.info("Usage: ooke compile [path]";@()));
+    <0
+  }el{};
+  <cliprintusage()
+};
+
 f=cliprintversion():i64{
   (log.info("ooke 3.0.0-dev";@()));
   <0
@@ -187,6 +248,13 @@ f=cfgdefault():$ookecfg{
   }
 };
 
+(* The reason is logged by serve.tk at the point of failure; this cannot read
+   `e.msg` off the payload because that traps RT005 (toke 127.78, open). *)
+f=clireportserveerr():i64{
+  (log.error("serve did not start — see the error above";@()));
+  <1
+};
+
 f=runserve(projectdir:$str):i64{
   let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {$ok:v v;$err:e cfgdefault()};
   let port=cfg.serverport;
@@ -199,7 +267,12 @@ f=runserve(projectdir:$str):i64{
   let corsorigins=cfg.servercorsorigins;
   let handledpaths=handlers.registerall();
   (log.info(str.join("";@("auto-registered ";handledpaths.len as str;" handler routes"));@()));
-  let r=mt serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {$ok:v 0;$err:e 1};
+  (* serverun now fails rather than starting with no routes (story 134.18), so
+     say why. Returning a bare 1 left the operator with a silent non-zero. *)
+  let r=mt serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {
+    $ok:v 0;
+    $err:e clireportserveerr()
+  };
   <r
 };
 

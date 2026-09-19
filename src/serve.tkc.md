@@ -82,7 +82,7 @@ Error type for `serverun`.
 
 **Error handling:** None.
 
-### `serveregisterstatic(pagesdir: $str; contentdir: $str; templatesdir: $str; sitename: $str; siteurl: $str; sitelanguage: $str; apiprefix: $str; handledpaths: @$str): void`
+### `serveregisterstatic(pagesdir: $str; contentdir: $str; templatesdir: $str; sitename: $str; siteurl: $str; sitelanguage: $str; apiprefix: $str; handledpaths: @$str): i64!$serveerr`
 
 **Purpose:** Scan the pages directory and register every page as a static HTTP
 route, in three passes: plain static pages, dynamic content pages, and API
@@ -102,12 +102,17 @@ takes precedence over a static fallback.
 | `apiprefix` | `$str` | When non-empty, namespaces `/api/...` paths as `/api/<prefix>/...`. |
 | `handledpaths` | `@$str` | Paths already served by a dynamic handler; skip these. |
 
-**Returns:** `void`.
+**Returns:** `i64!$serveerr` — `0` on success, `$serveerr` if the route scan
+failed.
 
 **Logic:**
 
-1. Scan routes: `routes = mt ookerouter.routerscan(pagesdir) {$ok:r r; $err:e @($route)}`.
-   On scan failure fall back to a one-element default-route array.
+1. Scan routes with `ookerouter.routerscan(pagesdir)`. **If the scan failed, log
+   the reason and return `$serveerr`** — the caller must not start a listener.
+   (Story 134.18: this used to be
+   `mt ookerouter.routerscan(pagesdir) {$ok:r r; $err:e @($route)}`, which
+   turned a failed scan into an *empty* route set, so the server came up, served
+   404 for every path, and reported itself healthy.)
 2. **Pass 1 — static, non-API pages.** Loop `i` from `0` to `routes.len`
    (exclusive). For each route `r` where `!r.isdynamic && !r.isapi`:
    a. Start `webpath` mutable at `r.pattern`. If `r.pattern` starts with
@@ -204,9 +209,15 @@ the type permits `$serveerr` for plumbing parity.
    HTTPS mode line and call `http.servetls(uport; tlscert; tlskey)`. Otherwise
    log the HTTP mode line and call `http.serveworkers(uport; uworkers)`.
 
-**Error handling:** The function's return type carries `$serveerr` for parity,
-but the body raises no errors directly; all fallible sub-calls are handled
-inside `serveregisterstatic`. The listener call blocks.
+**Error handling:** `serveregisterstatic` propagates its `$serveerr` through
+`!$serveerr`, so a failed route scan aborts startup before anything is bound
+(story 134.18). Every other fallible sub-call is handled inside
+`serveregisterstatic`. The listener call blocks.
+
+The failure reason is logged inside `serveregisterstatic` rather than read from
+the error payload, because reading a field off a struct-style error payload
+traps RT005 — toke story 127.78, open. Carry the payload's own message once
+that is fixed.
 
 ## Control Flow
 
