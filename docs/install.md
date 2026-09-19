@@ -10,14 +10,17 @@ were invisible in a working tree and fatal in a clone.
 | | |
 |---|---|
 | ooke | **3.0.0-rc.1** — release candidate, see `docs/release-notes-3.0.0.md` |
-| toke | **`c2aa278` (2026-09-19) or later**, declared in `ooke.toml [requires]` |
+| toke | **`6cc9061` (2026-09-19) or later**, declared in `ooke.toml [requires]` |
 
-toke has **no released version that works**. `toke/VERSION` has read `2.8.0`
+toke has **no released version that works**, and the pin is a commit you can
+clone, not merely one whose compiler is correct — see step 2. `toke/VERSION`
+has read `2.8.0`
 since 2026-06-21 and has not moved across the entire v0.4 language break, so a
 semver cannot express the requirement and the floor is a **commit**. Story
 134.15 is the owner decision to cut that version; until it lands, pin the
-commit. `docs/versioning.md` carries the evidence for the floor, including why
-it is `c2aa278` and not the `b66bd8e` an earlier story established.
+commit. `docs/versioning.md` carries the evidence for all three floors — compile
+(`b66bd8e`), behaviour (`c2aa278`) and installable (`6cc9061`) — and why the
+highest is the one declared.
 
 ## 1. System dependencies
 
@@ -28,16 +31,20 @@ it is `c2aa278` and not the `b66bd8e` an earlier story established.
 
     git clone https://github.com/karwalski/toke.git
     cd toke
-    git checkout c2aa278          # or later; see ooke.toml [requires]
+    git checkout 6cc9061          # or later; see ooke.toml [requires]
     make
 
-**A plain clone is sufficient.** toke's third-party sources
-(`stdlib/vendor/cmark`, `stdlib/vendor/tomlc99`) are *tracked in the
-repository* — there is no submodule to initialise and no fetch step. That was
-not always true: before toke's story 127.85 they were ignored, a fresh clone
-had zero vendored files, and the build died in clang with an opaque `E9003`
-that named neither the dependency nor the cure. If you see that, your toke
-predates the fix and is far below ooke's floor.
+**A plain clone is sufficient at `6cc9061` or later, and only there.** toke's
+third-party sources (`stdlib/vendor/cmark`, `stdlib/vendor/tomlc99`) are
+*tracked in the repository* as of toke's story 127.85 — no submodule to
+initialise, no fetch step. Before that commit they were ignored, so a fresh
+clone has **zero** vendored files and the build dies in clang with an opaque
+`E9003` naming neither the dependency nor the cure.
+
+That is why the pin is `6cc9061` and not `c2aa278`, even though `c2aa278` is
+where ooke's behaviour becomes correct (`docs/versioning.md` §1). Story 134.10
+found it by verifying this page from a clone instead of a working tree: a
+clone at `c2aa278` cannot be built at all.
 
 **Always build toke from clean when you change commit.** `git checkout` followed
 by an incremental `make` produces a compiler that behaves like neither commit —

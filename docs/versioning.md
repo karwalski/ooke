@@ -78,6 +78,37 @@ at `c2aa278` ooke is 12/12; at its parent `beff3db` it is 11/12. (`test_router`
 passes at `beff3db`, so the RT005 abort was fixed earlier in the range; the
 binding constraint is the TOML one.)
 
+### A third floor, found by packaging from a clone (story 134.10)
+
+`c2aa278` is where ooke's behaviour becomes correct. It is **not** a commit a
+consumer can use, and the reason is the same defect class as ooke's own 134.21.
+
+A fresh `git clone` of toke at `c2aa278` has **no `stdlib/vendor` directory at
+all**. toke's story 127.85 — which tracks the vendored cmark and tomlc99 so a
+clone can build `std.toml` and `std.md` — is commit `6cc9061`, *later* than
+`c2aa278`. Before it, those sources were ignored: present in every working
+tree, absent from every clone, and the build dies in clang with an opaque
+`E9003` that names neither the dependency nor the cure.
+
+So there are three floors, and the declared one is the highest:
+
+| Floor | Commit | Date | Means |
+|---|---|---|---|
+| compile | `b66bd8e` | 2026-07-06 | ooke's sources compile (134.7) |
+| behaviour | `c2aa278` | 2026-09-19 | ooke's suite passes (134.16) |
+| **installable** | **`6cc9061`** | **2026-09-19** | **a clone of toke builds at all (127.85)** |
+
+Verified from clean clones of both repositories outside the development tree,
+with no overrides: toke at `6cc9061` builds from a plain clone; ooke builds
+against it by the documented default (toke checked out beside ooke); `make
+test` is 12/12; `ooke new` + `ooke build` exits 0 and writes `build/index.html`.
+
+The lesson is the one 134.21 and 127.85 already taught and this floor had not
+yet learned: **a floor that has only ever been tested in a tree which already
+had the files is untested.** Both earlier floors were established by checking
+out a commit into a directory that still had an untracked `stdlib/vendor` from
+a previous build.
+
 **What the old floor was claiming.** `minify` and `inlinecss` live in
 `ooke.toml`, so on any toke between `b66bd8e` and `c2aa278` a site that
 configures `minify = false` is silently minified anyway — the configuration is
@@ -87,7 +118,7 @@ support for that range. It no longer does:
 ```toml
 mintoke       = "2.8.0"
 mintokedate   = "2026-09-19"
-mintokecommit = "c2aa278"
+mintokecommit = "6cc9061"
 ```
 
 **Both floors are real and they are 2.5 months apart.** Keep the distinction:
@@ -175,11 +206,12 @@ For 3.0.0 onwards:
 
 ## 5. For downstream projects (loke, moke, toke-website)
 
-**Wait for toke `c2aa278` (2026-09-19) or later — in practice, toke HEAD — and for
+**Wait for toke `6cc9061` (2026-09-19) or later — in practice, toke HEAD — and for
 ooke 3.0.0.**
 
-The floor is `c2aa278`, not `b66bd8e`: story 134.16 raised it by 2.5 months once
-ooke's suite could be run against an older compiler. See §1.
+The floor is `6cc9061`, not `b66bd8e`: 134.16 raised it to `c2aa278` once ooke's
+suite could be run against an older compiler, and 134.10 raised it again to
+`6cc9061`, the earliest toke a consumer can actually clone and build. See §1.
 
 - **toke**: no tagged release contains what ooke needs. The newest release,
   2.8.0 (2026-06-21), cannot compile ooke. What is unreleased: the v0.4 syntax

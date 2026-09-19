@@ -24,11 +24,21 @@ accessformat = "combined"
 apiprefix = ""
 
 [requires]
-# The minimum toke ooke actually works on.  TWO floors were measured, and this
-# block carries the HIGHER one, because it is the one a user feels.
+# The minimum toke ooke actually works on.  THREE floors were measured, and
+# this block carries the HIGHEST, because it is the one a user feels.
 #
-#   compile floor   b66bd8e  2026-07-06  (story 134.7)  — ooke BUILDS
-#   behaviour floor c2aa278  2026-09-19  (story 134.16) — ooke's suite PASSES
+#   compile floor     b66bd8e  2026-07-06  (134.7)   — ooke BUILDS
+#   behaviour floor   c2aa278  2026-09-19  (134.16)  — ooke's suite PASSES
+#   installable floor 6cc9061  2026-09-19  (127.85)  — a CLONE of toke builds
+#
+# The third was found by story 134.10 doing what it said and verifying the
+# package from fresh clones rather than the working tree: a clone of toke at
+# c2aa278 has no stdlib/vendor at all, because toke's 127.85 — which tracks
+# the vendored cmark and tomlc99 — is LATER than c2aa278.  Pinning the
+# behaviour floor pinned a commit nobody can clone and build; the build dies
+# in clang with an opaque E9003 naming neither the dependency nor the cure.
+# Same defect class as ooke's own 134.21, and the same lesson: a floor that
+# has only ever been tested in a tree that already had the files is untested.
 #
 # Story 134.16 built tkc at the 134.7 compile floor and ran ooke's (now honest,
 # 187-assertion) suite against it: 10 of 12.  A compiler that compiles ooke is
@@ -47,4 +57,4 @@ apiprefix = ""
 # they are the single source of truth.  Evidence: docs/versioning.md.
 mintoke = "2.8.0"
 mintokedate = "2026-09-19"
-mintokecommit = "c2aa278"
+mintokecommit = "6cc9061"

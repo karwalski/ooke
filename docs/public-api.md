@@ -73,8 +73,8 @@ output changes meaning — silently producing escaped text rather than failing.
 ## 3. What a consumer should actually pin
 
     ooke   3.0.0-rc.1   (a git tag, or the release tarball + its SHA256)
-    toke   c2aa278      (a commit, until story 134.15 cuts a version)
+    toke   6cc9061      (a commit, until story 134.15 cuts a version)
 
 Both, together. Pinning ooke without pinning toke pins nothing: ooke is
-source-compiled against whatever toke you have, and the two floors — build and
-behaviour — are 2.5 months apart (`docs/versioning.md` §1).
+source-compiled against whatever toke you have, and the floors — compile,
+behaviour and installable — span 2.5 months (`docs/versioning.md` §1).
