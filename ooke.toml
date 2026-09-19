@@ -24,4 +24,12 @@ accessformat = "combined"
 apiprefix = ""
 
 [requires]
-mintoke = "2.0.0"
+# Minimum toke the ooke sources actually build against (story 134.7).
+# Evidence: docs/versioning.md. The semver alone is NOT sufficient — toke/VERSION
+# has read 2.8.0 since 2026-06-21 while the v0.4 syntax break (Epic 116) and the
+# ADR-0010 capability model (Epic 124) shipped under that same string — so the
+# enforceable floor is the commit/date pair. Makefile: check-toke-version reads
+# these three keys; they are the single source of truth.
+mintoke = "2.8.0"
+mintokedate = "2026-07-06"
+mintokecommit = "b66bd8e"

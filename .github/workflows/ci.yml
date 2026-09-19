@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Drift gate (story 134.7): ooke builds against toke HEAD, and toke moves
+  # without ooke moving. A daily run catches an upstream break the day it
+  # happens rather than at the next ooke commit.
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,7 +30,18 @@ jobs:
         run: |
           git clone https://github.com/karwalski/toke.git ../toke
           cd ../toke
+          echo "toke HEAD: $(git rev-parse --short HEAD) $(git log -1 --format=%cs) VERSION=$(cat VERSION)"
           make CFLAGS="-std=c99 -D_GNU_SOURCE -O2 -DNDEBUG -Wall -Wextra -Wpedantic -Wno-misleading-indentation -DTKC_STDLIB_DIR='\"./src/stdlib\"'"
+
+      # ── Version floor gate (story 134.7) ─────────────────────────────────
+      # Fails the build if the toke checkout is below the floor declared in
+      # ooke.toml [requires], or if ooke's own version strings disagree.
+      - name: Check version floor
+        run: |
+          TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
+          make check-versions \
+               TOKE_ROOT="${TOKE_ROOT}" \
+               TOKE_STDLIB="${TOKE_ROOT}/src/stdlib"
 
       # ── Build ooke ───────────────────────────────────────────────────────
       - name: Build ooke

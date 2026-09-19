@@ -58,6 +58,15 @@ jobs:
           cd ../toke
           make CFLAGS="-std=c99 -D_GNU_SOURCE -O2 -DNDEBUG -Wall -Wextra -Wpedantic -Wno-misleading-indentation -DTKC_STDLIB_DIR='\"./src/stdlib\"'"
           echo "TKC built successfully: $(./toke --version 2>&1 || echo 'ok')"
+          echo "toke HEAD: $(git rev-parse --short HEAD) $(git log -1 --format=%cs) VERSION=$(cat VERSION)"
+
+      # ── Version floor gate (story 134.7) ─────────────────────────────────
+      - name: Check version floor
+        run: |
+          TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
+          make check-versions \
+               TOKE_ROOT="${TOKE_ROOT}" \
+               TOKE_STDLIB="${TOKE_ROOT}/src/stdlib"
 
       # ── Generate handlers and build ooke ─────────────────────────────────
       - name: Build ooke release binary

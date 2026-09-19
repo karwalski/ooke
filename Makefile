@@ -130,7 +130,9 @@ MAIN_LL  := $(SRC)/main.ll
 # ── Rules ─────────────────────────────────────────────────────────────────
 .PHONY: all dev clean interfaces check test test-check test-run
 
-all: $(BIN)
+all:
+	@$(MAKE) --no-print-directory check-versions
+	@$(MAKE) --no-print-directory $(BIN)
 
 dev: $(BIN)
 	@echo "Development server: http://localhost:3000"
@@ -216,7 +218,7 @@ check:
 	done
 
 # Test targets
-test: $(BIN) test-check test-run
+test: check-versions $(BIN) test-check test-run
 
 test-check:
 	@echo "=== Syntax check all test files ==="
@@ -236,18 +238,57 @@ clean:
 	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI) $(SRC)/_handlers.tk
 	rmdir $(IFACE_DIR) 2>/dev/null || true
 
-# ── Version check ────────────────────────────────────────────────────────
-MIN_TOKE_VERSION := 2.0.0
+# ── Version and dependency gate (story 134.7) ────────────────────────────
+# Single source of truth: ooke.toml [requires]. Never restate the floor here.
+MIN_TOKE_VERSION := $(shell sed -n 's/^mintoke *= *"\(.*\)"/\1/p' ooke.toml)
+MIN_TOKE_DATE    := $(shell sed -n 's/^mintokedate *= *"\(.*\)"/\1/p' ooke.toml)
+MIN_TOKE_COMMIT  := $(shell sed -n 's/^mintokecommit *= *"\(.*\)"/\1/p' ooke.toml)
+OOKE_VERSION     := $(shell cat VERSION)
+
+.PHONY: check-versions check-toke-version check-ooke-version
+
+check-versions: check-toke-version check-ooke-version
+
+# Why three checks and not one semver: toke/VERSION has read 2.8.0 since
+# 2026-06-21, and the v0.4 syntax break (Epic 116) plus the ADR-0010 capability
+# model (Epic 124) both shipped under that same string. A semver compare alone
+# therefore cannot express ooke's real floor. See docs/versioning.md.
 check-toke-version:
-	@if [ -f $(TOKE_ROOT)/VERSION ]; then \
-		TOKE_VER=$$(cat $(TOKE_ROOT)/VERSION); \
-		TOKE_MAJ=$$(echo $$TOKE_VER | cut -d. -f1); \
-		MIN_MAJ=$$(echo $(MIN_TOKE_VERSION) | cut -d. -f1); \
-		if [ "$$TOKE_MAJ" -lt "$$MIN_MAJ" ]; then \
-			echo "ERROR: ooke v$$(cat VERSION) requires toke >= $(MIN_TOKE_VERSION), found $$TOKE_VER"; \
-			exit 1; \
+	@set -e; \
+	if [ ! -f $(TOKE_ROOT)/VERSION ]; then \
+		echo "ERROR: no toke checkout at $(TOKE_ROOT) (no VERSION file)"; exit 1; \
+	fi; \
+	TOKE_VER=$$(cat $(TOKE_ROOT)/VERSION); \
+	LOWEST=$$(printf '%s\n%s\n' "$$TOKE_VER" "$(MIN_TOKE_VERSION)" | sort -V | head -1); \
+	if [ "$$LOWEST" != "$(MIN_TOKE_VERSION)" ] && [ "$$TOKE_VER" != "$(MIN_TOKE_VERSION)" ]; then \
+		echo "ERROR: ooke $(OOKE_VERSION) requires toke >= $(MIN_TOKE_VERSION), found $$TOKE_VER"; exit 1; \
+	fi; \
+	if [ ! -f $(TOKE_STDLIB)/capabilities.c ]; then \
+		echo "ERROR: $(TOKE_STDLIB)/capabilities.c is missing — that toke predates ADR-0010 (2026-07-06)."; \
+		echo "       ooke links capabilities.c and compiles with src/tkc.toml [capabilities];"; \
+		echo "       toke >= $(MIN_TOKE_COMMIT) ($(MIN_TOKE_DATE)) is required. See docs/versioning.md."; exit 1; \
+	fi; \
+	if git -C $(TOKE_ROOT) rev-parse --git-dir >/dev/null 2>&1; then \
+		HEAD_SHA=$$(git -C $(TOKE_ROOT) rev-parse --short HEAD); \
+		HEAD_DATE=$$(git -C $(TOKE_ROOT) log -1 --format=%cs HEAD); \
+		if git -C $(TOKE_ROOT) cat-file -e $(MIN_TOKE_COMMIT)^{commit} 2>/dev/null; then \
+			if ! git -C $(TOKE_ROOT) merge-base --is-ancestor $(MIN_TOKE_COMMIT) HEAD; then \
+				echo "ERROR: toke $$HEAD_SHA ($$HEAD_DATE) does not contain $(MIN_TOKE_COMMIT) — ooke's floor. See docs/versioning.md."; exit 1; \
+			fi; \
+		elif [ "$$HEAD_DATE" \< "$(MIN_TOKE_DATE)" ]; then \
+			echo "ERROR: toke $$HEAD_SHA is dated $$HEAD_DATE, before ooke's floor $(MIN_TOKE_DATE). See docs/versioning.md."; exit 1; \
 		fi; \
-		echo "toke $$TOKE_VER >= $(MIN_TOKE_VERSION) ✓"; \
+		echo "toke $$TOKE_VER @ $$HEAD_SHA ($$HEAD_DATE) >= floor $(MIN_TOKE_VERSION) / $(MIN_TOKE_COMMIT) ($(MIN_TOKE_DATE)) OK"; \
 	else \
-		echo "WARNING: toke VERSION file not found, skipping version check"; \
+		echo "toke $$TOKE_VER (not a git checkout; capabilities.c present) >= floor $(MIN_TOKE_VERSION) OK"; \
 	fi
+
+# The version ooke prints must match the version it declares; src/cli.tk said
+# "ooke 2.0.0" for three months while VERSION moved, so this is a real gate.
+check-ooke-version:
+	@set -e; \
+	if ! grep -q '"ooke $(OOKE_VERSION)"' src/cli.tk; then \
+		echo "ERROR: VERSION is $(OOKE_VERSION) but src/cli.tk does not print it:"; \
+		grep -n 'ooke [0-9]' src/cli.tk || true; exit 1; \
+	fi; \
+	echo "ooke $(OOKE_VERSION) declared consistently (VERSION, src/cli.tk) OK"
