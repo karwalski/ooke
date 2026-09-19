@@ -127,7 +127,7 @@ ERROR: toke 8c073a6 (2026-07-06) does not contain b66bd8e — ooke's floor.
 
 ## 3. ooke's own version
 
-`VERSION` is **3.0.0-dev**. The last release was **2.0.0** (2026-06-21, the
+`VERSION` is **3.0.0-rc.1**. The last release was **2.0.0** (2026-06-21, the
 pure-toke rebuild). Since then ooke has taken changes that break consumers:
 
 - migration to v0.4 syntax (`==`, expression-`if`) — **a project's own `pages/`

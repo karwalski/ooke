@@ -54,3 +54,6 @@ src/ooke/
 # test dir, not the build output dir
 !test/build/
 !test/build/**
+
+# Release artefacts (story 134.10): built by scripts/package_release.sh
+dist/

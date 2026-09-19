@@ -1,0 +1,81 @@
+# Changelog
+
+Dates are the dates the work was done, not publication dates. Nothing below has
+been published; see `docs/RELEASING.md`.
+
+## 3.0.0-rc.1 — unreleased (prepared 2026-09-19, story 134.10)
+
+Release **candidate**, not a release. One open P0 (134.24) stops `ooke build`
+working on the project `ooke new` creates. Read
+`docs/release-notes-3.0.0.md` before adopting.
+
+### Breaking, relative to 2.0.0
+
+The version loke was written against is **2.0.0** (2026-06-21). Everything here
+breaks a 2.0.0-era consumer.
+
+- **toke v0.4 syntax is now required of your code too.** ooke's sources moved to
+  `==` for equality and expression-oriented `if`; so must the `pages/*.tk` and
+  modules in your project. 2.0.0-era sources do not compile.
+- **Templates escape by default** (toke ADR-0011). A template that relied on raw
+  interpolation now emits escaped text. Use `{{raw ...}}`. This changes output
+  rather than failing, so it will not announce itself.
+- **A capability grant set is baked into the binary with `enforce = true`**
+  (toke ADR-0010).
+- **The toke floor is a commit, not a version.** `ooke.toml [requires]` gained
+  `mintokedate` and `mintokecommit`; `mintoke` alone is not enforceable while
+  toke's VERSION is frozen at 2.8.0 (story 134.15).
+- **`ooke new` writes a `[requires]` block** into every scaffolded project.
+  Previously it wrote no floor at all.
+- **No-underscore naming** for configuration keys and stdlib call names, imposed
+  by toke's Profile-1 character set.
+
+### Fixed
+
+- **The test suite had never run.** All 12 tests were reported `SKIP (link)` and
+  the runner exited 0. Now 12/12 — and the runner takes its build configuration
+  from `make print-build-vars` rather than a hand-copied list, which is how it
+  drifted out of linkability unnoticed. (134.5)
+- **157 assertions were inert.** `test.eq` results were computed and discarded,
+  so tests could not fail. Now 187 live assertions, each proved able to fail by
+  mutating one expectation per file and confirming all 11 files go red. (134.17)
+- **`ooke serve` segfaulted** on a missing `pages/` directory, and did not honour
+  SIGTERM. Exit 139, `EXC_BAD_ACCESS`. (134.14)
+- **`serve` swallowed a `routerscan` error** into an empty route set and served
+  nothing rather than refusing to start. (134.18)
+- **`ooke serve --help` started a server** instead of printing help. Help is now
+  answered before dispatch for every command in all three spellings. (134.19)
+- **Two configuration flags were parsed and never used.** Wired, not removed.
+  (134.20)
+- **Reproducible site builds** — the 132.20 blocker, root-caused to toke 127.58.
+  (134.8)
+- **A clone could not run the tests**: `test/support/` was untracked, so every
+  fresh clone died on a `make` error that named the file but not the cause.
+  Tracked now, with a preflight that fails by name. (134.21)
+- **`tkc --check` coverage 28/30 → 30/30**; lint warnings 96 → 2, errors 0;
+  all 63 string-concatenation chains converted to the canonical form.
+  (134.2, 134.3)
+- **The version gate was decorative** — it compared major versions only,
+  restated the floor in a second place, and was a prerequisite of nothing. It
+  now reads `ooke.toml` as the single source of truth and gates `make` and
+  `make test`. `ooke --version` and `VERSION` had also disagreed for three
+  months; that is now a build failure. (134.7)
+
+### Changed
+
+- Templates render into a string builder rather than a concat chain; 15.4%
+  memory reduction, measured. A template cache was implemented, measured and
+  **rejected**. (134.4)
+- `TOKE_ROOT` and `TKC` are overridable (`?=`) instead of absolute paths into
+  one developer's home directory. Nobody else could build ooke before this.
+  (134.16)
+
+### Known defects
+
+See `docs/release-notes-3.0.0.md`. The short list: **134.24 (P0)**, 134.22,
+134.23, and toke's unreleased-version problem (134.15).
+
+## 2.0.0 — 2026-06-21
+
+The pure-toke rebuild (Epic 113): ooke re-implemented as 100% toke, with the
+native glue pushed down into a reusable toke core (ADR-0005).

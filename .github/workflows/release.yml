@@ -52,13 +52,22 @@ jobs:
           brew install openssl@3 sqlite
 
       # ── Build tkc (the toke compiler) ────────────────────────────────────
-      - name: Clone and build tkc
+      # Story 134.10: a release must pin the toke it was built with.  This
+      # cloned toke `main` unpinned, so a tag rebuilt days apart produced
+      # different binaries from the same ooke commit — and with toke's VERSION
+      # frozen at 2.8.0 (story 134.15) nothing in the artefact recorded which.
+      # The pin is ooke.toml [requires] mintokecommit, the one source of truth.
+      - name: Clone and build tkc at ooke's declared floor
         run: |
+          PIN=$(sed -n 's/^mintokecommit *= *"\(.*\)"/\1/p' ooke.toml)
+          echo "ooke.toml pins toke to ${PIN}"
           git clone https://github.com/karwalski/toke.git ../toke
           cd ../toke
+          git checkout "${PIN}"
           make CFLAGS="-std=c99 -D_GNU_SOURCE -O2 -DNDEBUG -Wall -Wextra -Wpedantic -Wno-misleading-indentation -DTKC_STDLIB_DIR='\"./src/stdlib\"'"
           echo "TKC built successfully: $(./toke --version 2>&1 || echo 'ok')"
-          echo "toke HEAD: $(git rev-parse --short HEAD) $(git log -1 --format=%cs) VERSION=$(cat VERSION)"
+          echo "toke pinned: $(git rev-parse HEAD) $(git log -1 --format=%cs) VERSION=$(cat VERSION)"
+          shasum -a 256 toke || sha256sum toke
 
       # ── Version floor gate (story 134.7) ─────────────────────────────────
       - name: Check version floor
@@ -96,6 +105,15 @@ jobs:
           echo "ooke-toke built successfully"
           ls -la ooke-toke
 
+      # Story 134.10: docs/versioning.md claimed the release workflow ran the
+      # checks before packaging.  It ran the version gate only.  The suite had
+      # never run anywhere until 134.5, and could not fail until 134.17; a
+      # release that does not run it is packaging the old silence again.
+      - name: Run ooke's test suite
+        run: |
+          TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
+          make test-run TOKE_ROOT="${TOKE_ROOT}" TKC="${TOKE_ROOT}/toke"
+
       # ── Package release tarball ──────────────────────────────────────────
       - name: Package release tarball
         run: |
@@ -107,17 +125,25 @@ jobs:
           cp ooke-toke "${STAGING}/ooke"
           chmod +x "${STAGING}/ooke"
 
-          # Runtime content/template directories
-          cp -r templates "${STAGING}/templates" 2>/dev/null || true
-          cp -r content "${STAGING}/content" 2>/dev/null || true
-          cp -r pages "${STAGING}/pages" 2>/dev/null || true
-          cp -r static "${STAGING}/static" 2>/dev/null || true
+          # Story 134.10: this used to ship ooke's OWN site -- templates/,
+          # content/, pages/, static/ and an ooke.toml reading name = "my-site"
+          # -- which a consumer neither needs nor should inherit.  The binary
+          # is self-contained and `ooke new` scaffolds from code, not from
+          # files copied out of this repo.  Ship the binary and the documents
+          # you need to use and pin it.
+          cp VERSION LICENSE README.md CHANGELOG.md "${STAGING}/"
+          cp docs/install.md docs/versioning.md docs/public-api.md \
+             docs/release-notes-3.0.0.md "${STAGING}/"
 
-          # Config
-          cp ooke.toml "${STAGING}/" 2>/dev/null || true
-
-          # LICENSE
-          cp LICENSE "${STAGING}/"
+          # The pin, recorded in the artefact rather than only in the log.
+          {
+            echo "ooke        ${VERSION} ($(git rev-parse HEAD))"
+            echo "platform    ${{ matrix.os }}-${{ matrix.arch }}"
+            echo "toke        $(git -C ../toke rev-parse HEAD) ($(git -C ../toke log -1 --format=%cs))"
+            echo "toke VERSION $(cat ../toke/VERSION)"
+            sed -n '/^\[requires\]/,$p' ooke.toml | grep -E '^mintoke'
+          } > "${STAGING}/MANIFEST.txt"
+          cat "${STAGING}/MANIFEST.txt"
 
           tar czf "${STAGING}.tar.gz" "${STAGING}"
           echo "TARBALL=${STAGING}.tar.gz" >> "$GITHUB_ENV"
@@ -179,10 +205,17 @@ jobs:
 
             ### Each tarball contains
 
-            - `ooke` -- the ooke web framework binary
-            - `templates/` -- HTML template files
-            - `content/` -- content pages
-            - `pages/` -- page handler sources
-            - `static/` -- static assets (CSS, JS, images)
-            - `ooke.toml` -- default configuration
-            - `LICENSE`
+            - `ooke` -- the ooke binary, self-contained
+            - `MANIFEST.txt` -- the ooke commit and the **toke commit** it was built at
+            - `install.md` -- how to build toke at the pinned commit and ooke against it
+            - `versioning.md` -- the evidence for the toke floor, build and behaviour
+            - `public-api.md` -- what is stable and what is internal
+            - `release-notes-3.0.0.md` -- **known open defects, including a P0**
+            - `CHANGELOG.md`, `README.md`, `VERSION`, `LICENSE`
+
+            ### Before you adopt this
+
+            toke has no released version that works: pin the **commit** named in
+            `MANIFEST.txt`. And read `release-notes-3.0.0.md` -- `ooke build`
+            currently aborts on any project containing an API route, which is
+            every project `ooke new` creates (story 134.24).
