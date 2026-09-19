@@ -34,21 +34,21 @@ f=cliprintversion():i64{
 };
 
 f=clinew(name:$str):i64{
-  let d1=mt file.mkdir(name) {$ok:v v;$err:e false};
-  let d2=mt file.mkdir(path.join(name;"pages")) {$ok:v v;$err:e false};
-  let d3=mt file.mkdir(path.join(name;"templates")) {$ok:v v;$err:e false};
-  let d4=mt file.mkdir(path.join(name;"content")) {$ok:v v;$err:e false};
-  let d5=mt file.mkdir(path.join(name;"static")) {$ok:v v;$err:e false};
-  let tomlcontent=str.concat("[site]\nname = \"";str.concat(name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[paths]\napiprefix = \"\"\n\n[log]\naccessformat = \"combined\"\nmaxlines = 10000\nmaxagedays = 30\n\n[requires]\nmintoke = \"2.8.0\"\nmintokedate = \"2026-07-06\"\nmintokecommit = \"b66bd8e\"\n"));
-  let w1=mt file.write(path.join(name;"ooke.toml");tomlcontent) {$ok:v v;$err:e false};
+  (mt file.mkdir(name) {$ok:v v;$err:e false});
+  (mt file.mkdir(path.join(name;"pages")) {$ok:v v;$err:e false});
+  (mt file.mkdir(path.join(name;"templates")) {$ok:v v;$err:e false});
+  (mt file.mkdir(path.join(name;"content")) {$ok:v v;$err:e false});
+  (mt file.mkdir(path.join(name;"static")) {$ok:v v;$err:e false});
+  let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[paths]\napiprefix = \"\"\n\n[log]\naccessformat = \"combined\"\nmaxlines = 10000\nmaxagedays = 30\n\n[requires]\nmintoke = \"2.8.0\"\nmintokedate = \"2026-07-06\"\nmintokecommit = \"b66bd8e\"\n"));
+  (mt file.write(path.join(name;"ooke.toml");tomlcontent) {$ok:v v;$err:e false});
   let indexcontent="m=pages.index;\n";
-  let w2=mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {$ok:v v;$err:e false};
+  (mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {$ok:v v;$err:e false});
   (* Default placeholder theme: toke "Coin Gold" identity, self-contained
      (inline tokens + Google Fonts, no external CSS). Developers building on
      ooke re-theme freely by editing this file — this is just the empty-ooke
      default so a fresh `ooke new` + serve shows a polished branded page. *)
   let basecontent="<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>{{title}}</title>\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700;800&display=swap\">\n<style>\n:root{--bg:#14110B;--surface:#1F1A11;--line:#2A2317;--text:#F5EFE2;--muted:#9A9082;--gold:#F0C04A;--on-gold:#14110B}\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:var(--bg);color:var(--text);font-family:\"Space Grotesk\",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}\n.wrap{max-width:640px;margin:0 auto;padding:80px 24px}\n.lockup{display:flex;align-items:center;gap:14px;margin-bottom:36px}\n.coin{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 34% 32%,#F6D277 0%,#F0C04A 48%,#C68A1A 100%);box-shadow:0 0 18px rgba(240,192,74,.45)}\n.wordmark{font-family:\"JetBrains Mono\",monospace;font-weight:800;font-size:38px;letter-spacing:-2px}\nh1{font-size:30px;font-weight:700;letter-spacing:-1px;margin-bottom:12px}\np{color:var(--muted);margin-bottom:16px}\n.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px;margin:28px 0}\n.eyebrow{font-family:\"JetBrains Mono\",monospace;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}\n.btn{display:inline-block;background:var(--gold);color:var(--on-gold);font-weight:600;text-decoration:none;padding:11px 20px;border-radius:8px;font-size:14px}\na.link{color:var(--gold);text-decoration:none}\npre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:16px;overflow-x:auto;font-family:\"JetBrains Mono\",monospace;font-size:13px;color:#d8d0c0;margin:16px 0}\n.kw{color:var(--gold)}\nfooter{border-top:1px solid var(--line);margin-top:40px;padding-top:20px;color:var(--muted);font-size:13px}\nfooter a{color:var(--muted);text-decoration:none}\n</style>\n</head>\n<body>\n<div class=\"wrap\">\n<div class=\"lockup\"><div class=\"coin\"></div><span class=\"wordmark\">ooke</span></div>\n<div class=\"eyebrow\">Admit one</div>\n<h1>ooke is running.</h1>\n<p>A single native binary serving this page &mdash; no runtime, no dependencies. Built with <a class=\"link\" href=\"https://tokelang.dev\">toke</a>, a language built for AI.</p>\n{{content}}\n<div class=\"card\">\n<div class=\"eyebrow\">Get started</div>\n<p style=\"margin-bottom:12px\">Edit <code>templates/base.tkt</code> to make it yours, or add a page:</p>\n<pre><span class=\"kw\">m</span>=pages.about;</pre>\n<a class=\"btn\" href=\"https://github.com/karwalski/ooke\">ooke on GitHub</a>\n</div>\n<footer>Built with toke on ooke &middot; <a href=\"https://tokelang.dev\">tokelang.dev</a> &middot; Write less. Mean more.</footer>\n</div>\n</body>\n</html>\n";
-  let w3=mt file.write(path.join(path.join(name;"templates");"base.tkt");basecontent) {$ok:v v;$err:e false};
+  (mt file.write(path.join(path.join(name;"templates");"base.tkt");basecontent) {$ok:v v;$err:e false});
   (log.info(str.concat("Created project: ";name);@()));
   <0
 };
@@ -56,7 +56,7 @@ f=clinew(name:$str):i64{
 f=cligen(gentype:$str;genname:$str):i64{
   if(str.eq(gentype;"page")){
     let pagepath=path.join("pages";str.concat(genname;".tk"));
-    let pagecontent=str.concat("m=pages.";str.concat(genname;";\n"));
+    let pagecontent=str.join("";@("m=pages.";genname;";\n"));
     let pw=mt file.write(pagepath;pagecontent) {$ok:v v;$err:e false};
     (log.info(str.concat("Created page: ";pagepath);@()));
     <0
@@ -64,7 +64,7 @@ f=cligen(gentype:$str;genname:$str):i64{
     if(str.eq(gentype;"type")){
       let dm=mt file.mkdir("models") {$ok:v v;$err:e false};
       let typepath=path.join("models";str.concat(genname;".toml"));
-      let typecontent=str.concat("name = \"";str.concat(genname;"\"\n\n[fields]\nlist = \"title, slug\"\n\n[fields.title]\ntype = \"str\"\nrequired = true\n\n[fields.slug]\ntype = \"str\"\nrequired = true\n"));
+      let typecontent=str.join("";@("name = \"";genname;"\"\n\n[fields]\nlist = \"title, slug\"\n\n[fields.title]\ntype = \"str\"\nrequired = true\n\n[fields.slug]\ntype = \"str\"\nrequired = true\n"));
       let tw=mt file.write(typepath;typecontent) {$ok:v v;$err:e false};
       (log.info(str.concat("Created type: ";typepath);@()));
       <0
@@ -72,7 +72,7 @@ f=cligen(gentype:$str;genname:$str):i64{
       if(str.eq(gentype;"api")){
         let da=mt file.mkdir(path.join("pages";"api")) {$ok:v v;$err:e false};
         let apipath=path.join(path.join("pages";"api");str.concat(genname;".tk"));
-        let apicontent=str.concat("m=pages.api.";str.concat(genname;";\n"));
+        let apicontent=str.join("";@("m=pages.api.";genname;";\n"));
         let aw=mt file.write(apipath;apicontent) {$ok:v v;$err:e false};
         (log.info(str.concat("Created api: ";apipath);@()));
         (log.info("Wire handler: add src/api<name>.tk with apiget/apipost/apiinit, import in main.tk, add to Makefile";@()));
@@ -81,7 +81,7 @@ f=cligen(gentype:$str;genname:$str):i64{
         if(str.eq(gentype;"island")){
           let di=mt file.mkdir("islands") {$ok:v v;$err:e false};
           let islandpath=path.join("islands";str.concat(genname;".tk"));
-          let islandcontent=str.concat("m=islands.";str.concat(genname;";\n"));
+          let islandcontent=str.join("";@("m=islands.";genname;";\n"));
           let iw=mt file.write(islandpath;islandcontent) {$ok:v v;$err:e false};
           (log.info(str.concat("Created island: ";islandpath);@()));
           <0
@@ -95,58 +95,58 @@ f=cligen(gentype:$str;genname:$str):i64{
 };
 
 f=retcolon(t:$str):$str{
-  <str.concat(")";str.concat(":";t))
+  <str.concat("):";t)
 };
 
 f=specstack(t:$str;name:$str):$str{
-  let hdr=str.concat("m=";str.concat(name;";\ni=stk:std.stack;\n\n"));
-  let tdef=str.concat("t=$";str.concat(name;"=stk.$stack;\n\n"));
-  let newbody=str.concat("{\n  <stk.stack.new() as $";str.concat(name;";\n};\n\n"));
-  let fnew=str.concat("f=new():$";str.concat(name;newbody));
+  let hdr=str.join("";@("m=";name;";\ni=stk:std.stack;\n\n"));
+  let tdef=str.join("";@("t=$";name;"=stk.$stack;\n\n"));
+  let newbody=str.join("";@("{\n  <stk.stack.new() as $";name;";\n};\n\n"));
+  let fnew=str.join("";@("f=new():$";name;newbody));
   let pushret=str.concat(retcolon(t);"{\n  <stk.stack.push(s as stk.$stack;val);\n};\n\n");
-  let pushsig=str.concat(";val:";str.concat(t;pushret));
-  let fpush=str.concat("f=push(s:$";str.concat(name;pushsig));
+  let pushsig=str.join("";@(";val:";t;pushret));
+  let fpush=str.join("";@("f=push(s:$";name;pushsig));
   let popret=str.concat(retcolon(t);"{\n  <stk.stack.pop(s as stk.$stack);\n};\n\n");
-  let fpop=str.concat("f=pop(s:$";str.concat(name;popret));
+  let fpop=str.join("";@("f=pop(s:$";name;popret));
   let peekret=str.concat(retcolon(t);"{\n  <stk.stack.peek(s as stk.$stack);\n};\n\n");
-  let fpeek=str.concat("f=peek(s:$";str.concat(name;peekret));
-  let flen=str.concat("f=len(s:$";str.concat(name;str.concat(retcolon("i64");"{\n  <stk.stack.len(s as stk.$stack);\n};\n\n")));
-  let fempty=str.concat("f=empty(s:$";str.concat(name;str.concat(retcolon("i64");"{\n  <stk.stack.empty(s as stk.$stack);\n};\n")));
-  <str.concat(hdr;str.concat(tdef;str.concat(fnew;str.concat(fpush;str.concat(fpop;str.concat(fpeek;str.concat(flen;fempty)))))))
+  let fpeek=str.join("";@("f=peek(s:$";name;peekret));
+  let flen=str.join("";@("f=len(s:$";name;retcolon("i64");"{\n  <stk.stack.len(s as stk.$stack);\n};\n\n"));
+  let fempty=str.join("";@("f=empty(s:$";name;retcolon("i64");"{\n  <stk.stack.empty(s as stk.$stack);\n};\n"));
+  <str.join("";@(hdr;tdef;fnew;fpush;fpop;fpeek;flen;fempty))
 };
 
 f=specqueue(t:$str;name:$str):$str{
-  let hdr=str.concat("m=";str.concat(name;";\ni=que:std.queue;\n\n"));
-  let tdef=str.concat("t=$";str.concat(name;"=que.$queue;\n\n"));
-  let newbody=str.concat("{\n  <que.queue.new() as $";str.concat(name;";\n};\n\n"));
-  let fnew=str.concat("f=new():$";str.concat(name;newbody));
+  let hdr=str.join("";@("m=";name;";\ni=que:std.queue;\n\n"));
+  let tdef=str.join("";@("t=$";name;"=que.$queue;\n\n"));
+  let newbody=str.join("";@("{\n  <que.queue.new() as $";name;";\n};\n\n"));
+  let fnew=str.join("";@("f=new():$";name;newbody));
   let pushret=str.concat(retcolon(t);"{\n  <que.queue.push(q as que.$queue;val);\n};\n\n");
-  let pushsig=str.concat(";val:";str.concat(t;pushret));
-  let fpush=str.concat("f=push(q:$";str.concat(name;pushsig));
+  let pushsig=str.join("";@(";val:";t;pushret));
+  let fpush=str.join("";@("f=push(q:$";name;pushsig));
   let popret=str.concat(retcolon(t);"{\n  <que.queue.pop(q as que.$queue);\n};\n\n");
-  let fpop=str.concat("f=pop(q:$";str.concat(name;popret));
+  let fpop=str.join("";@("f=pop(q:$";name;popret));
   let peekret=str.concat(retcolon(t);"{\n  <que.queue.peek(q as que.$queue);\n};\n\n");
-  let fpeek=str.concat("f=peek(q:$";str.concat(name;peekret));
-  let flen=str.concat("f=len(q:$";str.concat(name;str.concat(retcolon("i64");"{\n  <que.queue.len(q as que.$queue);\n};\n")));
-  <str.concat(hdr;str.concat(tdef;str.concat(fnew;str.concat(fpush;str.concat(fpop;str.concat(fpeek;flen))))))
+  let fpeek=str.join("";@("f=peek(q:$";name;peekret));
+  let flen=str.join("";@("f=len(q:$";name;retcolon("i64");"{\n  <que.queue.len(q as que.$queue);\n};\n"));
+  <str.join("";@(hdr;tdef;fnew;fpush;fpop;fpeek;flen))
 };
 
 f=specset(t:$str;name:$str):$str{
-  let hdr=str.concat("m=";str.concat(name;";\ni=st:std.set;\n\n"));
-  let tdef=str.concat("t=$";str.concat(name;"=st.$set;\n\n"));
-  let newbody=str.concat("{\n  <st.set.new() as $";str.concat(name;";\n};\n\n"));
-  let fnew=str.concat("f=new():$";str.concat(name;newbody));
+  let hdr=str.join("";@("m=";name;";\ni=st:std.set;\n\n"));
+  let tdef=str.join("";@("t=$";name;"=st.$set;\n\n"));
+  let newbody=str.join("";@("{\n  <st.set.new() as $";name;";\n};\n\n"));
+  let fnew=str.join("";@("f=new():$";name;newbody));
   let addret=str.concat(retcolon(t);"{\n  <st.set.add(s as st.$set;val);\n};\n\n");
-  let addsig=str.concat(";val:";str.concat(t;addret));
-  let fadd=str.concat("f=add(s:$";str.concat(name;addsig));
+  let addsig=str.join("";@(";val:";t;addret));
+  let fadd=str.join("";@("f=add(s:$";name;addsig));
   let hasret=str.concat(retcolon("i64");"{\n  <st.set.has(s as st.$set;val);\n};\n\n");
-  let hassig=str.concat(";val:";str.concat(t;hasret));
-  let fhas=str.concat("f=has(s:$";str.concat(name;hassig));
+  let hassig=str.join("";@(";val:";t;hasret));
+  let fhas=str.join("";@("f=has(s:$";name;hassig));
   let remret=str.concat(retcolon(t);"{\n  <st.set.remove(s as st.$set;val);\n};\n\n");
-  let remsig=str.concat(";val:";str.concat(t;remret));
-  let fremove=str.concat("f=remove(s:$";str.concat(name;remsig));
-  let flen=str.concat("f=len(s:$";str.concat(name;str.concat(retcolon("i64");"{\n  <st.set.len(s as st.$set);\n};\n")));
-  <str.concat(hdr;str.concat(tdef;str.concat(fnew;str.concat(fadd;str.concat(fhas;str.concat(fremove;flen))))))
+  let remsig=str.join("";@(";val:";t;remret));
+  let fremove=str.join("";@("f=remove(s:$";name;remsig));
+  let flen=str.join("";@("f=len(s:$";name;retcolon("i64");"{\n  <st.set.len(s as st.$set);\n};\n"));
+  <str.join("";@(hdr;tdef;fnew;fadd;fhas;fremove;flen))
 };
 
 f=cligenspec(container:$str;typename:$str):i64{
@@ -170,7 +170,7 @@ f=cligenspec(container:$str;typename:$str):i64{
         (log.info(str.concat("Created specialised: ";filename);@()));
         <0
       }el{
-        (log.info(str.concat("unknown container: ";str.concat(container;", expected: stack, queue, set"));@()));
+        (log.info(str.join("";@("unknown container: ";container;", expected: stack, queue, set"));@()));
         <1
       }
     }
@@ -198,7 +198,7 @@ f=runserve(projectdir:$str):i64{
   let apiprefix=cfg.apiprefix;
   let corsorigins=cfg.servercorsorigins;
   let handledpaths=handlers.registerall();
-  (log.info(str.concat("auto-registered ";str.concat(str.fromint(handledpaths.len);" handler routes"));@()));
+  (log.info(str.join("";@("auto-registered ";handledpaths.len as str;" handler routes"));@()));
   let r=mt serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {$ok:v 0;$err:e 1};
   <r
 };
@@ -219,7 +219,7 @@ f=runbuild(projectdir:$str):i64{
     (log.info(str.concat("validation warnings: ";str.fromint(report.valwarnings));@()))
   }el{};
   if(report.pagesskipped>0){
-    (log.error(str.concat("pages skipped: ";str.concat(str.fromint(report.pagesskipped);" — build failed"));@()));
+    (log.error(str.join("";@("pages skipped: ";report.pagesskipped as str;" — build failed"));@()));
     <1
   }el{};
   <0

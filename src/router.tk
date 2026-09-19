@@ -28,7 +28,7 @@ f=routederivepattern(filepath:$str;pagesdir:$str):$str{
   lp(let i=0;i<segs.len;i=i+1){
     let seg=segs.get(i);
     let mapped=mt str.matchbracket(seg) {$ok:name str.concat(":";name);$err:e seg};
-    out=str.concat(out;str.concat("/";mapped))
+    out=str.join("";@(out;"/";mapped))
   };
   let result=mut.out;
   if(str.endswith(out;"/index")){
@@ -44,7 +44,7 @@ f=routederivepattern(filepath:$str;pagesdir:$str):$str{
 f=routederivetemplate(filepath:$str;pagesdir:$str):$str{
   let rel=str.trimprefix(filepath;pagesdir);
   let noext=str.trimsuffix(rel;".tk");
-  <str.concat("templates/";str.concat(noext;".tkt"))
+  <str.join("";@("templates/";noext;".tkt"))
 };
 
 f=routederivedtype(filepath:$str;pagesdir:$str):$str{
@@ -58,7 +58,7 @@ f=routederivedtype(filepath:$str;pagesdir:$str):$str{
       if(i==0){
         parts=seg
       }el{
-        parts=str.concat(parts;str.concat("/";seg))
+        parts=str.join("";@(parts;"/";seg))
       }
     };
     result=parts

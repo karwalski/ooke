@@ -132,16 +132,7 @@ f=tpllex(src:$str):@$token!$tplerr{
 
         let afteropen=mt str.slice(rem;bestpos+2;rlen) {$ok:v v;$err:e ""};
 
-        let closedelim=mut."";
-        if(besttype=="expr"){
-          closedelim="=}"
-        }el{
-          if(besttype=="dir"){
-            closedelim="!}"
-          }el{
-            closedelim="#}"
-          }
-        };
+        let closedelim=if(besttype=="expr"){"=}"}el if(besttype=="dir"){"!}"}el{"#}"};
 
         let closepos=str.indexof(afteropen;closedelim);
         if(closepos<0){
@@ -354,7 +345,7 @@ f=tplrender(
                   let iname=mt inameg {$ok:v v;$err:e ""};
                   let ihydrateg=iparse.get("hydrate");
                   let ihydrate=mt ihydrateg {$ok:v v;$err:e "load"};
-                  let idiv=str.concat("<div data-island=\"";str.concat(iname;str.concat("\" data-hydrate=\"";str.concat(ihydrate;"\"></div>"))));
+                  let idiv=str.join("";@("<div data-island=\"";iname;"\" data-hydrate=\"";ihydrate;"\"></div>"));
                   if(inblock){
                     currentblockbuf=str.concat(currentblockbuf;idiv)
                   }el{

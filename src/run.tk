@@ -28,8 +28,8 @@ f=runcompile(projectdir:$str;cfg:$clicfg):$str!$runerr{
   }el{};
   let outbin=path.join(projectdir;str.concat("build/";cfg.name));
   let builddir=path.join(projectdir;"build");
-  let mkr=mt file.mkdir(builddir) {$ok:v v;$err:e false};
-  (log.info(str.concat("compiling ";str.concat(entrypath;str.concat(" -> ";outbin)));@()));
+  (mt file.mkdir(builddir) {$ok:v v;$err:e false});
+  (log.info(str.join("";@("compiling ";entrypath;" -> ";outbin));@()));
   let h=mt process.spawn(@("tkc";entrypath;"--out";outbin)) {$ok:v v;$err:e 0};
   if(h==0){
     (log.info("failed to spawn tkc";@()));

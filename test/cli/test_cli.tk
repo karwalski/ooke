@@ -97,7 +97,7 @@ f=testgenspecunknown():bool{
 
 f=testgenpage():bool{
   let mkresult=file.mkdir("pages");
-  let d1=mt mkresult {$ok:v 0;$err:e 0};
+  (mt mkresult {$ok:v 0;$err:e 0});
   let rc=cli.cligen("page";"mypage");
   (test.eq(rc;0));
   let pagepath=path.join("pages";"mypage.tk");

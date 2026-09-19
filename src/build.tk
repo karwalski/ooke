@@ -31,8 +31,8 @@ f=buildpage(templatepath:$str;pattern:$str;sitename:$str;siteurl:$str;sitelangua
   let html=tpl.tplrenderfile(templatepath;ctx;templatesdir)!$builderr;
   let outpath=buildoutputpath(pattern;buildoutput);
   let parentdir=path.dir(outpath);
-  let mkr=file.mkdir(parentdir)!$builderr;
-  let wr=file.write(outpath;html)!$builderr;
+  (file.mkdir(parentdir)!$builderr);
+  (file.write(outpath;html)!$builderr);
   <0
 };
 
@@ -74,7 +74,7 @@ f=buildinlinecssonce(html:$str;templatesdir:$str):$str{
               }el{
                 let fulltag=str.slice(afterlink2;0;tagend as u64+1);
                 let fulltag2=mt fulltag {$ok:v v;$err:e ""};
-                let styleblock=str.concat("<style>\n";str.concat(csscontent;"\n</style>"));
+                let styleblock=str.join("";@("<style>\n";csscontent;"\n</style>"));
                 <str.replace(html;fulltag2;styleblock)
               }
             }
@@ -182,7 +182,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     let isdyn2=routes.get(j).isdynamic;
     let dyncount=router.routecountdynamic(routes.get(j).pattern);
     if(dyncount>1){
-      (log.warn(str.concat("build: cannot statically build ";str.concat(routes.get(j).pattern;" — the static builder resolves exactly one dynamic segment (:slug) backed by a literal content directory; this route is served dynamically only"));@()))
+      (log.warn(str.join("";@("build: cannot statically build ";routes.get(j).pattern;" — the static builder resolves exactly one dynamic segment (:slug) backed by a literal content directory; this route is served dynamically only"));@()))
     }el{};
     if(isdyn2&&dyncount==1){
       let ctype=routes.get(j).contenttype;
@@ -194,10 +194,10 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
         let body=col.get(k).body;
         let title=col.get(k).title;
         if(str.len(slug)==0){
-          (log.warn(str.concat("build: not published — a content item in ";str.concat(ctype;" has no slug. Markdown takes its slug from frontmatter or its filename; a .json content file must carry a slug key. Skipping so it cannot overwrite the section index."));@()))
+          (log.warn(str.join("";@("build: not published — a content item in ";ctype;" has no slug. Markdown takes its slug from frontmatter or its filename; a .json content file must carry a slug key. Skipping so it cannot overwrite the section index."));@()))
         }el{};
         if(hasmodel){
-          let fpath=str.concat(ctype;str.concat("/";str.concat(slug;".md")));
+          let fpath=str.join("";@(ctype;"/";slug;".md"));
           let vr=validate.validatecontent(model;col.get(k).meta;fpath);
           allval=validate.validatemerge(allval;vr)
         }el{};
@@ -211,7 +211,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
         );
         let html=mt tpl.tplrenderfile(routes.get(j).templatepath;ctx;templatesdir) {$ok:h h;$err:e ""};
         if(str.len(html)==0&&str.len(slug)>0){
-          (log.error(str.concat("build: render produced no output for ";str.concat(routes.get(j).templatepath;str.concat(" slug=";slug)));@()));
+          (log.error(str.join("";@("build: render produced no output for ";routes.get(j).templatepath;" slug=";slug));@()));
           skippedcount=skippedcount+1
         }el{};
         if(str.len(html)>0&&str.len(slug)>0){

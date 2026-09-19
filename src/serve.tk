@@ -33,7 +33,7 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
       let webpath=mut.rawweb;
       if(str.startswith(rawweb;"/api/")&&str.len(apiprefix)>0){
         let wroutename=str.trimprefix(rawweb;"/api/");
-        webpath=str.concat("/api/";str.concat(apiprefix;str.concat("/";wroutename)))
+        webpath=str.join("";@("/api/";apiprefix;"/";wroutename))
       }el{};
       let alreadyhandled=mut.false;
       lp(let h=0;h<handledpaths.len;h=h+1){
@@ -55,12 +55,12 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
         }el{
           let isapiroute=str.startswith(webpath;"/api/");
           if(isapiroute){
-            let defaultjson=str.concat("{\"status\":\"ok\",\"endpoint\":\"";str.concat(webpath;"\"}"));
+            let defaultjson=str.join("";@("{\"status\":\"ok\",\"endpoint\":\"";webpath;"\"}"));
             (log.info(str.concat("reg static api json (fallback): ";webpath);@()));
             (http.getstaticmime(webpath;defaultjson;"application/json"));
             (http.postecho(webpath))
           }el{
-            let fallbackhtml=str.concat("<html><body><p>";str.concat(webpath;"</p></body></html>"));
+            let fallbackhtml=str.join("";@("<html><body><p>";webpath;"</p></body></html>"));
             (log.info(str.concat("reg static (empty tpl fallback): ";webpath);@()));
             (http.getstatic(webpath;fallbackhtml))
           }
@@ -105,7 +105,7 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
       let apipath=mut.rawapi;
       if(str.len(apiprefix)>0){
         let routename=str.trimprefix(rawapi;"/api/");
-        apipath=str.concat("/api/";str.concat(apiprefix;str.concat("/";routename)))
+        apipath=str.join("";@("/api/";apiprefix;"/";routename))
       }el{};
       let apihandled=mut.false;
       lp(let ah=0;ah<handledpaths.len;ah=ah+1){
@@ -115,7 +115,7 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
         (log.info(str.concat("skip api (dynamic handler registered): ";apipath);@()))
       }el{
         (log.info(str.concat("api route (no handler, static fallback): ";apipath);@()));
-        let defaultjson=str.concat("{\"status\":\"ok\",\"endpoint\":\"";str.concat(apipath;"\"}"));
+        let defaultjson=str.join("";@("{\"status\":\"ok\",\"endpoint\":\"";apipath;"\"}"));
         (http.getstaticmime(apipath;defaultjson;"application/json"));
         (http.postecho(apipath))
       }

@@ -13,11 +13,11 @@ f=mkfixture(root:$str):bool{
   let tplsapi=path.join(tpls;"api");
   let tplsblog=path.join(tpls;"blog");
   let contentblog=path.join(path.join(root;"content");"blog");
-  let m0=mt file.mkdir(pagesapi) {$ok:v v;$err:e false};
-  let m1=mt file.mkdir(pagesblog) {$ok:v v;$err:e false};
-  let m2=mt file.mkdir(tplsapi) {$ok:v v;$err:e false};
-  let m3=mt file.mkdir(tplsblog) {$ok:v v;$err:e false};
-  let m4=mt file.mkdir(contentblog) {$ok:v v;$err:e false};
+  (mt file.mkdir(pagesapi) {$ok:v v;$err:e false});
+  (mt file.mkdir(pagesblog) {$ok:v v;$err:e false});
+  (mt file.mkdir(tplsapi) {$ok:v v;$err:e false});
+  (mt file.mkdir(tplsblog) {$ok:v v;$err:e false});
+  (mt file.mkdir(contentblog) {$ok:v v;$err:e false});
 
   let w0=mt file.write(path.join(pages;"index.tk");"m=p.index;\nf=get():i64{<0};\n") {$ok:v true;$err:e false};
   let w1=mt file.write(path.join(pagesapi;"hello.tk");"m=p.api.hello;\nf=post():i64{<0};\n") {$ok:v true;$err:e false};

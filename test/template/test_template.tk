@@ -168,7 +168,7 @@ f=testblockcollected():bool{
   let toks=mt tokens {$ok:t t;$err:e failret(e.msg)};
   (test.eq(toks.len;3));
   let out=tpl.tplrender(toks;ctx;"/tmp";@());
-  let s=mt out {$ok:s s;$err:e failret(e.msg)};
+  (mt out {$ok:s s;$err:e failret(e.msg)});
   <true
 };
 
@@ -203,7 +203,7 @@ f=testrenderfilesimple():bool{
   let tktsrc="<h1>{= heading =}</h1><p>{= body =}</p>";
   let tktpath="/tmp/test_ooke_simple.tkt";
   let writeresult=file.write(tktpath;tktsrc);
-  let d1=mt writeresult {$ok:v 0;$err:e failret("could not write temp template")};
+  (mt writeresult {$ok:v 0;$err:e failret("could not write temp template")});
   let ctx=@("heading":"Welcome";"body":"Hello from ooke.");
   let result=tpl.tplrenderfile(tktpath;ctx;"/tmp");
   let s=mt result {$ok:s s;$err:e failret(e.msg)};
@@ -217,7 +217,7 @@ f=testcachehit():bool{
   let tktsrc="<p>{= msg =}</p>";
   let tktpath="/tmp/test_ooke_cache.tkt";
   let writeresult=file.write(tktpath;tktsrc);
-  let d1=mt writeresult {$ok:v 0;$err:e failret("could not write temp template")};
+  (mt writeresult {$ok:v 0;$err:e failret("could not write temp template")});
   let ctx=@("msg":"cached");
   let cache0=tpl.tplcachenew();
   let r1=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";cache0);
@@ -238,11 +238,11 @@ f=testpartial():bool{
   let partialsrc="<header><a href=\"/\">Home</a></header>";
   let partialpath="/tmp/header.tkt";
   let pwrite=file.write(partialpath;partialsrc);
-  let d1=mt pwrite {$ok:v 0;$err:e failret("could not write partial")};
+  (mt pwrite {$ok:v 0;$err:e failret("could not write partial")});
   let tktsrc="{! partial(\"header\") !}<main>{= content =}</main>";
   let tktpath="/tmp/test_ooke_partial.tkt";
   let twrite=file.write(tktpath;tktsrc);
-  let d2=mt twrite {$ok:v 0;$err:e failret("could not write template")};
+  (mt twrite {$ok:v 0;$err:e failret("could not write template")});
   let ctx=@("content":"Hello from partial test.");
   let result=tpl.tplrenderfile(tktpath;ctx;"/tmp");
   let s=mt result {$ok:s s;$err:e failret(e.msg)};

@@ -63,7 +63,7 @@ f=validateloadmodel(modelspath:$str;typename:$str):$modeldef!$validateerr{
 
 f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
   let errors=mut.@($valerror);
-  let warnings=mut.@($valerror);
+  let warnings=@($valerror);
 
   lp(let i=0;i<model.fields.len;i=i+1){
     let fd=model.fields.get(i);
@@ -83,7 +83,7 @@ f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
           errors=errors.append($valerror{
             filepath:filepath;
             field:fd.name;
-            msg:str.concat("field '";str.concat(fd.name;"' expected int"))
+            msg:str.join("";@("field '";fd.name;"' expected int"))
           })
         }el{}
       }el{
@@ -93,7 +93,7 @@ f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
             errors=errors.append($valerror{
               filepath:filepath;
               field:fd.name;
-              msg:str.concat("field '";str.concat(fd.name;"' expected bool"))
+              msg:str.join("";@("field '";fd.name;"' expected bool"))
             })
           }el{}
         }el{}
@@ -107,11 +107,11 @@ f=validatecontent(model:$modeldef;meta:@($str:$str);filepath:$str):$valresult{
 f=validatelogresult(result:$valresult):i64{
   lp(let i=0;i<result.errors.len;i=i+1){
     let e=result.errors.get(i);
-    (log.info(str.concat("[validate] ERROR ";str.concat(e.filepath;str.concat(": ";e.msg)));@()))
+    (log.info(str.join("";@("[validate] ERROR ";e.filepath;": ";e.msg));@()))
   };
   lp(let j=0;j<result.warnings.len;j=j+1){
     let w=result.warnings.get(j);
-    (log.info(str.concat("[validate] WARN ";str.concat(w.filepath;str.concat(": ";w.msg)));@()))
+    (log.info(str.join("";@("[validate] WARN ";w.filepath;": ";w.msg));@()))
   };
   <0
 };

@@ -86,7 +86,7 @@ f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str{
     let coltype=mut."TEXT";
     if(str.eq(ft;"bool")){coltype="INTEGER"}el{};
     if(str.eq(ft;"int")){coltype="INTEGER"}el{};
-    sql=str.concat(sql;str.concat(",";str.concat(k;str.concat(" ";coltype))))
+    sql=str.join("";@(sql;",";k;" ";coltype))
   };
   sql=str.concat(sql;")");
   <sql
