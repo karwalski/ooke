@@ -31,6 +31,9 @@ t=$validateerr{msg:$str};
 
 f=validateloadmodel(modelspath:$str;typename:$str):$modeldef!$validateerr{
   let tomlpath=path.join(modelspath;str.concat(typename;".toml"));
+  if(!file.exists(tomlpath)){
+    <$validateerr{msg:str.concat("no model file: ";tomlpath)}
+  }el{};
   let src=file.read(tomlpath)!$validateerr;
   let tab=toml.load(src)!$validateerr;
 

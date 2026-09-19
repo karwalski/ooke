@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "exports": [
     {"kind": "type", "name": "builderr", "fields": [{"name": "msg", "type": "str"}]},
-    {"kind": "type", "name": "buildreport", "fields": [{"name": "pagesbuilt", "type": "i64"}, {"name": "assetscopy", "type": "i64"}, {"name": "valerrors", "type": "i64"}, {"name": "valwarnings", "type": "i64"}]},
+    {"kind": "type", "name": "buildreport", "fields": [{"name": "pagesbuilt", "type": "i64"}, {"name": "assetscopy", "type": "i64"}, {"name": "valerrors", "type": "i64"}, {"name": "valwarnings", "type": "i64"}, {"name": "pagesskipped", "type": "i64"}]},
     {"kind": "func", "name": "buildoutputpath", "params": ["str", "str"], "return": "str"},
     {"kind": "func", "name": "buildpage", "params": ["str", "str", "str", "str", "str", "str", "str"], "return": "void", "error": "builderr"},
     {"kind": "func", "name": "buildinlinecssonce", "params": ["str", "str"], "return": "str"},

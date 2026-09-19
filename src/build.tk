@@ -1,5 +1,6 @@
 m=ooke.build;
 i=file:std.file;
+i=log:std.log;
 i=str:std.str;
 i=path:std.path;
 i=cfg:ooke.config;
@@ -10,7 +11,7 @@ i=validate:ooke.validate;
 
 t=$builderr{msg:$str};
 
-t=$buildreport{pagesbuilt:i64;assetscopy:i64;valerrors:i64;valwarnings:i64};
+t=$buildreport{pagesbuilt:i64;assetscopy:i64;valerrors:i64;valwarnings:i64;pagesskipped:i64};
 
 f=buildoutputpath(pattern:$str;outputdir:$str):$str{
   if(pattern=="/"){
@@ -165,6 +166,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
   let routes=router.routerscan(pagesdir)!$builderr;
 
   let pagescount=mut.0;
+  let skippedcount=mut.0;
   let allval=mut.validate.validateempty();
 
   lp(let i=0;i<routes.len;i=i+1){
@@ -177,7 +179,11 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
 
   lp(let j=0;j<routes.len;j=j+1){
     let isdyn2=routes.get(j).isdynamic;
-    if(isdyn2){
+    let dyncount=router.routecountdynamic(routes.get(j).pattern);
+    if(dyncount>1){
+      (log.warn(str.concat("build: cannot statically build ";str.concat(routes.get(j).pattern;" — the static builder resolves exactly one dynamic segment (:slug) backed by a literal content directory; this route is served dynamically only"));@()))
+    }el{};
+    if(isdyn2&&dyncount==1){
       let ctype=routes.get(j).contenttype;
       let col=mt store.storeall(contentdir;ctype;"flat") {$ok:c c;$err:e @()};
       let model=mt validate.validateloadmodel(modelsdir;ctype) {$ok:m m;$err:e $modeldef{name:"";fields:@($fielddef)}};
@@ -186,6 +192,9 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
         let slug=col.get(k).slug;
         let body=col.get(k).body;
         let title=col.get(k).title;
+        if(str.len(slug)==0){
+          (log.warn(str.concat("build: not published — a content item in ";str.concat(ctype;" has no slug. Markdown takes its slug from frontmatter or its filename; a .json content file must carry a slug key. Skipping so it cannot overwrite the section index."));@()))
+        }el{};
         if(hasmodel){
           let fpath=str.concat(ctype;str.concat("/";str.concat(slug;".md")));
           let vr=validate.validatecontent(model;col.get(k).meta;fpath);
@@ -200,13 +209,20 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
           "title":title
         );
         let html=mt tpl.tplrenderfile(routes.get(j).templatepath;ctx;templatesdir) {$ok:h h;$err:e ""};
-        if(str.len(html)>0){
+        if(str.len(html)==0&&str.len(slug)>0){
+          (log.error(str.concat("build: render produced no output for ";str.concat(routes.get(j).templatepath;str.concat(" slug=";slug)));@()));
+          skippedcount=skippedcount+1
+        }el{};
+        if(str.len(html)>0&&str.len(slug)>0){
           let slugpattern=str.replace(routes.get(j).pattern;":slug";slug);
           let outpath=buildoutputpath(slugpattern;config.buildoutput);
           let parentdir=path.dir(outpath);
           let mkr3=mt file.mkdir(parentdir) {$ok:v true;$err:e false};
           let writeok=mt file.write(outpath;html) {$ok:v true;$err:e false};
-          if(writeok){pagescount=pagescount+1}el{}
+          if(writeok){pagescount=pagescount+1}el{
+            (log.error(str.concat("build: write failed for ";outpath);@()));
+            skippedcount=skippedcount+1
+          }
         }el{}
       }
     }el{}
@@ -234,5 +250,5 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     }el{}
   }el{};
 
-  <$buildreport{pagesbuilt:pagescount;assetscopy:assetscount;valerrors:allval.errors.len;valwarnings:allval.warnings.len}
+  <$buildreport{pagesbuilt:pagescount;assetscopy:assetscount;valerrors:allval.errors.len;valwarnings:allval.warnings.len;pagesskipped:skippedcount}
 };

@@ -133,13 +133,21 @@ f=storewrite(contenttype:$str;content:$content):bool!$storeerr{
 
 f=storeallflat(contentdir:$str;contenttype:$str):@$content!$storeerr{
   let dir=path.join(contentdir;contenttype);
+  if(!file.isdir(dir)){
+    <$storeerr{msg:str.concat("no content dir: ";dir)}
+  }el{};
   let files=file.listall(dir)!$storeerr;
   let results=mut.@($content);
   lp(let i=0;i<files.len;i=i+1){
     let fpath=files.get(i);
     if(str.endswith(fpath;".md")){
       let src=mt file.read(path.join(dir;fpath)) {$ok:s s;$err:e ""};
-      if(str.len(src)>0){results=results.append(storetryparse(src))}el{}
+      if(str.len(src)>0){
+        let parsed=storetryparse(src);
+        let stem=path.stem(fpath);
+        let finalslug=if(str.len(parsed.slug)>0){parsed.slug}el{stem};
+        results=results.append($content{slug:finalslug;type:parsed.type;title:parsed.title;meta:parsed.meta;body:parsed.body})
+      }el{}
     }el{
       if(str.endswith(fpath;".json")){
         let src=mt file.read(path.join(dir;fpath)) {$ok:s s;$err:e ""};

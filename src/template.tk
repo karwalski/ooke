@@ -375,6 +375,9 @@ f=tplrender(
 
   if(str.len(layoutname)>0){
     let layoutpath=path.join(templatesdir;str.concat(layoutname;".tkt"));
+    if(!file.exists(layoutpath)){
+      <$tplerr{msg:str.concat("no layout template: ";layoutpath)}
+    }el{};
     let layoutsrc=file.read(layoutpath)!$tplerr;
     let layouttokens=tpllex(layoutsrc)!$tplerr;
     let layoutout=tplrender(layouttokens;ctx;templatesdir;collectedblocks)!$tplerr;
@@ -397,6 +400,9 @@ f=tplrenderfile(
   ctx:@($str:$str);
   templatesdir:$str
 ):$str!$tplerr{
+  if(!file.exists(templatepath)){
+    <$tplerr{msg:str.concat("no template file: ";templatepath)}
+  }el{};
   let src=file.read(templatepath)!$tplerr;
   let tokens=tpllex(src)!$tplerr;
   <tplrender(tokens;ctx;templatesdir;@())!$tplerr

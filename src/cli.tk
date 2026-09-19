@@ -203,7 +203,11 @@ f=runserve(projectdir:$str):i64{
 
 f=runbuild(projectdir:$str):i64{
   let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {$ok:v v;$err:e cfgdefault()};
-  let report=mt build.buildrun(projectdir;cfg) {$ok:v v;$err:e $buildreport{pagesbuilt:0;assetscopy:0;valerrors:0;valwarnings:0}};
+  let report=mt build.buildrun(projectdir;cfg) {$ok:v v;$err:e $buildreport{pagesbuilt:0-1;assetscopy:0;valerrors:0;valwarnings:0;pagesskipped:0}};
+  if(report.pagesbuilt<0){
+    (log.error("build failed";@()));
+    <1
+  }el{};
   (log.info(str.concat("pages built: ";str.fromint(report.pagesbuilt));@()));
   (log.info(str.concat("assets copied: ";str.fromint(report.assetscopy));@()));
   if(report.valerrors>0){
@@ -211,6 +215,10 @@ f=runbuild(projectdir:$str):i64{
   }el{};
   if(report.valwarnings>0){
     (log.info(str.concat("validation warnings: ";str.fromint(report.valwarnings));@()))
+  }el{};
+  if(report.pagesskipped>0){
+    (log.error(str.concat("pages skipped: ";str.concat(str.fromint(report.pagesskipped);" — build failed"));@()));
+    <1
   }el{};
   <0
 };
