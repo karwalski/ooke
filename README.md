@@ -266,7 +266,7 @@ This compiles all toke source to LLVM IR, links with the toke stdlib, and produc
 ## Related Projects
 
 - [toke](https://github.com/karwalski/toke) -- the toke programming language
-- [toke-website](https://github.com/karwalski/toke-website) -- tokelang.dev, built with ooke
+- [toke-web](https://github.com/karwalski/toke-web) -- tokelang.dev, built with ooke
 
 ## Licence
 
