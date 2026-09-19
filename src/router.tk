@@ -67,6 +67,15 @@ f=routederivedtype(filepath:$str;pagesdir:$str):$str{
 };
 
 f=routerscan(pagesdir:$str):@$route!$routeerr{
+  (* 134.14: return our own error rather than propagating a failed stdlib call.
+     `!` on a stdlib call returns the 0 sentinel WITHOUT setting
+     @tk_current_error, so the caller's `mt` takes the $ok arm and binds a null
+     array; the first `.len` on it segfaults. 134.8 guarded store, template and
+     validate the same way and missed this one, which is why `ooke serve` and
+     `ooke build` still died with signal 11 on a project with no pages/. *)
+  if(!file.isdir(pagesdir)){
+    <$routeerr{msg:str.concat("no pages dir: ";pagesdir)}
+  }el{};
   let allfiles=file.listall(pagesdir)!$routeerr;
   let routes=mut.@($route);
   lp(let i=0;i<allfiles.len;i=i+1){

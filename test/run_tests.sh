@@ -1,95 +1,136 @@
-#!/bin/bash
-# ooke test runner — compiles and executes all test .tk files
-# Requires: make all has been run (ooke modules compiled to src/ooke/)
-set -o pipefail
+#!/usr/bin/env bash
+#
+# ooke test runner — compiles and executes every test/*/test_*.tk (story 134.5).
+#
+# Before 134.5 this script existed but had never been run: its hand-copied list
+# of stdlib C sources had drifted from the Makefile's (capabilities.c and
+# image.c were missing), so every one of the 12 tests failed to link and was
+# reported as "SKIP", and `make test-run` was a TODO that printed nothing.
+#
+# Two rules follow from that, and they are the point of this file:
+#
+#   1. NOTHING about the build is restated here. The compiler, the stdlib and
+#      vendor source lists, the flags and the ooke module IR all come from
+#      `make print-build-vars`, so the suite cannot silently drift from the
+#      binary it is meant to test (defect D24).
+#   2. A test that will not compile or will not link is a FAILURE, not a skip.
+#      The exit status is the number of tests that did not pass.
+#
+# Usage:  test/run_tests.sh [name ...]      # no names = every test
+#
+set -uo pipefail
 
-TKC="/Users/matthew.watt/tk/toke/toke"
-TOKE_ROOT="/Users/matthew.watt/tk/toke"
-TOKE_STDLIB="$TOKE_ROOT/src/stdlib"
-TOKE_VENDOR="$TOKE_ROOT/stdlib/vendor"
-OOKE_DIR="src/ooke"
-export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+cd "$(dirname "$0")/.." || exit 2
+ROOT=$(pwd)
 
-# All ooke IR modules
-OOKE_MODS="$OOKE_DIR/config $OOKE_DIR/store $OOKE_DIR/router $OOKE_DIR/template \
-  $OOKE_DIR/validate $OOKE_DIR/repair $OOKE_DIR/run $OOKE_DIR/build $OOKE_DIR/serve \
-  $OOKE_DIR/apihealth $OOKE_DIR/handlers"
+OBJ_DIR="$ROOT/build/testobj"
+LIB="$ROOT/build/libookestd.a"
+BIN_DIR="$ROOT/build/testbin"
 
-# Stdlib C sources needed
-STDLIB_C="\
-  $TOKE_STDLIB/tk_runtime.c $TOKE_STDLIB/args.c \
-  $TOKE_STDLIB/str.c $TOKE_STDLIB/str_glue.c \
-  $TOKE_STDLIB/collections.c $TOKE_STDLIB/collections_glue.c \
-  $TOKE_STDLIB/toml.c $TOKE_STDLIB/toml_glue.c \
-  $TOKE_STDLIB/file.c $TOKE_STDLIB/file_glue.c \
-  $TOKE_STDLIB/path.c $TOKE_STDLIB/path_glue.c \
-  $TOKE_STDLIB/io_glue.c \
-  $TOKE_STDLIB/env.c $TOKE_STDLIB/env_glue.c \
-  $TOKE_STDLIB/crypto.c $TOKE_STDLIB/crypto_glue.c \
-  $TOKE_STDLIB/tk_time.c $TOKE_STDLIB/time_glue.c \
-  $TOKE_STDLIB/log.c $TOKE_STDLIB/log_glue.c \
-  $TOKE_STDLIB/json.c $TOKE_STDLIB/json_glue.c \
-  $TOKE_STDLIB/encoding.c $TOKE_STDLIB/encoding_glue.c \
-  $TOKE_STDLIB/md.c $TOKE_STDLIB/md_glue.c \
-  $TOKE_STDLIB/math.c $TOKE_STDLIB/math_glue.c \
-  $TOKE_STDLIB/process.c $TOKE_STDLIB/process_glue.c \
-  $TOKE_STDLIB/http.c $TOKE_STDLIB/http2.c \
-  $TOKE_STDLIB/net.c $TOKE_STDLIB/ws.c $TOKE_STDLIB/router.c \
-  $TOKE_STDLIB/acme.c $TOKE_STDLIB/proxy.c $TOKE_STDLIB/cache.c \
-  $TOKE_STDLIB/content.c $TOKE_STDLIB/metrics.c \
-  $TOKE_STDLIB/server_ops.c $TOKE_STDLIB/ws_server.c $TOKE_STDLIB/hooks.c \
-  $TOKE_STDLIB/tk_web_glue.c \
-  $TOKE_STDLIB/tk_test.c $TOKE_STDLIB/test_glue.c \
-  $TOKE_STDLIB/db.c $TOKE_STDLIB/db_glue.c \
-  $TOKE_STDLIB/csv.c $TOKE_STDLIB/csv_glue.c \
-  $TOKE_STDLIB/template.c $TOKE_STDLIB/template_glue.c \
-  $TOKE_STDLIB/auth.c $TOKE_STDLIB/encrypt.c \
-  $TOKE_STDLIB/html.c $TOKE_STDLIB/svg.c $TOKE_STDLIB/canvas.c \
-  $TOKE_STDLIB/chart.c $TOKE_STDLIB/dashboard.c \
-  $TOKE_STDLIB/dataframe.c $TOKE_STDLIB/analytics.c \
-  $TOKE_STDLIB/ml.c $TOKE_STDLIB/llm.c $TOKE_STDLIB/llm_tool.c \
-  $TOKE_STDLIB/sse.c $TOKE_STDLIB/toon.c $TOKE_STDLIB/yaml.c \
-  $TOKE_STDLIB/i18n.c $TOKE_STDLIB/sys.c $TOKE_STDLIB/mem.c \
-  $TOKE_STDLIB/os.c $TOKE_STDLIB/task.c"
+# ── Build configuration, taken from the Makefile ────────────────────────────
+vars=$(make -s --no-print-directory print-build-vars) || {
+  echo "error: 'make print-build-vars' failed — cannot determine the build configuration" >&2
+  exit 2
+}
+eval "$vars"
 
-VENDOR_C="$TOKE_VENDOR/tomlc99/toml.c $(ls $TOKE_VENDOR/cmark/src/*.c | grep -v main.c | tr '\n' ' ')"
+: "${TKC:?}" "${CFLAGS:?}" "${LIBS:?}" "${STDLIB_SRCS:?}" "${VENDOR_SRCS:?}" "${OOKE_LL:?}"
 
-CFLAGS="-O1 -Wno-implicit-function-declaration -Wno-pedantic -D_GNU_SOURCE -DTK_HAVE_OPENSSL"
-INCLUDES="-I $TOKE_STDLIB -I $TOKE_VENDOR/cmark/src -I $TOKE_VENDOR/tomlc99 -I/opt/homebrew/include"
-LDFLAGS="-L/opt/homebrew/lib -lm -lz -lssl -lcrypto -lsqlite3"
+# std.test is a dependency of the TESTS, not of ooke, so it is named here and
+# nowhere else. Everything above comes from the Makefile.
+TEST_ONLY_SRCS="$TOKE_STDLIB/tk_test.c $TOKE_STDLIB/test_glue.c"
 
-pass=0; fail=0; skip=0
+# ── 1. ooke module IR ───────────────────────────────────────────────────────
+# The tests import ooke.* and link against the same IR the binary links.
+if ! make -s --no-print-directory $OOKE_LL; then
+  echo "error: could not build the ooke module IR (make $OOKE_LL)" >&2
+  exit 2
+fi
 
-cd "$(dirname "$0")/.."
+# ── 2. stdlib + vendor archive, built once and reused by every test ─────────
+# Linking ~80 C files per test made the suite too slow to run, which is part of
+# why it never was. Compile each translation unit once, cache it in build/,
+# and archive.
+mkdir -p "$OBJ_DIR" "$BIN_DIR"
+objs=()
+stale=()
+for src in $STDLIB_SRCS $VENDOR_SRCS $TEST_ONLY_SRCS; do
+  obj="$OBJ_DIR/$(echo "${src#$ROOT/}" | tr '/' '_' | sed 's/\.c$/.o/')"
+  objs+=("$obj")
+  if [ ! -f "$obj" ] || [ "$src" -nt "$obj" ]; then
+    stale+=("$src|$obj")
+  fi
+done
 
-for f in test/*/test_*.tk; do
+if [ ${#stale[@]} -gt 0 ]; then
+  echo "=== Compiling ${#stale[@]} C translation unit(s) for the test archive ==="
+  printf '%s\n' "${stale[@]}" |
+    CFLAGS="$CFLAGS" xargs -P "$(sysctl -n hw.ncpu 2>/dev/null || echo 4)" -I{} \
+      bash -c 'IFS="|" read -r s o <<< "{}"; clang $CFLAGS -c "$s" -o "$o"' || {
+        echo "error: stdlib/vendor compile failed" >&2; exit 2; }
+fi
+rm -f "$LIB"
+ar rcs "$LIB" "${objs[@]}" || exit 2
+
+# ── 3. Compile, link and run each test ──────────────────────────────────────
+if [ $# -gt 0 ]; then
+  tests=()
+  for n in "$@"; do tests+=("test/$n/test_$n.tk"); done
+else
+  tests=(test/*/test_*.tk)
+fi
+
+pass=0; fail=0
+failed_names=()
+
+for f in "${tests[@]}"; do
   bn=$(basename "$f" .tk)
+  ll="$BIN_DIR/$bn.ll"
+  exe="$BIN_DIR/$bn"
+  log="$BIN_DIR/$bn.log"
 
-  # 1. Compile test to IR (from src/ so imports resolve)
-  cd /Users/matthew.watt/tk/toke-ooke/src
-  if ! $TKC --emit-llvm "../$f" --out "/tmp/${bn}.ll" 2>/dev/null; then
-    printf "  SKIP %-30s (codegen)\n" "$bn"; skip=$((skip+1)); cd /Users/matthew.watt/tk/toke-ooke; continue
-  fi
-  cd /Users/matthew.watt/tk/toke-ooke
-
-  # 2. Link test IR + all ooke modules + stdlib
-  if ! clang $CFLAGS $INCLUDES -x ir "/tmp/${bn}.ll" $OOKE_MODS \
-    -x c $STDLIB_C $VENDOR_C $LDFLAGS -o "/tmp/${bn}" 2>/dev/null; then
-    printf "  SKIP %-30s (link)\n" "$bn"; skip=$((skip+1)); continue
+  # Compile from src/ so `i=…:ooke.*` imports resolve against the .tki files.
+  if ! (cd "$ROOT/src" && "$TKC" --emit-llvm "../$f" --out "$ll") >"$log" 2>&1; then
+    printf "  FAIL %-24s (codegen)\n" "$bn"; sed 's/^/       /' "$log" | head -5
+    fail=$((fail+1)); failed_names+=("$bn:codegen"); continue
   fi
 
-  # 3. Run
-  output=$("/tmp/${bn}" 2>&1)
-  rc=$?
-  if [ $rc -eq 0 ]; then
-    printf "  PASS %-30s\n" "$bn"; pass=$((pass+1))
+  if ! clang -x ir "$ll" $OOKE_LL -x none "$LIB" \
+        $LDFLAGS $LIBS -o "$exe" >"$log" 2>&1; then
+    printf "  FAIL %-24s (link)\n" "$bn"
+    grep -v '\-Woverride-module\|warning generated' "$log" | sed 's/^/       /' | head -8
+    fail=$((fail+1)); failed_names+=("$bn:link"); continue
+  fi
+
+  output=$("$exe" 2>&1); rc=$?
+
+  # std.test assertions are advisory: tk_test_assert_*() prints
+  # `DIAGNOSTIC: kind=assertion_failed` to stderr and RETURNS a bool. Every
+  # ooke test calls them as bare statements — `(test.eq(a;b));` — and then
+  # returns `<true` regardless, so a failed assertion never reached the exit
+  # status. Before 134.5 that meant the whole suite could have been green with
+  # every assertion in it failing. The runner therefore fails a test on a
+  # printed assertion failure as well as on a non-zero exit.
+  asserts=$(printf '%s' "$output" | grep -cE 'kind=assertion_failed|^ASSERT(_[A-Z]+)? FAILED|^FAIL: ')
+
+  if [ "$rc" -eq 0 ] && [ "$asserts" -eq 0 ]; then
+    printf "  PASS %-24s\n" "$bn"; pass=$((pass+1))
   else
-    printf "  FAIL %-30s (exit=%d)\n" "$bn" "$rc"; fail=$((fail+1))
-    echo "$output" | grep -i "fail\|assert" | head -3 | sed 's/^/       /'
+    if [ "$rc" -ne 0 ]; then
+      printf "  FAIL %-24s (exit=%d, %s failed assertion(s))\n" "$bn" "$rc" "$asserts"
+      failed_names+=("$bn:run($rc)")
+    else
+      printf "  FAIL %-24s (%s failed assertion(s), exit 0)\n" "$bn" "$asserts"
+      failed_names+=("$bn:assert($asserts)")
+    fi
+    printf '%s\n' "$output" | grep -E 'kind=assertion_failed|^ASSERT(_[A-Z]+)? FAILED|^FAIL: ' | head -6 | sed 's/^/       /'
+    fail=$((fail+1))
   fi
-  rm -f "/tmp/${bn}.ll" "/tmp/${bn}"
 done
 
 echo "---"
-echo "$pass passed, $fail failed, $skip skipped"
-exit $((fail + skip))
+echo "$pass passed, $fail failed, of $((pass+fail))"
+if [ $fail -gt 0 ]; then
+  printf '%s\n' "failed: ${failed_names[*]}"
+fi
+exit $(( fail > 0 ? 1 : 0 ))

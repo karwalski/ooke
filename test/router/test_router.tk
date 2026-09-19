@@ -179,6 +179,19 @@ f=testmatchspecificity():bool{
   <mt result {$ok:v v.route.pattern=="/docs/about/:slug";$err:e false}
 };
 
+f=testscanmissingdir():bool{
+  (* 134.14 regression: routerscan on a directory that does not exist must take
+     the $err arm. Before the guard it returned a null array through the $ok
+     arm and the caller segfaulted on .len — that is how `ooke serve` died on
+     the real site. Assert the arm, then force the .len that used to crash. *)
+  let missing=str.concat(file.tempdir();"/ooke_router_no_such_dir_134_14");
+  let result=router.routerscan(missing);
+  let iserr=mt result {$ok:v false;$err:e true};
+  if(iserr==false){<false};
+  let routes=mt result {$ok:v v;$err:e @($route)};
+  <routes.len==0
+};
+
 f=main():i64{
   let r0=testderivepattern();
   let r1=testderivetemplate();
@@ -193,7 +206,8 @@ f=main():i64{
   let r10=testmatchroot();
   let r11=testmatchtrailingslash();
   let r12=testmatchspecificity();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12){
+  let r13=testscanmissingdir();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13){
     <0
   }el{
     <1

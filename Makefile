@@ -128,7 +128,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run
+.PHONY: all dev clean interfaces check test test-check test-run print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -232,7 +232,21 @@ test-check:
 
 test-run: $(BIN)
 	@echo "=== Run test suite ==="
-	@echo "(TODO: compile and execute test binaries)"
+	@test/run_tests.sh
+
+# print-build-vars — the single source of truth for anything that has to link
+# against ooke (story 134.5). test/run_tests.sh consumes this rather than
+# keeping its own copy of the stdlib list, which is how the suite drifted out
+# of linkability and went unnoticed (defects D6, D24).
+print-build-vars:
+	@echo 'TKC="$(TKC)"'
+	@echo 'TOKE_STDLIB="$(TOKE_STDLIB)"'
+	@echo 'STDLIB_SRCS="$(STDLIB_SRCS)"'
+	@echo 'VENDOR_SRCS="$(VENDOR_SRCS)"'
+	@echo 'OOKE_LL="$(OOKE_LL)"'
+	@echo 'CFLAGS="$(CFLAGS)"'
+	@echo 'LDFLAGS="$(LDFLAGS)"'
+	@echo 'LIBS="$(LIBS)"'
 
 clean:
 	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI) $(SRC)/_handlers.tk
