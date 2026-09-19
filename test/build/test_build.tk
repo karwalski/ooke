@@ -1,8 +1,74 @@
 m=test.build;
 i=build:ooke.build;
+i=router:ooke.router;
 i=chk:ookeassert;
 i=file:std.file;
 i=str:std.str;
+
+(* Story 134.24 regression. `ooke build` rendered every pages/api/**.tk route as
+   a page: buildrun asked only `isdynamic` and never read `isapi`, so it looked
+   for templates/api/<name>.tkt, did not find it, and aborted the whole build —
+   including the build of `ooke new`'s own scaffold. These four cases pin the
+   flag read itself, so the regression cannot come back through an end-to-end
+   build nobody runs. *)
+f=mkroute(pattern:$str;filepath:$str;isdynamic:bool;isapi:bool):$route{
+  <$route{
+    pattern:pattern;
+    filepath:filepath;
+    templatepath:"templates/x.tkt";
+    contenttype:"";
+    isdynamic:isdynamic;
+    isapi:isapi;
+    params:@()
+  }
+};
+
+f=testapirouteisnotastaticpage():bool{
+  let r=mkroute("/api/health";"pages/api/health.tk";false;true);
+  <chk.isfalse(build.buildisstaticpage(r);"an api route is not a static page")
+};
+
+f=testapirouteisnotadynamicpage():bool{
+  let r=mkroute("/api/users/:id";"pages/api/users/[id].tk";true;true);
+  <chk.isfalse(build.buildisdynamicpage(r);"a dynamic api route is not a dynamic page")
+};
+
+f=testplainpageisastaticpage():bool{
+  let r=mkroute("/about";"pages/about.tk";false;false);
+  let a0=chk.istrue(build.buildisstaticpage(r);"a plain page is a static page");
+  let a1=chk.isfalse(build.buildisdynamicpage(r);"a plain page is not a dynamic page");
+  <a0&&a1
+};
+
+f=testslugpageisadynamicpage():bool{
+  let r=mkroute("/blog/:slug";"pages/blog/[slug].tk";true;false);
+  let a0=chk.istrue(build.buildisdynamicpage(r);"a slug page is a dynamic page");
+  let a1=chk.isfalse(build.buildisstaticpage(r);"a slug page is not a static page");
+  <a0&&a1
+};
+
+(* routerscan is what sets the flag; assert it really does for pages/api/**, so
+   the predicates above are being fed the value the scanner produces. *)
+f=testscannerflagsapiroutes():bool{
+  let tmp="/tmp/test_build_13424_scan";
+  let mk0=mt file.mkdir(tmp) {$ok:v true;$err:e false};
+  let mk1=mt file.mkdir(str.concat(tmp;"/api")) {$ok:v true;$err:e false};
+  let w0=mt file.write(str.concat(tmp;"/index.tk");"m=pages.index;\n") {$ok:v true;$err:e false};
+  let w1=mt file.write(str.concat(tmp;"/api/health.tk");"m=pages.api.health;\n") {$ok:v true;$err:e false};
+  if(!(mk0&&mk1&&w0&&w1)){<chk.istrue(false;"scan fixture written")};
+  let scan=router.routerscan(tmp);
+  let routes=mt scan {$ok:r r;$err:e @($route)};
+  let apiflagged=mut.0;
+  let pageflagged=mut.0;
+  lp(let i=0;i<routes.len;i=i+1){
+    if(build.buildisstaticpage(routes.get(i))){pageflagged=pageflagged+1}el{};
+    if(routes.get(i).isapi){apiflagged=apiflagged+1}el{}
+  };
+  let a0=chk.eqint(routes.len;2;"scan found both routes");
+  let a1=chk.eqint(apiflagged;1;"scan flags pages/api/health.tk as api");
+  let a2=chk.eqint(pageflagged;1;"only the non-api route is a static page");
+  <a0&&a1&&a2
+};
 
 f=testoutputpathroot():bool{
   let p=build.buildoutputpath("/";"build/");
@@ -72,5 +138,10 @@ f=main():i64{
   let r6=testinlinecssnolink();
   let r7=testinlinecssinlines();
   let r8=testinlinecssmissingfile();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8){<0}el{<1}
+  let r9=testapirouteisnotastaticpage();
+  let r10=testapirouteisnotadynamicpage();
+  let r11=testplainpageisastaticpage();
+  let r12=testslugpageisadynamicpage();
+  let r13=testscannerflagsapiroutes();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13){<0}el{<1}
 };

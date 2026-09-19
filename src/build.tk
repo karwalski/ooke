@@ -13,6 +13,30 @@ t=$builderr{msg:$str};
 
 t=$buildreport{pagesbuilt:i64;assetscopy:i64;valerrors:i64;valwarnings:i64;pagesskipped:i64};
 
+(* Story 134.24. routerscan has always set $route.isapi — anything under
+   pages/api/ is a request handler, not a page — and serve.tk has always read
+   it (serve.tk:46). buildrun never did: it asked only `isdynamic`, so every API
+   route fell into the static-page branch and was rendered as a template. There
+   is no templates/api/<name>.tkt to render, so tplrenderfile returned "no
+   template file" and the whole build aborted on it — on `ooke new`'s own output
+   as much as on the site.
+
+   The bisect blames e7a6f60 (134.2), which changed the page handlers' return
+   from :void to :i64. That commit only EXPOSED this: the same error was raised
+   before and quietly swallowed. The fix is therefore to READ the flag the
+   scanner sets, not to restore the swallowing.
+
+   The two questions buildrun asks of a route are named here so they can be
+   asserted directly, rather than living as an inline condition inside a loop
+   that only an end-to-end build can exercise. *)
+f=buildisstaticpage(r:$route):bool{
+  <!r.isdynamic&&!r.isapi
+};
+
+f=buildisdynamicpage(r:$route):bool{
+  <r.isdynamic&&!r.isapi
+};
+
 f=buildoutputpath(pattern:$str;outputdir:$str):$str{
   if(pattern=="/"){
     <str.concat(outputdir;"index.html")
@@ -185,18 +209,28 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
   let skippedcount=mut.0;
   let allval=mut.validate.validateempty();
 
+  (* 134.24: buildisstaticpage is the flag read the build never did. *)
+  let apicount=mut.0;
   lp(let i=0;i<routes.len;i=i+1){
-    let isdyn=routes.get(i).isdynamic;
-    if(!isdyn){
+    if(routes.get(i).isapi){
+      apicount=apicount+1
+    }el{};
+    if(buildisstaticpage(routes.get(i))){
       let bp=buildpage(routes.get(i).templatepath;routes.get(i).pattern;config.sitename;config.siteurl;config.sitelanguage;config.buildoutput;templatesdir;config.buildinlinecss;config.buildminify)!$builderr;
       pagescount=pagescount+1
     }el{}
   };
+  if(apicount>0){
+    (log.info(str.join("";@("build: ";apicount as str;" api route(s) under pages/api/ are request handlers, not pages — they are served by `ooke serve` and are not rendered into the static build"));@()))
+  }el{};
 
   lp(let j=0;j<routes.len;j=j+1){
-    let isdyn2=routes.get(j).isdynamic;
+    (* 134.24: the same flag governs the dynamic branch. pages/api/[id].tk is a
+       handler with a path parameter, not a content-backed section index, so it
+       must neither be rendered nor warned about as an unbuildable page. *)
+    let isdyn2=buildisdynamicpage(routes.get(j));
     let dyncount=router.routecountdynamic(routes.get(j).pattern);
-    if(dyncount>1){
+    if(dyncount>1&&isdyn2){
       (log.warn(str.join("";@("build: cannot statically build ";routes.get(j).pattern;" — the static builder resolves exactly one dynamic segment (:slug) backed by a literal content directory; this route is served dynamically only"));@()))
     }el{};
     if(isdyn2&&dyncount==1){
