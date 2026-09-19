@@ -1,0 +1,214 @@
+{
+ "before": {
+  "_handlers.tk": {
+   "min_bytes": 236,
+   "proxy8k": 85,
+   "byte256": 216,
+   "v03": 39,
+   "qwen25coder": 75,
+   "cl100k": 73
+  },
+  "apihealth.tk": {
+   "min_bytes": 150,
+   "proxy8k": 46,
+   "byte256": 111,
+   "v03": 24,
+   "qwen25coder": 51,
+   "cl100k": 47
+  },
+  "build.tk": {
+   "min_bytes": 7146,
+   "proxy8k": 2065,
+   "byte256": 6457,
+   "v03": 1525,
+   "qwen25coder": 2103,
+   "cl100k": 2089
+  },
+  "cli.tk": {
+   "min_bytes": 12917,
+   "proxy8k": 2298,
+   "byte256": 7279,
+   "v03": 1476,
+   "qwen25coder": 2285,
+   "cl100k": 2272
+  },
+  "config.tk": {
+   "min_bytes": 2087,
+   "proxy8k": 637,
+   "byte256": 1953,
+   "v03": 479,
+   "qwen25coder": 707,
+   "cl100k": 693
+  },
+  "main.tk": {
+   "min_bytes": 2951,
+   "proxy8k": 756,
+   "byte256": 2501,
+   "v03": 570,
+   "qwen25coder": 1001,
+   "cl100k": 986
+  },
+  "repair.tk": {
+   "min_bytes": 912,
+   "proxy8k": 239,
+   "byte256": 816,
+   "v03": 144,
+   "qwen25coder": 299,
+   "cl100k": 294
+  },
+  "router.tk": {
+   "min_bytes": 3508,
+   "proxy8k": 984,
+   "byte256": 3460,
+   "v03": 812,
+   "qwen25coder": 1187,
+   "cl100k": 1184
+  },
+  "run.tk": {
+   "min_bytes": 2610,
+   "proxy8k": 778,
+   "byte256": 2354,
+   "v03": 539,
+   "qwen25coder": 877,
+   "cl100k": 873
+  },
+  "serve.tk": {
+   "min_bytes": 5197,
+   "proxy8k": 1578,
+   "byte256": 4329,
+   "v03": 1048,
+   "qwen25coder": 1443,
+   "cl100k": 1435
+  },
+  "store.tk": {
+   "min_bytes": 5256,
+   "proxy8k": 1632,
+   "byte256": 4900,
+   "v03": 1190,
+   "qwen25coder": 1712,
+   "cl100k": 1710
+  },
+  "template.tk": {
+   "min_bytes": 9050,
+   "proxy8k": 2800,
+   "byte256": 8720,
+   "v03": 2128,
+   "qwen25coder": 2971,
+   "cl100k": 2971
+  },
+  "validate.tk": {
+   "min_bytes": 2869,
+   "proxy8k": 877,
+   "byte256": 2721,
+   "v03": 601,
+   "qwen25coder": 901,
+   "cl100k": 900
+  }
+ },
+ "after": {
+  "_handlers.tk": {
+   "min_bytes": 236,
+   "proxy8k": 85,
+   "byte256": 216,
+   "v03": 39,
+   "qwen25coder": 75,
+   "cl100k": 73
+  },
+  "apihealth.tk": {
+   "min_bytes": 150,
+   "proxy8k": 46,
+   "byte256": 111,
+   "v03": 24,
+   "qwen25coder": 51,
+   "cl100k": 47
+  },
+  "build.tk": {
+   "min_bytes": 7071,
+   "proxy8k": 2055,
+   "byte256": 6382,
+   "v03": 1545,
+   "qwen25coder": 2100,
+   "cl100k": 2086
+  },
+  "cli.tk": {
+   "min_bytes": 12318,
+   "proxy8k": 2251,
+   "byte256": 6679,
+   "v03": 1635,
+   "qwen25coder": 2253,
+   "cl100k": 2240
+  },
+  "config.tk": {
+   "min_bytes": 2087,
+   "proxy8k": 637,
+   "byte256": 1953,
+   "v03": 479,
+   "qwen25coder": 707,
+   "cl100k": 693
+  },
+  "main.tk": {
+   "min_bytes": 2951,
+   "proxy8k": 756,
+   "byte256": 2501,
+   "v03": 570,
+   "qwen25coder": 1001,
+   "cl100k": 986
+  },
+  "repair.tk": {
+   "min_bytes": 874,
+   "proxy8k": 234,
+   "byte256": 778,
+   "v03": 143,
+   "qwen25coder": 289,
+   "cl100k": 284
+  },
+  "router.tk": {
+   "min_bytes": 3484,
+   "proxy8k": 983,
+   "byte256": 3436,
+   "v03": 829,
+   "qwen25coder": 1190,
+   "cl100k": 1187
+  },
+  "run.tk": {
+   "min_bytes": 2584,
+   "proxy8k": 775,
+   "byte256": 2328,
+   "v03": 542,
+   "qwen25coder": 873,
+   "cl100k": 869
+  },
+  "serve.tk": {
+   "min_bytes": 5133,
+   "proxy8k": 1573,
+   "byte256": 4265,
+   "v03": 1073,
+   "qwen25coder": 1444,
+   "cl100k": 1436
+  },
+  "store.tk": {
+   "min_bytes": 5224,
+   "proxy8k": 1626,
+   "byte256": 4868,
+   "v03": 1193,
+   "qwen25coder": 1709,
+   "cl100k": 1707
+  },
+  "template.tk": {
+   "min_bytes": 8977,
+   "proxy8k": 2775,
+   "byte256": 8647,
+   "v03": 2119,
+   "qwen25coder": 2960,
+   "cl100k": 2960
+  },
+  "validate.tk": {
+   "min_bytes": 2809,
+   "proxy8k": 872,
+   "byte256": 2661,
+   "v03": 620,
+   "qwen25coder": 899,
+   "cl100k": 898
+  }
+ }
+}

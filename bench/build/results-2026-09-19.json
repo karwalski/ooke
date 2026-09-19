@@ -1,0 +1,152 @@
+{
+ "tag": "final",
+ "started": "2026-09-19T21:59:57+1000",
+ "machine": {
+  "model": "Mac14,10",
+  "cpus": 12,
+  "mem_bytes": 17179869184,
+  "os": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7"
+ },
+ "loadavg_1min_start": 267.74,
+ "max_load": 2.0,
+ "load_warning": true,
+ "tkc": {
+  "path": "/private/tmp/s134_4/toke-clean/toke",
+  "sha256": "01e129962d2bf8ccbc8f2b6bd9661849fcd6a7d96a4541354f0e400393e8fed0"
+ },
+ "fixture": "/private/tmp/s134_4/fixture-site",
+ "fixture_sha256": "147ca086de30662c3f20878e9f75b0e732115feba7382402d250b16b14be8f68",
+ "variants": {
+  "before": {
+   "binary": "/private/tmp/s134_4/ooke-before/ooke-toke",
+   "binary_sha256": "05ca3a1363a5e4459c35edc99fe50c9a71ee2c5cf8cb80f5f6e4383366e21d02",
+   "binary_bytes": 879896,
+   "runs": 15,
+   "warmups": 2,
+   "wall_ms_median": 305.633,
+   "wall_ci95": [
+    285.045,
+    377.113
+   ],
+   "wall_min": 267.917,
+   "wall_max": 870.12,
+   "wall_samples": [
+    421.744,
+    280.735,
+    278.365,
+    285.045,
+    294.767,
+    364.169,
+    304.552,
+    267.917,
+    870.12,
+    289.421,
+    329.337,
+    774.132,
+    305.633,
+    320.076,
+    377.113
+   ],
+   "rss_kb_median": 45888,
+   "rss_kb_min": 45776,
+   "rss_kb_max": 46176,
+   "allocs": {
+    "calls": 252339,
+    "bytes": 70431024,
+    "malloc": 92340,
+    "calloc": 84757,
+    "realloc": 75242,
+    "free": 194452
+   },
+   "output_sha256": "e75768a0115de58249a531291a51f06fc63e4cb477ddd259afc0639eb216fcd0"
+  },
+  "after": {
+   "binary": "/private/tmp/s134_4/ooke-after/ooke-toke",
+   "binary_sha256": "a098e3e055328cb92d06887b8998ce1adbad62fb62d0b03db863b17d105c927c",
+   "binary_bytes": 879896,
+   "runs": 15,
+   "warmups": 2,
+   "wall_ms_median": 286.529,
+   "wall_ci95": [
+    269.552,
+    303.109
+   ],
+   "wall_min": 245.734,
+   "wall_max": 384.905,
+   "wall_samples": [
+    384.905,
+    331.472,
+    286.616,
+    286.529,
+    303.109,
+    309.929,
+    263.864,
+    245.734,
+    299.641,
+    269.552,
+    256.271,
+    266.723,
+    278.087,
+    318.458,
+    274.308
+   ],
+   "rss_kb_median": 45568,
+   "rss_kb_min": 45520,
+   "rss_kb_max": 45952,
+   "allocs": {
+    "calls": 252339,
+    "bytes": 70433503,
+    "malloc": 92340,
+    "calloc": 84757,
+    "realloc": 75242,
+    "free": 194452
+   },
+   "output_sha256": "e75768a0115de58249a531291a51f06fc63e4cb477ddd259afc0639eb216fcd0"
+  },
+  "bld": {
+   "binary": "/private/tmp/s134_4/ooke-bld/ooke-toke",
+   "binary_sha256": "18b9b0a6a3ca0b89e653fe28cc225d9563bb6fb9473dc61150964e5774de0bd7",
+   "binary_bytes": 879896,
+   "runs": 15,
+   "warmups": 2,
+   "wall_ms_median": 261.769,
+   "wall_ci95": [
+    253.352,
+    271.488
+   ],
+   "wall_min": 224.406,
+   "wall_max": 345.035,
+   "wall_samples": [
+    253.352,
+    265.969,
+    271.488,
+    256.684,
+    224.561,
+    276.529,
+    224.406,
+    266.693,
+    345.035,
+    238.584,
+    261.769,
+    265.718,
+    255.366,
+    254.458,
+    280.517
+   ],
+   "rss_kb_median": 38560,
+   "rss_kb_min": 38368,
+   "rss_kb_max": 38832,
+   "allocs": {
+    "calls": 253281,
+    "bytes": 69775211,
+    "malloc": 92489,
+    "calloc": 84757,
+    "realloc": 76035,
+    "free": 195088
+   },
+   "output_sha256": "e75768a0115de58249a531291a51f06fc63e4cb477ddd259afc0639eb216fcd0"
+  }
+ },
+ "loadavg_1min_end": 254.7
+}
