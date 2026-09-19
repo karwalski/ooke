@@ -1,0 +1,3612 @@
+{
+ "meta": {
+  "date": "2026-09-19T05:23:02+00:00",
+  "story": "134.6 (baseline half \u2014 measures the build as it stands, before the uplift)",
+  "harness": "toke-ooke/bench/serving/run_serving.py",
+  "hw_model": "Mac14,10",
+  "hw_ncpu": 12,
+  "hw_memsize_bytes": 17179869184,
+  "os": "Darwin 25.5.0 (26.5.1)",
+  "python": "3.14.7",
+  "loadavg_1_5_15": [
+   8.92,
+   21.54,
+   16.23
+  ],
+  "max_load": 2.0,
+  "load_warning": true,
+  "load_caveat": "a background process permanently pins a core on this machine, so a 1-min load average below 2 is unreachable; --allow-load was used and every number here is therefore measured on a loaded machine. Medians and p95s are inflated relative to an idle box; treat them as an upper bound on latency and a lower bound on throughput.",
+  "thermal": [
+   "Note: No thermal warning level has been recorded",
+   "Note: No performance warning level has been recorded",
+   "Note: No CPU power status has been recorded"
+  ],
+  "site_dir": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/site",
+  "site_content_pin": {
+   "source": "/private/tmp/toke-1346/site-pinned",
+   "pinned_snapshot": true,
+   "files": 182,
+   "bytes": 18961419
+  },
+  "runs": {
+   "cold_trials": 20,
+   "ttfb_fresh_n": 150,
+   "ttfb_reused_n": 1000,
+   "warmup": 30,
+   "load_duration_s": 3.0,
+   "concurrency_levels": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128
+   ]
+  },
+  "stats": {
+   "central": "median",
+   "ci": "percentile bootstrap, 1000 resamples, seed 1346",
+   "p95": "nearest-rank on the sorted sample"
+  },
+  "pins": {
+   "website": {
+    "pinned_copy": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/pinned/website",
+    "source": "/private/tmp/toke-1346/site-pinned/website",
+    "sha256": "490efa472d1b57cdb19619bd563486f61e010ee6db85c9be797fdcf19c96c7a8",
+    "source_sha256_at_pin": "490efa472d1b57cdb19619bd563486f61e010ee6db85c9be797fdcf19c96c7a8",
+    "source_mtime_utc": "2026-09-19T03:20:51+00:00",
+    "size_bytes": 929624
+   },
+   "ooke": {
+    "pinned_copy": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/pinned/ooke-toke",
+    "source": "/Users/matthew.watt/tk/toke-ooke/ooke-toke",
+    "sha256": "c74d38121b61c11db0db303cb9da2974b5f75f4df98e27b4e3bc24675bdfbba6",
+    "source_sha256_at_pin": "c74d38121b61c11db0db303cb9da2974b5f75f4df98e27b4e3bc24675bdfbba6",
+    "source_mtime_utc": "2026-09-19T05:16:11+00:00",
+    "size_bytes": 879928
+   },
+   "caddy": {
+    "pinned_copy": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/pinned/caddy",
+    "source": "/opt/homebrew/bin/caddy",
+    "sha256": "46624575b4140297db1a5631227f8e0dbc06a03d7160cac474a7d2525f272d53",
+    "source_sha256_at_pin": "46624575b4140297db1a5631227f8e0dbc06a03d7160cac474a7d2525f272d53",
+    "source_mtime_utc": "2026-05-11T23:33:42+00:00",
+    "size_bytes": 46162978
+   }
+  },
+  "tkc": {
+   "tkc_bin_sha": "6dc20edee16f80d04d4268bb33c243f61b7c0b996b0e0ade8045bc713c8d6338",
+   "tkc_version": "toke 2.8.0",
+   "tkc_path": "/Users/matthew.watt/tk/toke/tkc",
+   "tkc_resolved": "/Users/matthew.watt/tk/toke/toke",
+   "tkc_pinned_copy": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/tkc_pin_90aavfkw/tkc",
+   "toke_head": "c84eab0e40631930aa74859a92c4ae68db1b1189",
+   "toke_src_dirty": true
+  },
+  "tkc_pinned_path": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/tkc_pin_90aavfkw/tkc",
+  "loadavg_1min_at_end": 14.12,
+  "knee_recomputed": "knee() was corrected after the run (degrades_at was reporting c=1, the lowest level below peak, rather than the first level ABOVE peak that fell 5 % below it); the correction is a pure re-read of the same `levels` arrays, which are untouched"
+ },
+ "servers": {
+  "website": {
+   "label": "toke-website `website` binary (toke std.http, --http, 2 workers)",
+   "stack": "toke 2.8.0 stdlib std.http (tk_web_glue.c servepages/servedir/getstaticmime)",
+   "cwd": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/site",
+   "binary": {
+    "pinned_copy": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/pinned/website",
+    "source": "/private/tmp/toke-1346/site-pinned/website",
+    "sha256": "490efa472d1b57cdb19619bd563486f61e010ee6db85c9be797fdcf19c96c7a8",
+    "source_sha256_at_pin": "490efa472d1b57cdb19619bd563486f61e010ee6db85c9be797fdcf19c96c7a8",
+    "source_mtime_utc": "2026-09-19T03:20:51+00:00",
+    "size_bytes": 929624
+   },
+   "routes": {
+    "static": "/index.html",
+    "templated": "/",
+    "api": "/api/health",
+    "templated_small": "/ooke",
+    "static_small": "/robots.txt"
+   },
+   "port_mode": "argv",
+   "precondition": {
+    "status": "ok",
+    "routes": {
+     "static": {
+      "path": "/index.html",
+      "status": 200,
+      "bytes": 63058,
+      "body_sha256": "426f031e625bac70d9d8c74ee9c8ac9c8f26fbcc6f3eaaf86f6661cab41460e2"
+     },
+     "templated": {
+      "path": "/",
+      "status": 200,
+      "bytes": 63058,
+      "body_sha256": "426f031e625bac70d9d8c74ee9c8ac9c8f26fbcc6f3eaaf86f6661cab41460e2"
+     },
+     "api": {
+      "path": "/api/health",
+      "status": 200,
+      "bytes": 58,
+      "body_sha256": "7d6842303742432161b2734e0980acb919f27f1f623f93f2b39f314f5f23eb11"
+     },
+     "templated_small": {
+      "path": "/ooke",
+      "status": 200,
+      "bytes": 10909,
+      "body_sha256": "d0b28b74530fdbcc21f05860fe0ea8701c7a3a98eab18bd9af3e29730372d384"
+     },
+     "static_small": {
+      "path": "/robots.txt",
+      "status": 200,
+      "bytes": 66,
+      "body_sha256": "2c80750189e3229263dcffde4106d4d4753ecb2c022f7980c759b988b2204312"
+     }
+    },
+    "bad": [],
+    "loadavg_1min": 8.93
+   },
+   "cold_start_ms": {
+    "n": 20,
+    "unit": "ms",
+    "min": 14.2936,
+    "median": 16.6393,
+    "ci95_median": [
+     15.995,
+     18.5219
+    ],
+    "p95": 22.0952,
+    "p99": 23.8238,
+    "max": 23.8238,
+    "mean": 17.6974,
+    "stdev": 2.6944,
+    "trials": 20,
+    "failures": 0,
+    "loadavg_1min": 6.71,
+    "definition": "wall from just before fork/exec to the first byte of the first HTTP 200 on /api/health; the client busy-polls connect() so poll granularity is ~0.2 ms, not a fixed sleep"
+   },
+   "rss_kb_idle": {
+    "n": 10,
+    "median": 10304.0,
+    "per_pid": [
+     [
+      40227,
+      6432
+     ],
+     [
+      40229,
+      2752
+     ],
+     [
+      40230,
+      1120
+     ]
+    ],
+    "note": "sum of RSS over the server's whole process group (`ps -o rss= -g <pgid>`), sampled 1 s after the first 200 and before any load; includes forked workers, so copy-on-write pages are counted once per worker \u2014 the per-pid breakdown is given so the sum can be discounted"
+   },
+   "worker_processes": 3,
+   "rusage_idle": {
+    "ru_maxrss_kb": 6432,
+    "ru_utime_s": 0.004,
+    "ru_stime_s": 0.011,
+    "exit_status": 9,
+    "needed_sigkill": true
+   },
+   "rate_limit": {
+    "loadavg_1min": 6.65,
+    "fresh_connections_before_first_non_200": 396,
+    "first_non_200": 429,
+    "ok_before": 396,
+    "elapsed_s": 0.057,
+    "cap": 600,
+    "path": "/api/health",
+    "method": "sequential fresh TCP connections, one request each, closed by the client",
+    "recovered_after_62s": true,
+    "recovery_status": 200
+   },
+   "ttfb": {
+    "static": {
+     "path": "/index.html",
+     "fresh_status_counts": {
+      "200": 150
+     },
+     "reused_status_counts": {
+      "200": 1000
+     },
+     "body_bytes": [
+      63058
+     ],
+     "ttfb_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.1145,
+      "median": 0.1938,
+      "ci95_median": [
+       0.1767,
+       0.2109
+      ],
+      "p95": 0.301,
+      "p99": 0.4183,
+      "max": 0.4349,
+      "mean": 0.2087,
+      "stdev": 0.0641
+     },
+     "total_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.1745,
+      "median": 0.2721,
+      "ci95_median": [
+       0.2522,
+       0.3184
+      ],
+      "p95": 0.4374,
+      "p99": 0.5288,
+      "max": 0.549,
+      "mean": 0.2955,
+      "stdev": 0.0862
+     },
+     "ttfb_reused_conn_ms": {
+      "n": 1000,
+      "unit": "ms",
+      "min": 0.0978,
+      "median": 0.1378,
+      "ci95_median": [
+       0.1366,
+       0.139
+      ],
+      "p95": 0.195,
+      "p99": 0.3443,
+      "max": 1.4432,
+      "mean": 0.148,
+      "stdev": 0.0634
+     },
+     "fresh_conn_errors": 0,
+     "fresh_conn_error_sample": [],
+     "reused_conn_errors": 0,
+     "loadavg_1min": 4.65,
+     "definition": "fresh: connect() through to the first byte of the response, one new TCP connection per sample, connection setup INCLUDED \u2014 what a browser sees on a cold link. reused: send through first byte on an already-open keep-alive connection \u2014 the server's own service time."
+    },
+    "templated": {
+     "path": "/",
+     "fresh_status_counts": {
+      "200": 150
+     },
+     "reused_status_counts": {
+      "200": 1000
+     },
+     "body_bytes": [
+      63058
+     ],
+     "ttfb_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.3385,
+      "median": 0.4221,
+      "ci95_median": [
+       0.4093,
+       0.438
+      ],
+      "p95": 0.5805,
+      "p99": 1.2169,
+      "max": 1.5815,
+      "mean": 0.4462,
+      "stdev": 0.1284
+     },
+     "total_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.442,
+      "median": 0.5283,
+      "ci95_median": [
+       0.5114,
+       0.5341
+      ],
+      "p95": 0.6944,
+      "p99": 1.3236,
+      "max": 1.692,
+      "mean": 0.5496,
+      "stdev": 0.1308
+     },
+     "ttfb_reused_conn_ms": {
+      "n": 1000,
+      "unit": "ms",
+      "min": 0.2422,
+      "median": 0.3111,
+      "ci95_median": [
+       0.3096,
+       0.3133
+      ],
+      "p95": 0.4096,
+      "p99": 0.8668,
+      "max": 7.6863,
+      "mean": 0.3443,
+      "stdev": 0.3124
+     },
+     "fresh_conn_errors": 0,
+     "fresh_conn_error_sample": [],
+     "reused_conn_errors": 0,
+     "loadavg_1min": 4.6,
+     "definition": "fresh: connect() through to the first byte of the response, one new TCP connection per sample, connection setup INCLUDED \u2014 what a browser sees on a cold link. reused: send through first byte on an already-open keep-alive connection \u2014 the server's own service time."
+    },
+    "api": {
+     "path": "/api/health",
+     "fresh_status_counts": {
+      "200": 150
+     },
+     "reused_status_counts": {
+      "200": 1000
+     },
+     "body_bytes": [
+      58
+     ],
+     "ttfb_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.078,
+      "median": 0.1416,
+      "ci95_median": [
+       0.1403,
+       0.1435
+      ],
+      "p95": 0.1741,
+      "p99": 0.2465,
+      "max": 0.3738,
+      "mean": 0.1434,
+      "stdev": 0.0308
+     },
+     "total_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.0828,
+      "median": 0.1588,
+      "ci95_median": [
+       0.156,
+       0.1611
+      ],
+      "p95": 0.1879,
+      "p99": 0.2591,
+      "max": 0.3846,
+      "mean": 0.1565,
+      "stdev": 0.0321
+     },
+     "ttfb_reused_conn_ms": {
+      "n": 1000,
+      "unit": "ms",
+      "min": 0.0179,
+      "median": 0.0265,
+      "ci95_median": [
+       0.0262,
+       0.0268
+      ],
+      "p95": 0.0414,
+      "p99": 0.0602,
+      "max": 0.2342,
+      "mean": 0.0281,
+      "stdev": 0.01
+     },
+     "fresh_conn_errors": 0,
+     "fresh_conn_error_sample": [],
+     "reused_conn_errors": 0,
+     "loadavg_1min": 4.47,
+     "definition": "fresh: connect() through to the first byte of the response, one new TCP connection per sample, connection setup INCLUDED \u2014 what a browser sees on a cold link. reused: send through first byte on an already-open keep-alive connection \u2014 the server's own service time."
+    },
+    "templated_small": {
+     "path": "/ooke",
+     "fresh_status_counts": {
+      "200": 150
+     },
+     "reused_status_counts": {
+      "200": 1000
+     },
+     "body_bytes": [
+      10909
+     ],
+     "ttfb_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.2425,
+      "median": 0.3251,
+      "ci95_median": [
+       0.3103,
+       0.3447
+      ],
+      "p95": 0.4441,
+      "p99": 0.6644,
+      "max": 3.5683,
+      "mean": 0.3574,
+      "stdev": 0.272
+     },
+     "total_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.2685,
+      "median": 0.3468,
+      "ci95_median": [
+       0.3349,
+       0.3624
+      ],
+      "p95": 0.4711,
+      "p99": 0.7146,
+      "max": 3.6197,
+      "mean": 0.3819,
+      "stdev": 0.2747
+     },
+     "ttfb_reused_conn_ms": {
+      "n": 1000,
+      "unit": "ms",
+      "min": 0.112,
+      "median": 0.2146,
+      "ci95_median": [
+       0.2111,
+       0.2185
+      ],
+      "p95": 0.372,
+      "p99": 0.6725,
+      "max": 1.6447,
+      "mean": 0.2348,
+      "stdev": 0.1078
+     },
+     "fresh_conn_errors": 0,
+     "fresh_conn_error_sample": [],
+     "reused_conn_errors": 0,
+     "loadavg_1min": 4.47,
+     "definition": "fresh: connect() through to the first byte of the response, one new TCP connection per sample, connection setup INCLUDED \u2014 what a browser sees on a cold link. reused: send through first byte on an already-open keep-alive connection \u2014 the server's own service time."
+    },
+    "static_small": {
+     "path": "/robots.txt",
+     "fresh_status_counts": {
+      "200": 150
+     },
+     "reused_status_counts": {
+      "200": 1000
+     },
+     "body_bytes": [
+      66
+     ],
+     "ttfb_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.1082,
+      "median": 0.2607,
+      "ci95_median": [
+       0.2473,
+       0.2707
+      ],
+      "p95": 0.5834,
+      "p99": 1.6869,
+      "max": 1.8152,
+      "mean": 0.3016,
+      "stdev": 0.2272
+     },
+     "total_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.1124,
+      "median": 0.2754,
+      "ci95_median": [
+       0.2635,
+       0.2865
+      ],
+      "p95": 0.5992,
+      "p99": 1.7071,
+      "max": 1.8314,
+      "mean": 0.3166,
+      "stdev": 0.2293
+     },
+     "ttfb_reused_conn_ms": {
+      "n": 1000,
+      "unit": "ms",
+      "min": 0.0602,
+      "median": 0.0971,
+      "ci95_median": [
+       0.0954,
+       0.0988
+      ],
+      "p95": 0.1508,
+      "p99": 0.1883,
+      "max": 0.3595,
+      "mean": 0.1046,
+      "stdev": 0.0272
+     },
+     "fresh_conn_errors": 0,
+     "fresh_conn_error_sample": [],
+     "reused_conn_errors": 0,
+     "loadavg_1min": 5.39,
+     "definition": "fresh: connect() through to the first byte of the response, one new TCP connection per sample, connection setup INCLUDED \u2014 what a browser sees on a cold link. reused: send through first byte on an already-open keep-alive connection \u2014 the server's own service time."
+    }
+   },
+   "throughput": {
+    "static": {
+     "path": "/index.html",
+     "mode": "keep-alive, one connection per client thread, reconnect on close, server restarted before each concurrency level",
+     "client": "python3 threads, blocking sockets. Control: at c=1 the measured requests/second equals 1/mean-latency to three digits, so the client adds no measurable per-request overhead at that level. Above ~8 threads the GIL is a plausible ceiling; the caddy rows are the control \u2014 where caddy goes higher on the same route, the client was not the limit.",
+     "levels": [
+      {
+       "concurrency": 1,
+       "duration_s": 3.133,
+       "completed": 3382,
+       "errors": 0,
+       "connections_opened": 4,
+       "statuses": {
+        "200": 3382
+       },
+       "rate_limited": false,
+       "rps": 1079.5,
+       "latency_ms": {
+        "n": 3382,
+        "unit": "ms",
+        "min": 0.1184,
+        "median": 0.2271,
+        "ci95_median": [
+         0.2244,
+         0.2292
+        ],
+        "p95": 0.4258,
+        "p99": 1.0899,
+        "max": 245.4042,
+        "mean": 0.8843,
+        "stdev": 12.1909
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 125696.0,
+        "max": 227520
+       },
+       "loadavg_1min": 5.41
+      },
+      {
+       "concurrency": 2,
+       "duration_s": 3.135,
+       "completed": 7217,
+       "errors": 0,
+       "connections_opened": 8,
+       "statuses": {
+        "200": 7217
+       },
+       "rate_limited": false,
+       "rps": 2302.1,
+       "latency_ms": {
+        "n": 7217,
+        "unit": "ms",
+        "min": 0.1037,
+        "median": 0.2087,
+        "ci95_median": [
+         0.2073,
+         0.2103
+        ],
+        "p95": 0.3746,
+        "p99": 0.8122,
+        "max": 246.8566,
+        "mean": 0.8291,
+        "stdev": 11.8545
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 247416.0,
+        "max": 484448
+       },
+       "loadavg_1min": 5.38
+      },
+      {
+       "concurrency": 4,
+       "duration_s": 3.118,
+       "completed": 8969,
+       "errors": 0,
+       "connections_opened": 12,
+       "statuses": {
+        "200": 8969
+       },
+       "rate_limited": false,
+       "rps": 2876.3,
+       "latency_ms": {
+        "n": 8969,
+        "unit": "ms",
+        "min": 0.1071,
+        "median": 0.211,
+        "ci95_median": [
+         0.2096,
+         0.2124
+        ],
+        "p95": 0.3486,
+        "p99": 0.7639,
+        "max": 975.2353,
+        "mean": 1.3473,
+        "stdev": 24.4349
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 293440.0,
+        "max": 595440
+       },
+       "loadavg_1min": 5.35
+      },
+      {
+       "concurrency": 8,
+       "duration_s": 3.268,
+       "completed": 10765,
+       "errors": 0,
+       "connections_opened": 17,
+       "statuses": {
+        "200": 10765
+       },
+       "rate_limited": false,
+       "rps": 3293.7,
+       "latency_ms": {
+        "n": 10765,
+        "unit": "ms",
+        "min": 0.1046,
+        "median": 0.1928,
+        "ci95_median": [
+         0.1915,
+         0.194
+        ],
+        "p95": 0.3289,
+        "p99": 0.8421,
+        "max": 2101.2067,
+        "mean": 2.2461,
+        "stdev": 49.583
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 387760,
+        "max": 717680
+       },
+       "loadavg_1min": 5.44
+      },
+      {
+       "concurrency": 16,
+       "duration_s": 3.099,
+       "completed": 7775,
+       "errors": 0,
+       "connections_opened": 23,
+       "statuses": {
+        "200": 7775
+       },
+       "rate_limited": false,
+       "rps": 2509.2,
+       "latency_ms": {
+        "n": 7775,
+        "unit": "ms",
+        "min": 0.1048,
+        "median": 0.1999,
+        "ci95_median": [
+         0.1986,
+         0.2013
+        ],
+        "p95": 0.3356,
+        "p99": 1.2751,
+        "max": 3000.7606,
+        "mean": 6.176,
+        "stdev": 116.1713
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 257704.0,
+        "max": 507920
+       },
+       "loadavg_1min": 5.83
+      },
+      {
+       "concurrency": 32,
+       "duration_s": 3.219,
+       "completed": 9030,
+       "errors": 0,
+       "connections_opened": 40,
+       "statuses": {
+        "200": 9030
+       },
+       "rate_limited": false,
+       "rps": 2804.9,
+       "latency_ms": {
+        "n": 9030,
+        "unit": "ms",
+        "min": 0.1127,
+        "median": 0.1907,
+        "ci95_median": [
+         0.1892,
+         0.192
+        ],
+        "p95": 0.3252,
+        "p99": 1.5812,
+        "max": 3001.8607,
+        "mean": 10.6569,
+        "stdev": 164.9293
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 326464,
+        "max": 605200
+       },
+       "loadavg_1min": 6.65
+      },
+      {
+       "concurrency": 64,
+       "duration_s": 3.218,
+       "completed": 8920,
+       "errors": 0,
+       "connections_opened": 72,
+       "statuses": {
+        "200": 8920
+       },
+       "rate_limited": false,
+       "rps": 2771.8,
+       "latency_ms": {
+        "n": 8920,
+        "unit": "ms",
+        "min": 0.1046,
+        "median": 0.1853,
+        "ci95_median": [
+         0.1838,
+         0.1866
+        ],
+        "p95": 0.3136,
+        "p99": 2.5544,
+        "max": 3003.3099,
+        "mean": 21.5553,
+        "stdev": 243.1348
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 379136,
+        "max": 597232
+       },
+       "loadavg_1min": 7.02
+      },
+      {
+       "concurrency": 128,
+       "duration_s": 3.286,
+       "completed": 7799,
+       "errors": 0,
+       "connections_opened": 134,
+       "statuses": {
+        "200": 7799
+       },
+       "rate_limited": false,
+       "rps": 2373.3,
+       "latency_ms": {
+        "n": 7799,
+        "unit": "ms",
+        "min": 0.112,
+        "median": 0.1927,
+        "ci95_median": [
+         0.1912,
+         0.1948
+        ],
+        "p95": 0.348,
+        "p99": 3005.5048,
+        "max": 3011.1423,
+        "mean": 49.3744,
+        "stdev": 375.344
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 287168,
+        "max": 524528
+       },
+       "loadavg_1min": 6.69
+      }
+     ],
+     "knee": {
+      "peak_rps": 3293.7,
+      "peak_concurrency": 8,
+      "degrades_at": 16,
+      "rps_at_c1": 1079.5,
+      "rps_at_max_c": 2373.3,
+      "rule": "peak = highest rps in the sweep; degrades_at = lowest concurrency above the peak whose rps is more than 5 % below it; null = no such level inside the sweep"
+     }
+    },
+    "templated": {
+     "path": "/",
+     "mode": "keep-alive, one connection per client thread, reconnect on close, server restarted before each concurrency level",
+     "client": "python3 threads, blocking sockets. Control: at c=1 the measured requests/second equals 1/mean-latency to three digits, so the client adds no measurable per-request overhead at that level. Above ~8 threads the GIL is a plausible ceiling; the caddy rows are the control \u2014 where caddy goes higher on the same route, the client was not the limit.",
+     "levels": [
+      {
+       "concurrency": 1,
+       "duration_s": 3.106,
+       "completed": 7216,
+       "errors": 0,
+       "connections_opened": 8,
+       "statuses": {
+        "200": 7216
+       },
+       "rate_limited": false,
+       "rps": 2323.2,
+       "latency_ms": {
+        "n": 7216,
+        "unit": "ms",
+        "min": 0.2684,
+        "median": 0.3588,
+        "ci95_median": [
+         0.3576,
+         0.36
+        ],
+        "p95": 0.479,
+        "p99": 0.8412,
+        "max": 236.5704,
+        "mean": 0.4138,
+        "stdev": 2.7853
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 262448.0,
+        "max": 481456
+       },
+       "loadavg_1min": 6.37
+      },
+      {
+       "concurrency": 2,
+       "duration_s": 3.113,
+       "completed": 8239,
+       "errors": 0,
+       "connections_opened": 9,
+       "statuses": {
+        "200": 8239
+       },
+       "rate_limited": false,
+       "rps": 2646.3,
+       "latency_ms": {
+        "n": 8239,
+        "unit": "ms",
+        "min": 0.2016,
+        "median": 0.3897,
+        "ci95_median": [
+         0.3875,
+         0.3915
+        ],
+        "p95": 0.5479,
+        "p99": 1.0562,
+        "max": 240.5431,
+        "mean": 0.726,
+        "stdev": 8.6328
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 250968.0,
+        "max": 548944
+       },
+       "loadavg_1min": 6.1
+      },
+      {
+       "concurrency": 4,
+       "duration_s": 3.243,
+       "completed": 6766,
+       "errors": 0,
+       "connections_opened": 10,
+       "statuses": {
+        "200": 6766
+       },
+       "rate_limited": false,
+       "rps": 2086.2,
+       "latency_ms": {
+        "n": 6766,
+        "unit": "ms",
+        "min": 0.2087,
+        "median": 0.3978,
+        "ci95_median": [
+         0.3954,
+         0.3996
+        ],
+        "p95": 0.5672,
+        "p99": 1.4744,
+        "max": 1358.7281,
+        "mean": 1.7952,
+        "stdev": 31.2292
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 207520,
+        "max": 456912
+       },
+       "loadavg_1min": 6.17
+      },
+      {
+       "concurrency": 8,
+       "duration_s": 3.136,
+       "completed": 8747,
+       "errors": 0,
+       "connections_opened": 16,
+       "statuses": {
+        "200": 8747
+       },
+       "rate_limited": false,
+       "rps": 2788.8,
+       "latency_ms": {
+        "n": 8747,
+        "unit": "ms",
+        "min": 0.1967,
+        "median": 0.3916,
+        "ci95_median": [
+         0.3901,
+         0.3931
+        ],
+        "p95": 0.5645,
+        "p99": 1.5287,
+        "max": 2548.3698,
+        "mean": 2.7426,
+        "stdev": 60.6235
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 299480.0,
+        "max": 587456
+       },
+       "loadavg_1min": 6.07
+      },
+      {
+       "concurrency": 16,
+       "duration_s": 3.249,
+       "completed": 9540,
+       "errors": 0,
+       "connections_opened": 25,
+       "statuses": {
+        "200": 9540
+       },
+       "rate_limited": false,
+       "rps": 2936.5,
+       "latency_ms": {
+        "n": 9540,
+        "unit": "ms",
+        "min": 0.1945,
+        "median": 0.3753,
+        "ci95_median": [
+         0.373,
+         0.377
+        ],
+        "p95": 0.5256,
+        "p99": 1.4882,
+        "max": 3001.27,
+        "mean": 5.0459,
+        "stdev": 102.2218
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 386032,
+        "max": 639376
+       },
+       "loadavg_1min": 5.91
+      },
+      {
+       "concurrency": 32,
+       "duration_s": 3.106,
+       "completed": 8887,
+       "errors": 0,
+       "connections_opened": 40,
+       "statuses": {
+        "200": 8887
+       },
+       "rate_limited": false,
+       "rps": 2861.4,
+       "latency_ms": {
+        "n": 8887,
+        "unit": "ms",
+        "min": 0.2002,
+        "median": 0.3762,
+        "ci95_median": [
+         0.3745,
+         0.378
+        ],
+        "p95": 0.5633,
+        "p99": 2.2112,
+        "max": 3002.2937,
+        "mean": 10.8098,
+        "stdev": 165.6908
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 285800.0,
+        "max": 584512
+       },
+       "loadavg_1min": 5.84
+      },
+      {
+       "concurrency": 64,
+       "duration_s": 3.272,
+       "completed": 9735,
+       "errors": 0,
+       "connections_opened": 72,
+       "statuses": {
+        "200": 9735
+       },
+       "rate_limited": false,
+       "rps": 2975.6,
+       "latency_ms": {
+        "n": 9735,
+        "unit": "ms",
+        "min": 0.194,
+        "median": 0.343,
+        "ci95_median": [
+         0.3412,
+         0.3452
+        ],
+        "p95": 0.5058,
+        "p99": 2.3188,
+        "max": 3010.7303,
+        "mean": 19.7824,
+        "stdev": 233.4591
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 362752,
+        "max": 652000
+       },
+       "loadavg_1min": 6.35
+      },
+      {
+       "concurrency": 128,
+       "duration_s": 3.086,
+       "completed": 9212,
+       "errors": 0,
+       "connections_opened": 136,
+       "statuses": {
+        "200": 9212
+       },
+       "rate_limited": false,
+       "rps": 2985.1,
+       "latency_ms": {
+        "n": 9212,
+        "unit": "ms",
+        "min": 0.2042,
+        "median": 0.3766,
+        "ci95_median": [
+         0.3745,
+         0.3783
+        ],
+        "p95": 0.5632,
+        "p99": 3001.6895,
+        "max": 3010.5098,
+        "mean": 41.7755,
+        "stdev": 345.2598
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 324704.0,
+        "max": 596464
+       },
+       "loadavg_1min": 6.41
+      }
+     ],
+     "knee": {
+      "peak_rps": 2985.1,
+      "peak_concurrency": 128,
+      "degrades_at": null,
+      "rps_at_c1": 2323.2,
+      "rps_at_max_c": 2985.1,
+      "rule": "peak = highest rps in the sweep; degrades_at = lowest concurrency above the peak whose rps is more than 5 % below it; null = no such level inside the sweep"
+     }
+    },
+    "api": {
+     "path": "/api/health",
+     "mode": "keep-alive, one connection per client thread, reconnect on close, server restarted before each concurrency level",
+     "client": "python3 threads, blocking sockets. Control: at c=1 the measured requests/second equals 1/mean-latency to three digits, so the client adds no measurable per-request overhead at that level. Above ~8 threads the GIL is a plausible ceiling; the caddy rows are the control \u2014 where caddy goes higher on the same route, the client was not the limit.",
+     "levels": [
+      {
+       "concurrency": 1,
+       "duration_s": 3.087,
+       "completed": 63207,
+       "errors": 0,
+       "connections_opened": 64,
+       "statuses": {
+        "200": 63207
+       },
+       "rate_limited": false,
+       "rps": 20473.6,
+       "latency_ms": {
+        "n": 63207,
+        "unit": "ms",
+        "min": 0.0202,
+        "median": 0.0414,
+        "ci95_median": [
+         0.0413,
+         0.0414
+        ],
+        "p95": 0.0691,
+        "p99": 0.1019,
+        "max": 4.0947,
+        "mean": 0.0464,
+        "stdev": 0.0451
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 50512,
+        "max": 87664
+       },
+       "loadavg_1min": 5.93
+      },
+      {
+       "concurrency": 2,
+       "duration_s": 3.094,
+       "completed": 85614,
+       "errors": 0,
+       "connections_opened": 86,
+       "statuses": {
+        "200": 85614
+       },
+       "rate_limited": false,
+       "rps": 27674.7,
+       "latency_ms": {
+        "n": 85614,
+        "unit": "ms",
+        "min": 0.0205,
+        "median": 0.0634,
+        "ci95_median": [
+         0.0632,
+         0.0635
+        ],
+        "p95": 0.1029,
+        "p99": 0.144,
+        "max": 7.5172,
+        "mean": 0.0687,
+        "stdev": 0.0786
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 62240,
+        "max": 113760
+       },
+       "loadavg_1min": 6.08
+      },
+      {
+       "concurrency": 4,
+       "duration_s": 3.12,
+       "completed": 88121,
+       "errors": 0,
+       "connections_opened": 92,
+       "statuses": {
+        "200": 88121
+       },
+       "rate_limited": false,
+       "rps": 28245.0,
+       "latency_ms": {
+        "n": 88121,
+        "unit": "ms",
+        "min": 0.024,
+        "median": 0.062,
+        "ci95_median": [
+         0.0618,
+         0.0621
+        ],
+        "p95": 0.1008,
+        "p99": 0.1452,
+        "max": 87.6325,
+        "mean": 0.1349,
+        "stdev": 2.1653
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 64816,
+        "max": 117792
+       },
+       "loadavg_1min": 5.44
+      },
+      {
+       "concurrency": 8,
+       "duration_s": 3.065,
+       "completed": 85127,
+       "errors": 0,
+       "connections_opened": 92,
+       "statuses": {
+        "200": 85127
+       },
+       "rate_limited": false,
+       "rps": 27769.9,
+       "latency_ms": {
+        "n": 85127,
+        "unit": "ms",
+        "min": 0.0242,
+        "median": 0.064,
+        "ci95_median": [
+         0.0638,
+         0.0641
+        ],
+        "p95": 0.1032,
+        "p99": 0.1512,
+        "max": 230.3445,
+        "mean": 0.2806,
+        "stdev": 6.6113
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 64304,
+        "max": 112368
+       },
+       "loadavg_1min": 5.17
+      },
+      {
+       "concurrency": 16,
+       "duration_s": 3.108,
+       "completed": 84675,
+       "errors": 0,
+       "connections_opened": 100,
+       "statuses": {
+        "200": 84675
+       },
+       "rate_limited": false,
+       "rps": 27245.5,
+       "latency_ms": {
+        "n": 84675,
+        "unit": "ms",
+        "min": 0.0238,
+        "median": 0.063,
+        "ci95_median": [
+         0.0629,
+         0.0632
+        ],
+        "p95": 0.1075,
+        "p99": 0.179,
+        "max": 562.6816,
+        "mean": 0.5656,
+        "stdev": 15.133
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 63168,
+        "max": 113136
+       },
+       "loadavg_1min": 5.16
+      },
+      {
+       "concurrency": 32,
+       "duration_s": 3.126,
+       "completed": 99051,
+       "errors": 0,
+       "connections_opened": 130,
+       "statuses": {
+        "200": 99051
+       },
+       "rate_limited": false,
+       "rps": 31685.4,
+       "latency_ms": {
+        "n": 99051,
+        "unit": "ms",
+        "min": 0.0185,
+        "median": 0.0545,
+        "ci95_median": [
+         0.0544,
+         0.0546
+        ],
+        "p95": 0.0878,
+        "p99": 0.1174,
+        "max": 935.5691,
+        "mean": 0.9681,
+        "stdev": 27.2064
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 71792,
+        "max": 129952
+       },
+       "loadavg_1min": 4.46
+      },
+      {
+       "concurrency": 64,
+       "duration_s": 3.09,
+       "completed": 98466,
+       "errors": 0,
+       "connections_opened": 162,
+       "statuses": {
+        "200": 98466
+       },
+       "rate_limited": false,
+       "rps": 31863.1,
+       "latency_ms": {
+        "n": 98466,
+        "unit": "ms",
+        "min": 0.0247,
+        "median": 0.055,
+        "ci95_median": [
+         0.0549,
+         0.0551
+        ],
+        "p95": 0.0882,
+        "p99": 0.118,
+        "max": 1901.653,
+        "mean": 1.9512,
+        "stdev": 53.1053
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 71952,
+        "max": 127808
+       },
+       "loadavg_1min": 3.85
+      },
+      {
+       "concurrency": 128,
+       "duration_s": 3.063,
+       "completed": 85418,
+       "errors": 0,
+       "connections_opened": 212,
+       "statuses": {
+        "200": 85418
+       },
+       "rate_limited": false,
+       "rps": 27886.4,
+       "latency_ms": {
+        "n": 85418,
+        "unit": "ms",
+        "min": 0.0244,
+        "median": 0.0639,
+        "ci95_median": [
+         0.0637,
+         0.0641
+        ],
+        "p95": 0.1033,
+        "p99": 0.1744,
+        "max": 3000.854,
+        "mean": 4.5086,
+        "stdev": 101.6098
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 64976,
+        "max": 111776
+       },
+       "loadavg_1min": 4.79
+      }
+     ],
+     "knee": {
+      "peak_rps": 31863.1,
+      "peak_concurrency": 64,
+      "degrades_at": 128,
+      "rps_at_c1": 20473.6,
+      "rps_at_max_c": 27886.4,
+      "rule": "peak = highest rps in the sweep; degrades_at = lowest concurrency above the peak whose rps is more than 5 % below it; null = no such level inside the sweep"
+     }
+    },
+    "static_small": {
+     "path": "/robots.txt",
+     "mode": "keep-alive, one connection per client thread, reconnect on close, server restarted before each concurrency level",
+     "client": "python3 threads, blocking sockets. Control: at c=1 the measured requests/second equals 1/mean-latency to three digits, so the client adds no measurable per-request overhead at that level. Above ~8 threads the GIL is a plausible ceiling; the caddy rows are the control \u2014 where caddy goes higher on the same route, the client was not the limit.",
+     "levels": [
+      {
+       "concurrency": 1,
+       "duration_s": 3.003,
+       "completed": 23178,
+       "errors": 0,
+       "connections_opened": 24,
+       "statuses": {
+        "200": 23178
+       },
+       "rate_limited": false,
+       "rps": 7717.4,
+       "latency_ms": {
+        "n": 23178,
+        "unit": "ms",
+        "min": 0.0688,
+        "median": 0.1137,
+        "ci95_median": [
+         0.1132,
+         0.1142
+        ],
+        "p95": 0.1813,
+        "p99": 0.2886,
+        "max": 2.995,
+        "mean": 0.1279,
+        "stdev": 0.0958
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 27392,
+        "max": 42896
+       },
+       "loadavg_1min": 4.95
+      },
+      {
+       "concurrency": 2,
+       "duration_s": 3.111,
+       "completed": 34374,
+       "errors": 0,
+       "connections_opened": 36,
+       "statuses": {
+        "200": 34374
+       },
+       "rate_limited": false,
+       "rps": 11050.4,
+       "latency_ms": {
+        "n": 34374,
+        "unit": "ms",
+        "min": 0.0748,
+        "median": 0.1555,
+        "ci95_median": [
+         0.155,
+         0.156
+        ],
+        "p95": 0.2587,
+        "p99": 0.4191,
+        "max": 7.2699,
+        "mean": 0.1729,
+        "stdev": 0.1425
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 35456.0,
+        "max": 58896
+       },
+       "loadavg_1min": 4.87
+      },
+      {
+       "concurrency": 4,
+       "duration_s": 3.121,
+       "completed": 37819,
+       "errors": 0,
+       "connections_opened": 40,
+       "statuses": {
+        "200": 37819
+       },
+       "rate_limited": false,
+       "rps": 12117.8,
+       "latency_ms": {
+        "n": 37819,
+        "unit": "ms",
+        "min": 0.0714,
+        "median": 0.1452,
+        "ci95_median": [
+         0.1449,
+         0.1455
+        ],
+        "p95": 0.2161,
+        "p99": 0.3326,
+        "max": 190.408,
+        "mean": 0.3157,
+        "stdev": 5.0134
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 38152.0,
+        "max": 62144
+       },
+       "loadavg_1min": 5.27
+      },
+      {
+       "concurrency": 8,
+       "duration_s": 3.018,
+       "completed": 33746,
+       "errors": 0,
+       "connections_opened": 40,
+       "statuses": {
+        "200": 33746
+       },
+       "rate_limited": false,
+       "rps": 11181.5,
+       "latency_ms": {
+        "n": 33746,
+        "unit": "ms",
+        "min": 0.0732,
+        "median": 0.1587,
+        "ci95_median": [
+         0.1582,
+         0.1592
+        ],
+        "p95": 0.2749,
+        "p99": 0.4796,
+        "max": 585.4989,
+        "mean": 0.7094,
+        "stdev": 16.4104
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 34864,
+        "max": 55520
+       },
+       "loadavg_1min": 5.47
+      },
+      {
+       "concurrency": 16,
+       "duration_s": 3.128,
+       "completed": 33747,
+       "errors": 0,
+       "connections_opened": 48,
+       "statuses": {
+        "200": 33747
+       },
+       "rate_limited": false,
+       "rps": 10790.0,
+       "latency_ms": {
+        "n": 33747,
+        "unit": "ms",
+        "min": 0.0701,
+        "median": 0.1615,
+        "ci95_median": [
+         0.161,
+         0.1619
+        ],
+        "p95": 0.2604,
+        "p99": 0.4258,
+        "max": 1259.5107,
+        "mean": 1.4206,
+        "stdev": 36.4201
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 36072.0,
+        "max": 57360
+       },
+       "loadavg_1min": 5.68
+      },
+      {
+       "concurrency": 32,
+       "duration_s": 3.148,
+       "completed": 33083,
+       "errors": 0,
+       "connections_opened": 64,
+       "statuses": {
+        "200": 33083
+       },
+       "rate_limited": false,
+       "rps": 10510.6,
+       "latency_ms": {
+        "n": 33083,
+        "unit": "ms",
+        "min": 0.0814,
+        "median": 0.1613,
+        "ci95_median": [
+         0.1609,
+         0.1617
+        ],
+        "p95": 0.2737,
+        "p99": 0.5218,
+        "max": 2737.9629,
+        "mean": 2.9009,
+        "stdev": 71.559
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 36224.0,
+        "max": 57440
+       },
+       "loadavg_1min": 5.04
+      },
+      {
+       "concurrency": 64,
+       "duration_s": 3.117,
+       "completed": 35759,
+       "errors": 0,
+       "connections_opened": 98,
+       "statuses": {
+        "200": 35759
+       },
+       "rate_limited": false,
+       "rps": 11473.3,
+       "latency_ms": {
+        "n": 35759,
+        "unit": "ms",
+        "min": 0.0717,
+        "median": 0.1515,
+        "ci95_median": [
+         0.1511,
+         0.1518
+        ],
+        "p95": 0.2469,
+        "p99": 0.4609,
+        "max": 3000.5302,
+        "mean": 5.3759,
+        "stdev": 112.0248
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 37032.0,
+        "max": 59424
+       },
+       "loadavg_1min": 4.96
+      },
+      {
+       "concurrency": 128,
+       "duration_s": 3.144,
+       "completed": 37621,
+       "errors": 0,
+       "connections_opened": 164,
+       "statuses": {
+        "200": 37621
+       },
+       "rate_limited": false,
+       "rps": 11966.7,
+       "latency_ms": {
+        "n": 37621,
+        "unit": "ms",
+        "min": 0.0777,
+        "median": 0.1443,
+        "ci95_median": [
+         0.144,
+         0.1446
+        ],
+        "p95": 0.2112,
+        "p99": 0.52,
+        "max": 3002.1508,
+        "mean": 10.2252,
+        "stdev": 164.2795
+       },
+       "rss_kb_under_load": {
+        "n": 22,
+        "median": 38248.0,
+        "max": 64208
+       },
+       "loadavg_1min": 5.12
+      }
+     ],
+     "knee": {
+      "peak_rps": 12117.8,
+      "peak_concurrency": 4,
+      "degrades_at": 8,
+      "rps_at_c1": 7717.4,
+      "rps_at_max_c": 11966.7,
+      "rule": "peak = highest rps in the sweep; degrades_at = lowest concurrency above the peak whose rps is more than 5 % below it; null = no such level inside the sweep"
+     }
+    }
+   },
+   "rss_kb_under_load_max": 717680,
+   "status": "ok"
+  },
+  "ooke": {
+   "label": "ooke-toke `serve` on ooke's own testproj scaffold",
+   "stack": "ooke src/serve.tk -> toke std.http. NOTE: ooke renders every page ONCE at startup (serveregisterstatic -> http.getstatic) and serves the rendered HTML from memory, so its page route is an in-memory static response, NOT a per-request render. The website binary's http.servepages re-reads and re-renders the .tkt from disk on every request. The two 'page' numbers are therefore different workloads and must not be compared head to head.",
+   "cwd": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/ookesite",
+   "binary": {
+    "pinned_copy": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/pinned/ooke-toke",
+    "source": "/Users/matthew.watt/tk/toke-ooke/ooke-toke",
+    "sha256": "c74d38121b61c11db0db303cb9da2974b5f75f4df98e27b4e3bc24675bdfbba6",
+    "source_sha256_at_pin": "c74d38121b61c11db0db303cb9da2974b5f75f4df98e27b4e3bc24675bdfbba6",
+    "source_mtime_utc": "2026-09-19T05:16:11+00:00",
+    "size_bytes": 879928
+   },
+   "routes": {
+    "page_prerendered": "/",
+    "api": "/api/health"
+   },
+   "port_mode": "config",
+   "precondition": {
+    "status": "ok",
+    "routes": {
+     "page_prerendered": {
+      "path": "/",
+      "status": 200,
+      "bytes": 2242,
+      "body_sha256": "ccc98add10944a43ccee92c033075ddeed0eb083d32c7c219fbae42aeed193a0"
+     },
+     "api": {
+      "path": "/api/health",
+      "status": 200,
+      "bytes": 32,
+      "body_sha256": "fbf827e21b94dafc8eaf6b8d7b416be8cea6ff18a632a0bb642d9b70cd6b6ace"
+     }
+    },
+    "bad": [],
+    "loadavg_1min": 4.79
+   },
+   "cold_start_ms": {
+    "n": 20,
+    "unit": "ms",
+    "min": 10.9165,
+    "median": 11.8725,
+    "ci95_median": [
+     11.5999,
+     12.1906
+    ],
+    "p95": 15.8937,
+    "p99": 19.2373,
+    "max": 19.2373,
+    "mean": 12.4314,
+    "stdev": 1.9568,
+    "trials": 20,
+    "failures": 0,
+    "loadavg_1min": 7.09,
+    "definition": "wall from just before fork/exec to the first byte of the first HTTP 200 on /api/health; the client busy-polls connect() so poll granularity is ~0.2 ms, not a fixed sleep"
+   },
+   "rss_kb_idle": {
+    "n": 10,
+    "median": 3792.0,
+    "per_pid": [
+     [
+      64118,
+      1504
+     ],
+     [
+      64119,
+      832
+     ],
+     [
+      64120,
+      400
+     ],
+     [
+      64121,
+      608
+     ],
+     [
+      64122,
+      448
+     ]
+    ],
+    "note": "sum of RSS over the server's whole process group (`ps -o rss= -g <pgid>`), sampled 1 s after the first 200 and before any load; includes forked workers, so copy-on-write pages are counted once per worker \u2014 the per-pid breakdown is given so the sum can be discounted"
+   },
+   "worker_processes": 5,
+   "rusage_idle": {
+    "ru_maxrss_kb": 2320,
+    "ru_utime_s": 0.004,
+    "ru_stime_s": 0.01,
+    "exit_status": 9,
+    "needed_sigkill": true
+   },
+   "rate_limit": {
+    "loadavg_1min": 7.32,
+    "fresh_connections_before_first_non_200": null,
+    "first_non_200": null,
+    "ok_before": 600,
+    "elapsed_s": 0.075,
+    "cap": 600,
+    "path": "/api/health",
+    "method": "sequential fresh TCP connections, one request each, closed by the client"
+   },
+   "ttfb": {
+    "page_prerendered": {
+     "path": "/",
+     "fresh_status_counts": {
+      "200": 150
+     },
+     "reused_status_counts": {
+      "200": 1000
+     },
+     "body_bytes": [
+      2242
+     ],
+     "ttfb_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.112,
+      "median": 0.1411,
+      "ci95_median": [
+       0.1389,
+       0.1444
+      ],
+      "p95": 0.2115,
+      "p99": 0.2884,
+      "max": 0.3615,
+      "mean": 0.1486,
+      "stdev": 0.0317
+     },
+     "total_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.1351,
+      "median": 0.1571,
+      "ci95_median": [
+       0.1524,
+       0.1612
+      ],
+      "p95": 0.2305,
+      "p99": 0.3173,
+      "max": 0.3847,
+      "mean": 0.1653,
+      "stdev": 0.0335
+     },
+     "ttfb_reused_conn_ms": {
+      "n": 1000,
+      "unit": "ms",
+      "min": 0.0174,
+      "median": 0.0272,
+      "ci95_median": [
+       0.0269,
+       0.0275
+      ],
+      "p95": 0.0559,
+      "p99": 0.0834,
+      "max": 0.1593,
+      "mean": 0.0315,
+      "stdev": 0.0146
+     },
+     "fresh_conn_errors": 0,
+     "fresh_conn_error_sample": [],
+     "reused_conn_errors": 0,
+     "loadavg_1min": 7.32,
+     "definition": "fresh: connect() through to the first byte of the response, one new TCP connection per sample, connection setup INCLUDED \u2014 what a browser sees on a cold link. reused: send through first byte on an already-open keep-alive connection \u2014 the server's own service time."
+    },
+    "api": {
+     "path": "/api/health",
+     "fresh_status_counts": {
+      "200": 150
+     },
+     "reused_status_counts": {
+      "200": 1000
+     },
+     "body_bytes": [
+      32
+     ],
+     "ttfb_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.0883,
+      "median": 0.1554,
+      "ci95_median": [
+       0.1509,
+       0.1605
+      ],
+      "p95": 0.208,
+      "p99": 0.301,
+      "max": 0.3527,
+      "mean": 0.158,
+      "stdev": 0.0354
+     },
+     "total_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.097,
+      "median": 0.1678,
+      "ci95_median": [
+       0.1658,
+       0.1711
+      ],
+      "p95": 0.2221,
+      "p99": 0.3074,
+      "max": 0.3582,
+      "mean": 0.1704,
+      "stdev": 0.0349
+     },
+     "ttfb_reused_conn_ms": {
+      "n": 1000,
+      "unit": "ms",
+      "min": 0.017,
+      "median": 0.0287,
+      "ci95_median": [
+       0.028,
+       0.0298
+      ],
+      "p95": 0.0563,
+      "p99": 0.0785,
+      "max": 0.1196,
+      "mean": 0.0327,
+      "stdev": 0.0125
+     },
+     "fresh_conn_errors": 0,
+     "fresh_conn_error_sample": [],
+     "reused_conn_errors": 0,
+     "loadavg_1min": 7.3,
+     "definition": "fresh: connect() through to the first byte of the response, one new TCP connection per sample, connection setup INCLUDED \u2014 what a browser sees on a cold link. reused: send through first byte on an already-open keep-alive connection \u2014 the server's own service time."
+    }
+   },
+   "throughput": {
+    "page_prerendered": {
+     "path": "/",
+     "mode": "keep-alive, one connection per client thread, reconnect on close, server restarted before each concurrency level",
+     "client": "python3 threads, blocking sockets. Control: at c=1 the measured requests/second equals 1/mean-latency to three digits, so the client adds no measurable per-request overhead at that level. Above ~8 threads the GIL is a plausible ceiling; the caddy rows are the control \u2014 where caddy goes higher on the same route, the client was not the limit.",
+     "levels": [
+      {
+       "concurrency": 1,
+       "duration_s": 3.066,
+       "completed": 55323,
+       "errors": 0,
+       "connections_opened": 56,
+       "statuses": {
+        "200": 55323
+       },
+       "rate_limited": false,
+       "rps": 18043.8,
+       "latency_ms": {
+        "n": 55323,
+        "unit": "ms",
+        "min": 0.0215,
+        "median": 0.0449,
+        "ci95_median": [
+         0.0447,
+         0.045
+        ],
+        "p95": 0.0886,
+        "p99": 0.1597,
+        "max": 4.0302,
+        "mean": 0.0529,
+        "stdev": 0.0519
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 43408,
+        "max": 55024
+       },
+       "loadavg_1min": 7.61
+      },
+      {
+       "concurrency": 2,
+       "duration_s": 3.112,
+       "completed": 75020,
+       "errors": 0,
+       "connections_opened": 76,
+       "statuses": {
+        "200": 75020
+       },
+       "rate_limited": false,
+       "rps": 24103.4,
+       "latency_ms": {
+        "n": 75020,
+        "unit": "ms",
+        "min": 0.0223,
+        "median": 0.0699,
+        "ci95_median": [
+         0.0697,
+         0.0701
+        ],
+        "p95": 0.1314,
+        "p99": 0.2154,
+        "max": 6.6562,
+        "mean": 0.0784,
+        "stdev": 0.0769
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 46080,
+        "max": 76688
+       },
+       "loadavg_1min": 7.83
+      },
+      {
+       "concurrency": 4,
+       "duration_s": 3.103,
+       "completed": 73649,
+       "errors": 0,
+       "connections_opened": 76,
+       "statuses": {
+        "200": 73649
+       },
+       "rate_limited": false,
+       "rps": 23733.0,
+       "latency_ms": {
+        "n": 73649,
+        "unit": "ms",
+        "min": 0.0368,
+        "median": 0.1473,
+        "ci95_median": [
+         0.1469,
+         0.1478
+        ],
+        "p95": 0.2655,
+        "p99": 0.3687,
+        "max": 3.617,
+        "mean": 0.1613,
+        "stdev": 0.0925
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 58224,
+        "max": 99632
+       },
+       "loadavg_1min": 6.94
+      },
+      {
+       "concurrency": 8,
+       "duration_s": 3.108,
+       "completed": 73609,
+       "errors": 0,
+       "connections_opened": 80,
+       "statuses": {
+        "200": 73609
+       },
+       "rate_limited": false,
+       "rps": 23686.0,
+       "latency_ms": {
+        "n": 73609,
+        "unit": "ms",
+        "min": 0.0428,
+        "median": 0.1476,
+        "ci95_median": [
+         0.1472,
+         0.148
+        ],
+        "p95": 0.2647,
+        "p99": 0.3758,
+        "max": 184.7451,
+        "mean": 0.3244,
+        "stdev": 5.1143
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 58480,
+        "max": 100944
+       },
+       "loadavg_1min": 6.9
+      },
+      {
+       "concurrency": 16,
+       "duration_s": 3.121,
+       "completed": 68492,
+       "errors": 0,
+       "connections_opened": 84,
+       "statuses": {
+        "200": 68492
+       },
+       "rate_limited": false,
+       "rps": 21947.9,
+       "latency_ms": {
+        "n": 68492,
+        "unit": "ms",
+        "min": 0.0427,
+        "median": 0.1551,
+        "ci95_median": [
+         0.1546,
+         0.1556
+        ],
+        "p95": 0.2936,
+        "p99": 0.4611,
+        "max": 572.0544,
+        "mean": 0.6992,
+        "stdev": 16.1794
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 55312,
+        "max": 83184
+       },
+       "loadavg_1min": 6.74
+      },
+      {
+       "concurrency": 32,
+       "duration_s": 3.124,
+       "completed": 70325,
+       "errors": 0,
+       "connections_opened": 100,
+       "statuses": {
+        "200": 70325
+       },
+       "rate_limited": false,
+       "rps": 22509.5,
+       "latency_ms": {
+        "n": 70325,
+        "unit": "ms",
+        "min": 0.0342,
+        "median": 0.1512,
+        "ci95_median": [
+         0.1507,
+         0.1517
+        ],
+        "p95": 0.2921,
+        "p99": 0.4447,
+        "max": 1286.4924,
+        "mean": 1.3637,
+        "stdev": 35.2335
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 55504,
+        "max": 90736
+       },
+       "loadavg_1min": 8.13
+      },
+      {
+       "concurrency": 64,
+       "duration_s": 3.142,
+       "completed": 69903,
+       "errors": 0,
+       "connections_opened": 132,
+       "statuses": {
+        "200": 69903
+       },
+       "rate_limited": false,
+       "rps": 22250.7,
+       "latency_ms": {
+        "n": 69903,
+        "unit": "ms",
+        "min": 0.0354,
+        "median": 0.1507,
+        "ci95_median": [
+         0.1502,
+         0.1511
+        ],
+        "p95": 0.2917,
+        "p99": 0.4948,
+        "max": 2554.7711,
+        "mean": 2.746,
+        "stdev": 68.3066
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 42912,
+        "max": 62384
+       },
+       "loadavg_1min": 8.09
+      },
+      {
+       "concurrency": 128,
+       "duration_s": 3.138,
+       "completed": 76522,
+       "errors": 0,
+       "connections_opened": 203,
+       "statuses": {
+        "200": 76522
+       },
+       "rate_limited": false,
+       "rps": 24383.4,
+       "latency_ms": {
+        "n": 76522,
+        "unit": "ms",
+        "min": 0.0338,
+        "median": 0.1408,
+        "ci95_median": [
+         0.1404,
+         0.1412
+        ],
+        "p95": 0.2616,
+        "p99": 0.4204,
+        "max": 2999.9805,
+        "mean": 5.0375,
+        "stdev": 107.8064
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 59488,
+        "max": 78000
+       },
+       "loadavg_1min": 9.25
+      }
+     ],
+     "knee": {
+      "peak_rps": 24383.4,
+      "peak_concurrency": 128,
+      "degrades_at": null,
+      "rps_at_c1": 18043.8,
+      "rps_at_max_c": 24383.4,
+      "rule": "peak = highest rps in the sweep; degrades_at = lowest concurrency above the peak whose rps is more than 5 % below it; null = no such level inside the sweep"
+     }
+    },
+    "api": {
+     "path": "/api/health",
+     "mode": "keep-alive, one connection per client thread, reconnect on close, server restarted before each concurrency level",
+     "client": "python3 threads, blocking sockets. Control: at c=1 the measured requests/second equals 1/mean-latency to three digits, so the client adds no measurable per-request overhead at that level. Above ~8 threads the GIL is a plausible ceiling; the caddy rows are the control \u2014 where caddy goes higher on the same route, the client was not the limit.",
+     "levels": [
+      {
+       "concurrency": 1,
+       "duration_s": 3.075,
+       "completed": 57433,
+       "errors": 0,
+       "connections_opened": 58,
+       "statuses": {
+        "200": 57433
+       },
+       "rate_limited": false,
+       "rps": 18675.5,
+       "latency_ms": {
+        "n": 57433,
+        "unit": "ms",
+        "min": 0.0202,
+        "median": 0.0435,
+        "ci95_median": [
+         0.0434,
+         0.0436
+        ],
+        "p95": 0.0822,
+        "p99": 0.1363,
+        "max": 3.1219,
+        "mean": 0.0509,
+        "stdev": 0.0483
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 47664,
+        "max": 72912
+       },
+       "loadavg_1min": 9.57
+      },
+      {
+       "concurrency": 2,
+       "duration_s": 3.068,
+       "completed": 81876,
+       "errors": 0,
+       "connections_opened": 82,
+       "statuses": {
+        "200": 81876
+       },
+       "rate_limited": false,
+       "rps": 26688.7,
+       "latency_ms": {
+        "n": 81876,
+        "unit": "ms",
+        "min": 0.0255,
+        "median": 0.0654,
+        "ci95_median": [
+         0.0653,
+         0.0656
+        ],
+        "p95": 0.1143,
+        "p99": 0.1792,
+        "max": 3.7979,
+        "mean": 0.0718,
+        "stdev": 0.0588
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 63200,
+        "max": 94016
+       },
+       "loadavg_1min": 9.51
+      },
+      {
+       "concurrency": 4,
+       "duration_s": 3.105,
+       "completed": 70017,
+       "errors": 0,
+       "connections_opened": 72,
+       "statuses": {
+        "200": 70017
+       },
+       "rate_limited": false,
+       "rps": 22548.4,
+       "latency_ms": {
+        "n": 70017,
+        "unit": "ms",
+        "min": 0.038,
+        "median": 0.1534,
+        "ci95_median": [
+         0.153,
+         0.1538
+        ],
+        "p95": 0.2838,
+        "p99": 0.4013,
+        "max": 3.2796,
+        "mean": 0.1696,
+        "stdev": 0.103
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 58032,
+        "max": 99072
+       },
+       "loadavg_1min": 8.75
+      },
+      {
+       "concurrency": 8,
+       "duration_s": 3.098,
+       "completed": 72229,
+       "errors": 0,
+       "connections_opened": 80,
+       "statuses": {
+        "200": 72229
+       },
+       "rate_limited": false,
+       "rps": 23311.6,
+       "latency_ms": {
+        "n": 72229,
+        "unit": "ms",
+        "min": 0.0338,
+        "median": 0.1482,
+        "ci95_median": [
+         0.1477,
+         0.1486
+        ],
+        "p95": 0.2777,
+        "p99": 0.4171,
+        "max": 186.0423,
+        "mean": 0.3306,
+        "stdev": 5.2478
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 57872,
+        "max": 101680
+       },
+       "loadavg_1min": 8.08
+      },
+      {
+       "concurrency": 16,
+       "duration_s": 3.081,
+       "completed": 74412,
+       "errors": 0,
+       "connections_opened": 88,
+       "statuses": {
+        "200": 74412
+       },
+       "rate_limited": false,
+       "rps": 24155.2,
+       "latency_ms": {
+        "n": 74412,
+        "unit": "ms",
+        "min": 0.034,
+        "median": 0.1438,
+        "ci95_median": [
+         0.1434,
+         0.1442
+        ],
+        "p95": 0.266,
+        "p99": 0.402,
+        "max": 576.252,
+        "mean": 0.6436,
+        "stdev": 14.9645
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 58864,
+        "max": 101200
+       },
+       "loadavg_1min": 7.55
+      },
+      {
+       "concurrency": 32,
+       "duration_s": 3.078,
+       "completed": 77257,
+       "errors": 0,
+       "connections_opened": 108,
+       "statuses": {
+        "200": 77257
+       },
+       "rate_limited": false,
+       "rps": 25097.4,
+       "latency_ms": {
+        "n": 77257,
+        "unit": "ms",
+        "min": 0.0383,
+        "median": 0.1407,
+        "ci95_median": [
+         0.1403,
+         0.1411
+        ],
+        "p95": 0.2505,
+        "p99": 0.3534,
+        "max": 1117.6761,
+        "mean": 1.2419,
+        "stdev": 32.0968
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 61152,
+        "max": 105280
+       },
+       "loadavg_1min": 7.76
+      },
+      {
+       "concurrency": 64,
+       "duration_s": 3.096,
+       "completed": 77390,
+       "errors": 0,
+       "connections_opened": 140,
+       "statuses": {
+        "200": 77390
+       },
+       "rate_limited": false,
+       "rps": 24993.9,
+       "latency_ms": {
+        "n": 77390,
+        "unit": "ms",
+        "min": 0.036,
+        "median": 0.14,
+        "ci95_median": [
+         0.1396,
+         0.1404
+        ],
+        "p95": 0.2534,
+        "p99": 0.3789,
+        "max": 2308.8868,
+        "mean": 2.4815,
+        "stdev": 62.9072
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 61616,
+        "max": 105968
+       },
+       "loadavg_1min": 6.76
+      },
+      {
+       "concurrency": 128,
+       "duration_s": 3.157,
+       "completed": 59330,
+       "errors": 0,
+       "connections_opened": 184,
+       "statuses": {
+        "200": 59330
+       },
+       "rate_limited": false,
+       "rps": 18795.5,
+       "latency_ms": {
+        "n": 59330,
+        "unit": "ms",
+        "min": 0.0316,
+        "median": 0.1744,
+        "ci95_median": [
+         0.1738,
+         0.1751
+        ],
+        "p95": 0.366,
+        "p99": 0.7238,
+        "max": 3000.6235,
+        "mean": 6.4911,
+        "stdev": 125.8402
+       },
+       "rss_kb_under_load": {
+        "n": 21,
+        "median": 51920,
+        "max": 89168
+       },
+       "loadavg_1min": 7.35
+      }
+     ],
+     "knee": {
+      "peak_rps": 26688.7,
+      "peak_concurrency": 2,
+      "degrades_at": 4,
+      "rps_at_c1": 18675.5,
+      "rps_at_max_c": 18795.5,
+      "rule": "peak = highest rps in the sweep; degrades_at = lowest concurrency above the peak whose rps is more than 5 % below it; null = no such level inside the sweep"
+     }
+    }
+   },
+   "rss_kb_under_load_max": 105968,
+   "status": "ok"
+  },
+  "caddy": {
+   "label": "caddy file-server (Go, production static file server) \u2014 REFERENCE",
+   "stack": "caddy v2 file-server over the same build/ tree and the same bytes",
+   "cwd": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/site",
+   "binary": {
+    "pinned_copy": "/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/run-serving-f_2j0_1p/pinned/caddy",
+    "source": "/opt/homebrew/bin/caddy",
+    "sha256": "46624575b4140297db1a5631227f8e0dbc06a03d7160cac474a7d2525f272d53",
+    "source_sha256_at_pin": "46624575b4140297db1a5631227f8e0dbc06a03d7160cac474a7d2525f272d53",
+    "source_mtime_utc": "2026-05-11T23:33:42+00:00",
+    "size_bytes": 46162978
+   },
+   "routes": {
+    "static": "/index.html",
+    "static_small": "/robots.txt"
+   },
+   "port_mode": "argv",
+   "precondition": {
+    "status": "ok",
+    "routes": {
+     "static": {
+      "path": "/index.html",
+      "status": 200,
+      "bytes": 63058,
+      "body_sha256": "426f031e625bac70d9d8c74ee9c8ac9c8f26fbcc6f3eaaf86f6661cab41460e2"
+     },
+     "static_small": {
+      "path": "/robots.txt",
+      "status": 200,
+      "bytes": 66,
+      "body_sha256": "2c80750189e3229263dcffde4106d4d4753ecb2c022f7980c759b988b2204312"
+     }
+    },
+    "bad": [],
+    "loadavg_1min": 7.64
+   },
+   "cold_start_ms": {
+    "n": 20,
+    "unit": "ms",
+    "min": 48.3835,
+    "median": 54.2277,
+    "ci95_median": [
+     52.5007,
+     56.7844
+    ],
+    "p95": 67.3737,
+    "p99": 68.9349,
+    "max": 68.9349,
+    "mean": 55.6382,
+    "stdev": 5.3018,
+    "trials": 20,
+    "failures": 0,
+    "loadavg_1min": 7.11,
+    "definition": "wall from just before fork/exec to the first byte of the first HTTP 200 on /index.html; the client busy-polls connect() so poll granularity is ~0.2 ms, not a fixed sleep"
+   },
+   "rss_kb_idle": {
+    "n": 10,
+    "median": 41856.0,
+    "per_pid": [
+     [
+      79918,
+      41856
+     ]
+    ],
+    "note": "sum of RSS over the server's whole process group (`ps -o rss= -g <pgid>`), sampled 1 s after the first 200 and before any load; includes forked workers, so copy-on-write pages are counted once per worker \u2014 the per-pid breakdown is given so the sum can be discounted"
+   },
+   "worker_processes": 1,
+   "rusage_idle": {
+    "needed_sigkill": false
+   },
+   "rate_limit": {
+    "loadavg_1min": 7.11,
+    "fresh_connections_before_first_non_200": null,
+    "first_non_200": null,
+    "ok_before": 600,
+    "elapsed_s": 0.295,
+    "cap": 600,
+    "path": "/index.html",
+    "method": "sequential fresh TCP connections, one request each, closed by the client"
+   },
+   "ttfb": {
+    "static": {
+     "path": "/index.html",
+     "fresh_status_counts": {
+      "200": 150
+     },
+     "reused_status_counts": {
+      "200": 1000
+     },
+     "body_bytes": [
+      63058
+     ],
+     "ttfb_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.3432,
+      "median": 0.4967,
+      "ci95_median": [
+       0.479,
+       0.5237
+      ],
+      "p95": 0.9061,
+      "p99": 1.1057,
+      "max": 1.4429,
+      "mean": 0.5626,
+      "stdev": 0.1767
+     },
+     "total_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.3648,
+      "median": 0.5232,
+      "ci95_median": [
+       0.5065,
+       0.5528
+      ],
+      "p95": 0.9893,
+      "p99": 1.1945,
+      "max": 1.4945,
+      "mean": 0.5968,
+      "stdev": 0.1923
+     },
+     "ttfb_reused_conn_ms": {
+      "n": 1000,
+      "unit": "ms",
+      "min": 0.1277,
+      "median": 0.2154,
+      "ci95_median": [
+       0.2106,
+       0.2204
+      ],
+      "p95": 0.4223,
+      "p99": 0.6208,
+      "max": 1.1095,
+      "mean": 0.2434,
+      "stdev": 0.0969
+     },
+     "fresh_conn_errors": 0,
+     "fresh_conn_error_sample": [],
+     "reused_conn_errors": 0,
+     "loadavg_1min": 7.11,
+     "definition": "fresh: connect() through to the first byte of the response, one new TCP connection per sample, connection setup INCLUDED \u2014 what a browser sees on a cold link. reused: send through first byte on an already-open keep-alive connection \u2014 the server's own service time."
+    },
+    "static_small": {
+     "path": "/robots.txt",
+     "fresh_status_counts": {
+      "200": 150
+     },
+     "reused_status_counts": {
+      "200": 1000
+     },
+     "body_bytes": [
+      66
+     ],
+     "ttfb_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.2554,
+      "median": 0.3392,
+      "ci95_median": [
+       0.3301,
+       0.3453
+      ],
+      "p95": 0.4015,
+      "p99": 0.4419,
+      "max": 0.4488,
+      "mean": 0.3373,
+      "stdev": 0.0392
+     },
+     "total_fresh_conn_ms": {
+      "n": 150,
+      "unit": "ms",
+      "min": 0.2605,
+      "median": 0.3437,
+      "ci95_median": [
+       0.3345,
+       0.3492
+      ],
+      "p95": 0.407,
+      "p99": 0.4465,
+      "max": 0.4544,
+      "mean": 0.3423,
+      "stdev": 0.0399
+     },
+     "ttfb_reused_conn_ms": {
+      "n": 1000,
+      "unit": "ms",
+      "min": 0.1702,
+      "median": 0.246,
+      "ci95_median": [
+       0.2431,
+       0.2493
+      ],
+      "p95": 0.3265,
+      "p99": 0.4256,
+      "max": 0.7285,
+      "mean": 0.2546,
+      "stdev": 0.0481
+     },
+     "fresh_conn_errors": 0,
+     "fresh_conn_error_sample": [],
+     "reused_conn_errors": 0,
+     "loadavg_1min": 7.11,
+     "definition": "fresh: connect() through to the first byte of the response, one new TCP connection per sample, connection setup INCLUDED \u2014 what a browser sees on a cold link. reused: send through first byte on an already-open keep-alive connection \u2014 the server's own service time."
+    }
+   },
+   "throughput": {
+    "static": {
+     "path": "/index.html",
+     "mode": "keep-alive, one connection per client thread, reconnect on close, server restarted before each concurrency level",
+     "client": "python3 threads, blocking sockets. Control: at c=1 the measured requests/second equals 1/mean-latency to three digits, so the client adds no measurable per-request overhead at that level. Above ~8 threads the GIL is a plausible ceiling; the caddy rows are the control \u2014 where caddy goes higher on the same route, the client was not the limit.",
+     "levels": [
+      {
+       "concurrency": 1,
+       "duration_s": 3.027,
+       "completed": 10796,
+       "errors": 0,
+       "connections_opened": 1,
+       "statuses": {
+        "200": 10796
+       },
+       "rate_limited": false,
+       "rps": 3566.0,
+       "latency_ms": {
+        "n": 10796,
+        "unit": "ms",
+        "min": 0.1339,
+        "median": 0.2504,
+        "ci95_median": [
+         0.249,
+         0.2517
+        ],
+        "p95": 0.427,
+        "p99": 0.7552,
+        "max": 7.075,
+        "mean": 0.2754,
+        "stdev": 0.1524
+       },
+       "rss_kb_under_load": {
+        "n": 25,
+        "median": 47968,
+        "max": 48848
+       },
+       "loadavg_1min": 7.58
+      },
+      {
+       "concurrency": 2,
+       "duration_s": 3.03,
+       "completed": 17145,
+       "errors": 0,
+       "connections_opened": 2,
+       "statuses": {
+        "200": 17145
+       },
+       "rate_limited": false,
+       "rps": 5657.8,
+       "latency_ms": {
+        "n": 17145,
+        "unit": "ms",
+        "min": 0.1685,
+        "median": 0.3131,
+        "ci95_median": [
+         0.3121,
+         0.3143
+        ],
+        "p95": 0.5492,
+        "p99": 1.0153,
+        "max": 3.0638,
+        "mean": 0.3473,
+        "stdev": 0.1605
+       },
+       "rss_kb_under_load": {
+        "n": 25,
+        "median": 49056,
+        "max": 49792
+       },
+       "loadavg_1min": 7.61
+      },
+      {
+       "concurrency": 4,
+       "duration_s": 3.105,
+       "completed": 21457,
+       "errors": 0,
+       "connections_opened": 4,
+       "statuses": {
+        "200": 21457
+       },
+       "rate_limited": false,
+       "rps": 6910.5,
+       "latency_ms": {
+        "n": 21457,
+        "unit": "ms",
+        "min": 0.263,
+        "median": 0.4923,
+        "ci95_median": [
+         0.4903,
+         0.4946
+        ],
+        "p95": 0.8891,
+        "p99": 1.8654,
+        "max": 5.6965,
+        "mean": 0.556,
+        "stdev": 0.2774
+       },
+       "rss_kb_under_load": {
+        "n": 25,
+        "median": 50352,
+        "max": 51152
+       },
+       "loadavg_1min": 7.8
+      },
+      {
+       "concurrency": 8,
+       "duration_s": 3.088,
+       "completed": 22042,
+       "errors": 0,
+       "connections_opened": 8,
+       "statuses": {
+        "200": 22042
+       },
+       "rate_limited": false,
+       "rps": 7138.7,
+       "latency_ms": {
+        "n": 22042,
+        "unit": "ms",
+        "min": 0.2862,
+        "median": 0.9553,
+        "ci95_median": [
+         0.9481,
+         0.962
+        ],
+        "p95": 2.1137,
+        "p99": 3.0857,
+        "max": 13.8861,
+        "mean": 1.0856,
+        "stdev": 0.5725
+       },
+       "rss_kb_under_load": {
+        "n": 25,
+        "median": 51008,
+        "max": 51728
+       },
+       "loadavg_1min": 7.43
+      },
+      {
+       "concurrency": 16,
+       "duration_s": 3.072,
+       "completed": 18175,
+       "errors": 0,
+       "connections_opened": 16,
+       "statuses": {
+        "200": 18175
+       },
+       "rate_limited": false,
+       "rps": 5916.1,
+       "latency_ms": {
+        "n": 18175,
+        "unit": "ms",
+        "min": 0.3334,
+        "median": 2.0892,
+        "ci95_median": [
+         2.059,
+         2.1142
+        ],
+        "p95": 6.4261,
+        "p99": 9.9025,
+        "max": 40.5284,
+        "mean": 2.6375,
+        "stdev": 2.0904
+       },
+       "rss_kb_under_load": {
+        "n": 24,
+        "median": 48368.0,
+        "max": 51824
+       },
+       "loadavg_1min": 7.24
+      },
+      {
+       "concurrency": 32,
+       "duration_s": 3.127,
+       "completed": 10810,
+       "errors": 0,
+       "connections_opened": 32,
+       "statuses": {
+        "200": 10810
+       },
+       "rate_limited": false,
+       "rps": 3456.9,
+       "latency_ms": {
+        "n": 10810,
+        "unit": "ms",
+        "min": 0.4261,
+        "median": 5.6422,
+        "ci95_median": [
+         5.4776,
+         5.788
+        ],
+        "p95": 28.4348,
+        "p99": 49.7445,
+        "max": 107.1941,
+        "mean": 8.8858,
+        "stdev": 10.0537
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 51760,
+        "max": 53376
+       },
+       "loadavg_1min": 7.22
+      },
+      {
+       "concurrency": 64,
+       "duration_s": 3.138,
+       "completed": 9783,
+       "errors": 0,
+       "connections_opened": 64,
+       "statuses": {
+        "200": 9783
+       },
+       "rate_limited": false,
+       "rps": 3118.0,
+       "latency_ms": {
+        "n": 9783,
+        "unit": "ms",
+        "min": 0.4645,
+        "median": 11.911,
+        "ci95_median": [
+         11.5045,
+         12.3422
+        ],
+        "p95": 65.8049,
+        "p99": 100.3372,
+        "max": 224.0562,
+        "mean": 19.7373,
+        "stdev": 22.2274
+       },
+       "rss_kb_under_load": {
+        "n": 24,
+        "median": 57240.0,
+        "max": 58880
+       },
+       "loadavg_1min": 6.96
+      },
+      {
+       "concurrency": 128,
+       "duration_s": 3.14,
+       "completed": 6690,
+       "errors": 0,
+       "connections_opened": 128,
+       "statuses": {
+        "200": 6690
+       },
+       "rate_limited": false,
+       "rps": 2130.5,
+       "latency_ms": {
+        "n": 6690,
+        "unit": "ms",
+        "min": 0.4462,
+        "median": 34.5961,
+        "ci95_median": [
+         33.0795,
+         36.0492
+        ],
+        "p95": 192.9734,
+        "p99": 281.0634,
+        "max": 503.0817,
+        "mean": 57.7721,
+        "stdev": 64.5884
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 62768,
+        "max": 64304
+       },
+       "loadavg_1min": 6.64
+      }
+     ],
+     "knee": {
+      "peak_rps": 7138.7,
+      "peak_concurrency": 8,
+      "degrades_at": 16,
+      "rps_at_c1": 3566.0,
+      "rps_at_max_c": 2130.5,
+      "rule": "peak = highest rps in the sweep; degrades_at = lowest concurrency above the peak whose rps is more than 5 % below it; null = no such level inside the sweep"
+     }
+    },
+    "static_small": {
+     "path": "/robots.txt",
+     "mode": "keep-alive, one connection per client thread, reconnect on close, server restarted before each concurrency level",
+     "client": "python3 threads, blocking sockets. Control: at c=1 the measured requests/second equals 1/mean-latency to three digits, so the client adds no measurable per-request overhead at that level. Above ~8 threads the GIL is a plausible ceiling; the caddy rows are the control \u2014 where caddy goes higher on the same route, the client was not the limit.",
+     "levels": [
+      {
+       "concurrency": 1,
+       "duration_s": 3.004,
+       "completed": 12100,
+       "errors": 0,
+       "connections_opened": 1,
+       "statuses": {
+        "200": 12100
+       },
+       "rate_limited": false,
+       "rps": 4028.0,
+       "latency_ms": {
+        "n": 12100,
+        "unit": "ms",
+        "min": 0.1293,
+        "median": 0.2267,
+        "ci95_median": [
+         0.2253,
+         0.2284
+        ],
+        "p95": 0.3512,
+        "p99": 0.5368,
+        "max": 2.9067,
+        "mean": 0.246,
+        "stdev": 0.124
+       },
+       "rss_kb_under_load": {
+        "n": 25,
+        "median": 48048,
+        "max": 48544
+       },
+       "loadavg_1min": 6.83
+      },
+      {
+       "concurrency": 2,
+       "duration_s": 3.093,
+       "completed": 16415,
+       "errors": 0,
+       "connections_opened": 2,
+       "statuses": {
+        "200": 16415
+       },
+       "rate_limited": false,
+       "rps": 5307.8,
+       "latency_ms": {
+        "n": 16415,
+        "unit": "ms",
+        "min": 0.1559,
+        "median": 0.3192,
+        "ci95_median": [
+         0.3179,
+         0.3204
+        ],
+        "p95": 0.5995,
+        "p99": 1.1821,
+        "max": 5.1202,
+        "mean": 0.363,
+        "stdev": 0.2117
+       },
+       "rss_kb_under_load": {
+        "n": 25,
+        "median": 49072,
+        "max": 49248
+       },
+       "loadavg_1min": 7.08
+      },
+      {
+       "concurrency": 4,
+       "duration_s": 3.068,
+       "completed": 25163,
+       "errors": 0,
+       "connections_opened": 4,
+       "statuses": {
+        "200": 25163
+       },
+       "rate_limited": false,
+       "rps": 8202.9,
+       "latency_ms": {
+        "n": 25163,
+        "unit": "ms",
+        "min": 0.2425,
+        "median": 0.4317,
+        "ci95_median": [
+         0.4304,
+         0.4331
+        ],
+        "p95": 0.6995,
+        "p99": 1.4582,
+        "max": 8.2734,
+        "mean": 0.4746,
+        "stdev": 0.2141
+       },
+       "rss_kb_under_load": {
+        "n": 25,
+        "median": 49696,
+        "max": 50048
+       },
+       "loadavg_1min": 7.24
+      },
+      {
+       "concurrency": 8,
+       "duration_s": 3.013,
+       "completed": 21015,
+       "errors": 0,
+       "connections_opened": 8,
+       "statuses": {
+        "200": 21015
+       },
+       "rate_limited": false,
+       "rps": 6973.8,
+       "latency_ms": {
+        "n": 21015,
+        "unit": "ms",
+        "min": 0.2528,
+        "median": 0.9815,
+        "ci95_median": [
+         0.9729,
+         0.9904
+        ],
+        "p95": 2.3222,
+        "p99": 3.3981,
+        "max": 10.6367,
+        "mean": 1.139,
+        "stdev": 0.6276
+       },
+       "rss_kb_under_load": {
+        "n": 24,
+        "median": 51008.0,
+        "max": 51616
+       },
+       "loadavg_1min": 8.26
+      },
+      {
+       "concurrency": 16,
+       "duration_s": 3.104,
+       "completed": 17520,
+       "errors": 0,
+       "connections_opened": 16,
+       "statuses": {
+        "200": 17520
+       },
+       "rate_limited": false,
+       "rps": 5644.8,
+       "latency_ms": {
+        "n": 17520,
+        "unit": "ms",
+        "min": 0.3058,
+        "median": 2.0561,
+        "ci95_median": [
+         2.0215,
+         2.0928
+        ],
+        "p95": 7.037,
+        "p99": 11.453,
+        "max": 69.4203,
+        "mean": 2.7361,
+        "stdev": 2.44
+       },
+       "rss_kb_under_load": {
+        "n": 24,
+        "median": 50872.0,
+        "max": 51744
+       },
+       "loadavg_1min": 9.12
+      },
+      {
+       "concurrency": 32,
+       "duration_s": 3.131,
+       "completed": 14650,
+       "errors": 0,
+       "connections_opened": 32,
+       "statuses": {
+        "200": 14650
+       },
+       "rate_limited": false,
+       "rps": 4679.1,
+       "latency_ms": {
+        "n": 14650,
+        "unit": "ms",
+        "min": 0.306,
+        "median": 4.0466,
+        "ci95_median": [
+         3.9442,
+         4.1457
+        ],
+        "p95": 20.9361,
+        "p99": 33.1563,
+        "max": 62.8619,
+        "mean": 6.5554,
+        "stdev": 7.1213
+       },
+       "rss_kb_under_load": {
+        "n": 25,
+        "median": 54368,
+        "max": 55280
+       },
+       "loadavg_1min": 9.59
+      },
+      {
+       "concurrency": 64,
+       "duration_s": 3.125,
+       "completed": 9682,
+       "errors": 0,
+       "connections_opened": 64,
+       "statuses": {
+        "200": 9682
+       },
+       "rate_limited": false,
+       "rps": 3097.8,
+       "latency_ms": {
+        "n": 9682,
+        "unit": "ms",
+        "min": 0.4281,
+        "median": 11.8249,
+        "ci95_median": [
+         11.386,
+         12.3385
+        ],
+        "p95": 66.2973,
+        "p99": 109.1189,
+        "max": 221.9816,
+        "mean": 19.8856,
+        "stdev": 23.0715
+       },
+       "rss_kb_under_load": {
+        "n": 24,
+        "median": 56960.0,
+        "max": 57872
+       },
+       "loadavg_1min": 9.94
+      },
+      {
+       "concurrency": 128,
+       "duration_s": 3.116,
+       "completed": 7184,
+       "errors": 0,
+       "connections_opened": 128,
+       "statuses": {
+        "200": 7184
+       },
+       "rate_limited": false,
+       "rps": 2305.7,
+       "latency_ms": {
+        "n": 7184,
+        "unit": "ms",
+        "min": 0.417,
+        "median": 32.6699,
+        "ci95_median": [
+         31.1928,
+         34.1356
+        ],
+        "p95": 178.2081,
+        "p99": 251.819,
+        "max": 487.9635,
+        "mean": 53.7071,
+        "stdev": 58.94
+       },
+       "rss_kb_under_load": {
+        "n": 23,
+        "median": 57184,
+        "max": 60368
+       },
+       "loadavg_1min": 17.31
+      }
+     ],
+     "knee": {
+      "peak_rps": 8202.9,
+      "peak_concurrency": 4,
+      "degrades_at": 8,
+      "rps_at_c1": 4028.0,
+      "rps_at_max_c": 2305.7,
+      "rule": "peak = highest rps in the sweep; degrades_at = lowest concurrency above the peak whose rps is more than 5 % below it; null = no such level inside the sweep"
+     }
+    }
+   },
+   "rss_kb_under_load_max": 64304,
+   "status": "ok"
+  }
+ },
+ "build": {
+  "website": {
+   "status": "ok",
+   "returncode": 0,
+   "wall_s": 10.83,
+   "n": 1,
+   "target": "website",
+   "target_bytes": 929624,
+   "make_args": [
+    "make",
+    "TKC=/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/tkc_pin_90aavfkw/tkc",
+    "TOKE=/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/tkc_pin_90aavfkw/tkc"
+   ],
+   "loadavg_1min": 15.5,
+   "note": "single clean build (`make clean && make`) in a throwaway rsync copy of the repo, so no agent's working tree is touched; n=1, and the machine was loaded \u2014 treat as an order of magnitude, not a gate"
+  },
+  "ooke": {
+   "status": "ok",
+   "returncode": 0,
+   "wall_s": 9.93,
+   "n": 1,
+   "target": "ooke-toke",
+   "target_bytes": 879928,
+   "make_args": [
+    "make",
+    "TKC=/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/tkc_pin_90aavfkw/tkc",
+    "TOKE=/var/folders/gf/4ylkzm4d3bg50537kywj3pph0000gp/T/tkc_pin_90aavfkw/tkc"
+   ],
+   "loadavg_1min": 14.12,
+   "note": "single clean build (`make clean && make`) in a throwaway rsync copy of the repo, so no agent's working tree is touched; n=1, and the machine was loaded \u2014 treat as an order of magnitude, not a gate"
+  }
+ },
+ "binary_sizes": {
+  "website": {
+   "path": "/private/tmp/toke-1346/site-pinned/website",
+   "bytes": 929624,
+   "sha256": "490efa472d1b57cdb19619bd563486f61e010ee6db85c9be797fdcf19c96c7a8"
+  },
+  "ooke": {
+   "path": "/Users/matthew.watt/tk/toke-ooke/ooke-toke",
+   "bytes": 879928,
+   "sha256": "c74d38121b61c11db0db303cb9da2974b5f75f4df98e27b4e3bc24675bdfbba6"
+  },
+  "caddy": {
+   "path": "/opt/homebrew/bin/caddy",
+   "bytes": 46162978,
+   "sha256": "46624575b4140297db1a5631227f8e0dbc06a03d7160cac474a7d2525f272d53"
+  }
+ },
+ "memory_growth_probe": {
+  "note": "run as a separate invocation of probe_memory_growth() immediately after the main run, on the same pinned site snapshot and freshly pinned binaries; the concurrency sweep varies request rate and connection count together, so it cannot separate a leak from allocation churn \u2014 this can",
+  "loadavg_1min": 5.63,
+  "servers": {
+   "website": {
+    "static": {
+     "path": "/index.html",
+     "completed": 20000,
+     "series": [
+      {
+       "requests": 0,
+       "rss_kb": 10272,
+       "procs": 3
+      },
+      {
+       "requests": 2000,
+       "rss_kb": 143072,
+       "procs": 3,
+       "elapsed_s": 0.67
+      },
+      {
+       "requests": 5000,
+       "rss_kb": 339376,
+       "procs": 3,
+       "elapsed_s": 1.75
+      },
+      {
+       "requests": 10000,
+       "rss_kb": 231872,
+       "procs": 3,
+       "elapsed_s": 4.08
+      },
+      {
+       "requests": 20000,
+       "rss_kb": 226144,
+       "procs": 3,
+       "elapsed_s": 7.85
+      }
+     ],
+     "monotonic": false,
+     "loadavg_1min": 5.64,
+     "method": "one keep-alive connection, RSS = sum over the process group",
+     "reading": "monotonic true would indicate a leak; false means the figure is an allocation high-water mark that rises and falls"
+    },
+    "templated": {
+     "path": "/",
+     "completed": 20000,
+     "series": [
+      {
+       "requests": 0,
+       "rss_kb": 10272,
+       "procs": 3
+      },
+      {
+       "requests": 2000,
+       "rss_kb": 143856,
+       "procs": 3,
+       "elapsed_s": 0.61
+      },
+      {
+       "requests": 5000,
+       "rss_kb": 340368,
+       "procs": 3,
+       "elapsed_s": 1.48
+      },
+      {
+       "requests": 10000,
+       "rss_kb": 667568,
+       "procs": 3,
+       "elapsed_s": 3.09
+      },
+      {
+       "requests": 20000,
+       "rss_kb": 161952,
+       "procs": 3,
+       "elapsed_s": 7.46
+      }
+     ],
+     "monotonic": false,
+     "loadavg_1min": 5.32,
+     "method": "one keep-alive connection, RSS = sum over the process group",
+     "reading": "monotonic true would indicate a leak; false means the figure is an allocation high-water mark that rises and falls"
+    },
+    "api": {
+     "path": "/api/health",
+     "completed": 20000,
+     "series": [
+      {
+       "requests": 0,
+       "rss_kb": 10272,
+       "procs": 3
+      },
+      {
+       "requests": 2000,
+       "rss_kb": 14416,
+       "procs": 3,
+       "elapsed_s": 0.16
+      },
+      {
+       "requests": 5000,
+       "rss_kb": 17888,
+       "procs": 3,
+       "elapsed_s": 0.34
+      },
+      {
+       "requests": 10000,
+       "rss_kb": 23728,
+       "procs": 3,
+       "elapsed_s": 0.62
+      },
+      {
+       "requests": 20000,
+       "rss_kb": 36032,
+       "procs": 3,
+       "elapsed_s": 1.11
+      }
+     ],
+     "monotonic": true,
+     "loadavg_1min": 4.89,
+     "method": "one keep-alive connection, RSS = sum over the process group",
+     "reading": "monotonic true would indicate a leak; false means the figure is an allocation high-water mark that rises and falls"
+    },
+    "templated_small": {
+     "path": "/ooke",
+     "completed": 20000,
+     "series": [
+      {
+       "requests": 0,
+       "rss_kb": 10176,
+       "procs": 3
+      },
+      {
+       "requests": 2000,
+       "rss_kb": 46896,
+       "procs": 3,
+       "elapsed_s": 0.44
+      },
+      {
+       "requests": 5000,
+       "rss_kb": 99712,
+       "procs": 3,
+       "elapsed_s": 1.02
+      },
+      {
+       "requests": 10000,
+       "rss_kb": 185888,
+       "procs": 3,
+       "elapsed_s": 2.15
+      },
+      {
+       "requests": 20000,
+       "rss_kb": 308208,
+       "procs": 3,
+       "elapsed_s": 4.25
+      }
+     ],
+     "monotonic": true,
+     "loadavg_1min": 4.98,
+     "method": "one keep-alive connection, RSS = sum over the process group",
+     "reading": "monotonic true would indicate a leak; false means the figure is an allocation high-water mark that rises and falls"
+    },
+    "static_small": {
+     "path": "/robots.txt",
+     "completed": 20000,
+     "series": [
+      {
+       "requests": 0,
+       "rss_kb": 10192,
+       "procs": 3
+      },
+      {
+       "requests": 2000,
+       "rss_kb": 15808,
+       "procs": 3,
+       "elapsed_s": 0.25
+      },
+      {
+       "requests": 5000,
+       "rss_kb": 20656,
+       "procs": 3,
+       "elapsed_s": 0.63
+      },
+      {
+       "requests": 10000,
+       "rss_kb": 26960,
+       "procs": 3,
+       "elapsed_s": 1.27
+      },
+      {
+       "requests": 20000,
+       "rss_kb": 40128,
+       "procs": 3,
+       "elapsed_s": 2.57
+      }
+     ],
+     "monotonic": true,
+     "loadavg_1min": 5.3,
+     "method": "one keep-alive connection, RSS = sum over the process group",
+     "reading": "monotonic true would indicate a leak; false means the figure is an allocation high-water mark that rises and falls"
+    }
+   },
+   "ooke": {
+    "page_prerendered": {
+     "path": "/",
+     "completed": 20000,
+     "series": [
+      {
+       "requests": 0,
+       "rss_kb": 7744,
+       "procs": 5
+      },
+      {
+       "requests": 2000,
+       "rss_kb": 11584,
+       "procs": 5,
+       "elapsed_s": 0.13
+      },
+      {
+       "requests": 5000,
+       "rss_kb": 17728,
+       "procs": 5,
+       "elapsed_s": 0.31
+      },
+      {
+       "requests": 10000,
+       "rss_kb": 23616,
+       "procs": 5,
+       "elapsed_s": 0.58
+      },
+      {
+       "requests": 20000,
+       "rss_kb": 37392,
+       "procs": 5,
+       "elapsed_s": 1.12
+      }
+     ],
+     "monotonic": true,
+     "loadavg_1min": 5.59,
+     "method": "one keep-alive connection, RSS = sum over the process group",
+     "reading": "monotonic true would indicate a leak; false means the figure is an allocation high-water mark that rises and falls"
+    },
+    "api": {
+     "path": "/api/health",
+     "completed": 20000,
+     "series": [
+      {
+       "requests": 0,
+       "rss_kb": 7728,
+       "procs": 5
+      },
+      {
+       "requests": 2000,
+       "rss_kb": 12672,
+       "procs": 5,
+       "elapsed_s": 0.15
+      },
+      {
+       "requests": 5000,
+       "rss_kb": 18992,
+       "procs": 5,
+       "elapsed_s": 0.33
+      },
+      {
+       "requests": 10000,
+       "rss_kb": 24800,
+       "procs": 5,
+       "elapsed_s": 0.61
+      },
+      {
+       "requests": 20000,
+       "rss_kb": 36512,
+       "procs": 5,
+       "elapsed_s": 1.1
+      }
+     ],
+     "monotonic": true,
+     "loadavg_1min": 5.47,
+     "method": "one keep-alive connection, RSS = sum over the process group",
+     "reading": "monotonic true would indicate a leak; false means the figure is an allocation high-water mark that rises and falls"
+    }
+   },
+   "caddy": {
+    "static": {
+     "path": "/index.html",
+     "completed": 20000,
+     "series": [
+      {
+       "requests": 0,
+       "rss_kb": 42048,
+       "procs": 1
+      },
+      {
+       "requests": 2000,
+       "rss_kb": 47200,
+       "procs": 1,
+       "elapsed_s": 0.48
+      },
+      {
+       "requests": 5000,
+       "rss_kb": 48272,
+       "procs": 1,
+       "elapsed_s": 1.16
+      },
+      {
+       "requests": 10000,
+       "rss_kb": 48704,
+       "procs": 1,
+       "elapsed_s": 2.36
+      },
+      {
+       "requests": 20000,
+       "rss_kb": 48944,
+       "procs": 1,
+       "elapsed_s": 4.65
+      }
+     ],
+     "monotonic": true,
+     "loadavg_1min": 5.43,
+     "method": "one keep-alive connection, RSS = sum over the process group",
+     "reading": "monotonic true would indicate a leak; false means the figure is an allocation high-water mark that rises and falls"
+    },
+    "static_small": {
+     "path": "/robots.txt",
+     "completed": 20000,
+     "series": [
+      {
+       "requests": 0,
+       "rss_kb": 42256,
+       "procs": 1
+      },
+      {
+       "requests": 2000,
+       "rss_kb": 46576,
+       "procs": 1,
+       "elapsed_s": 0.44
+      },
+      {
+       "requests": 5000,
+       "rss_kb": 48336,
+       "procs": 1,
+       "elapsed_s": 1.11
+      },
+      {
+       "requests": 10000,
+       "rss_kb": 46096,
+       "procs": 1,
+       "elapsed_s": 2.28
+      },
+      {
+       "requests": 20000,
+       "rss_kb": 45440,
+       "procs": 1,
+       "elapsed_s": 4.41
+      }
+     ],
+     "monotonic": false,
+     "loadavg_1min": 5.63,
+     "method": "one keep-alive connection, RSS = sum over the process group",
+     "reading": "monotonic true would indicate a leak; false means the figure is an allocation high-water mark that rises and falls"
+    }
+   }
+  }
+ }
+}
