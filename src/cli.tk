@@ -8,7 +8,7 @@ i=serve:ooke.serve;
 i=build:ooke.build;
 i=handlers:ooke.handlers;
 
-f=cliprintusage():void{
+f=cliprintusage():i64{
   (log.info("ooke - toke CMS and web framework";@()));
   (log.info("";@()));
   (log.info("Usage:";@()));
@@ -24,11 +24,13 @@ f=cliprintusage():void{
   (log.info("";@()));
   (log.info("Options:";@()));
   (log.info("  --help       show this help";@()));
-  (log.info("  --version    print version";@()))
+  (log.info("  --version    print version";@()));
+  <0
 };
 
-f=cliprintversion():void{
-  (log.info("ooke 3.0.0-dev";@()))
+f=cliprintversion():i64{
+  (log.info("ooke 3.0.0-dev";@()));
+  <0
 };
 
 f=clinew(name:$str):i64{

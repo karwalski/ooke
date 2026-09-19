@@ -10,7 +10,7 @@
     {"kind": "type", "name": "validateerr", "fields": [{"name": "msg", "type": "str"}]},
     {"kind": "func", "name": "validateloadmodel", "params": ["str", "str"], "return": "modeldef", "error": "validateerr"},
     {"kind": "func", "name": "validatecontent", "params": ["modeldef", "[str:str]", "str"], "return": "valresult"},
-    {"kind": "func", "name": "validatelogresult", "params": ["valresult"], "return": "void"},
+    {"kind": "func", "name": "validatelogresult", "params": ["valresult"], "return": "i64"},
     {"kind": "func", "name": "validatemerge", "params": ["valresult", "valresult"], "return": "valresult"},
     {"kind": "func", "name": "validateempty", "params": [], "return": "valresult"}
   ]

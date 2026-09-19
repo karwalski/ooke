@@ -1,6 +1,6 @@
 m=pages.api.hello;
 i=http:std.http;
 
-f=post(req:http.$req):http.$res{
-  <http.$res{status:200;body:req.body;headers:@()};
+f=post(req:i64):i64{
+  <http.resok(http.reqbody(req))
 };

@@ -207,25 +207,50 @@ $(BIN): $(MAIN_LL) $(OOKE_LL)
 
 interfaces: $(OOKE_TKI)
 
+# check — type-check EVERY .tk file in the repo, standalone, from the repo root.
+#
+# Story 134.2. The old rule covered 12 of 30 files, piped through `head -5` and
+# ended in `|| true`, so it could not fail (defect D7). This one covers all of
+# them and exits non-zero on the first error.
+#
+# The invocation that makes a repo-root check work is `-I $(SRC)`: ooke's .tki
+# interfaces live in src/, and tkc resolves .tki relative to the working
+# directory. The build rules hide this by doing `cd $(SRC)` first; anything run
+# from the repo root — a human, a linter, CI — needs the flag (defect D10).
+# The environment equivalent is TKC_INTERFACE_PATH=src.
+TK_SOURCES := $(shell find . -name '*.tk' -not -path './.git/*' | sort)
+
 check:
-	@for f in $(SRC)/config.tk $(SRC)/store.tk $(SRC)/router.tk \
-	           $(SRC)/template.tk $(SRC)/validate.tk $(SRC)/repair.tk $(SRC)/build.tk $(SRC)/serve.tk \
-	           $(SRC)/run.tk \
-	           $(SRC)/apihealth.tk $(SRC)/cli.tk $(SRC)/main.tk; do \
-	  echo "--- $$f"; \
-	  cd $(SRC) && $(TKC) --check $$(basename $$f) 2>&1 | head -5 || true; \
-	  cd ..; \
-	done
+	@echo "=== tkc --check -I $(SRC) over $(words $(TK_SOURCES)) file(s) ==="
+	@pass=0; fail=0; \
+	for f in $(TK_SOURCES); do \
+	  if out=$$($(TKC) --check --diag-text -I $(SRC) "$$f" 2>&1); then \
+	    pass=$$((pass+1)); \
+	  else \
+	    fail=$$((fail+1)); echo "  FAIL $$f"; echo "$$out" | sed 's/^/        /'; \
+	  fi; \
+	done; \
+	echo "  $$pass passed, $$fail failed"; \
+	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions $(BIN) test-check test-run
+test: check-versions check $(BIN) test-check test-run
 
+# test-check — type-check the test programs.
+#
+# Story 134.2. The old rule counted only diagnostics that were simultaneously
+# severity=error AND stage=parse AND not E2030 — i.e. it filtered out the very
+# errors that were breaking the repo, and ignored every name-resolution, type
+# and codegen error (defect D8). It is now just `check` restricted to test/,
+# with no filtering: tkc's own exit status decides.
 test-check:
-	@echo "=== Syntax check all test files ==="
+	@echo "=== Type check all test files ==="
 	@pass=0; fail=0; for f in test/*/test_*.tk; do \
-	  errs=$$($(TKC) --check $$f 2>&1 | grep '"severity":"error"' | grep '"stage":"parse"' | grep -v 'E2030' | grep -c '"error_code"'); \
-	  if [ "$$errs" = "0" ]; then pass=$$((pass+1)); \
-	  else fail=$$((fail+1)); echo "  FAIL: $$f"; fi; \
+	  if out=$$($(TKC) --check --diag-text -I $(SRC) "$$f" 2>&1); then \
+	    pass=$$((pass+1)); \
+	  else \
+	    fail=$$((fail+1)); echo "  FAIL: $$f"; echo "$$out" | sed 's/^/        /'; \
+	  fi; \
 	done; \
 	echo "  $$pass passed, $$fail failed"; \
 	[ "$$fail" = "0" ]

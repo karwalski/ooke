@@ -22,7 +22,7 @@ f=buildoutputpath(pattern:$str;outputdir:$str):$str{
   }
 };
 
-f=buildpage(templatepath:$str;pattern:$str;sitename:$str;siteurl:$str;sitelanguage:$str;buildoutput:$str;templatesdir:$str):void!$builderr{
+f=buildpage(templatepath:$str;pattern:$str;sitename:$str;siteurl:$str;sitelanguage:$str;buildoutput:$str;templatesdir:$str):i64!$builderr{
   let ctx=@(
     "site.name":sitename;
     "site.url":siteurl;
@@ -32,7 +32,8 @@ f=buildpage(templatepath:$str;pattern:$str;sitename:$str;siteurl:$str;sitelangua
   let outpath=buildoutputpath(pattern;buildoutput);
   let parentdir=path.dir(outpath);
   let mkr=file.mkdir(parentdir)!$builderr;
-  let wr=file.write(outpath;html)!$builderr
+  let wr=file.write(outpath;html)!$builderr;
+  <0
 };
 
 f=buildinlinecssonce(html:$str;templatesdir:$str):$str{

@@ -2,6 +2,7 @@ m=page.index;
 i=http:std.http;
 i=tpl:ooke.template;
 
-f=get(req:http.$req):http.$res{
-  <tpl.renderfile("templates/index.tkt"; @("page.title":"ooke test page"));
+f=get(req:i64):i64{
+  let html=mt tpl.tplrenderfile("templates/index.tkt";@("page.title":"ooke test page");"templates") {$ok:h h;$err:e ""};
+  <http.resok(html)
 };

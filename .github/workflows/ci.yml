@@ -1,10 +1,11 @@
 name: CI
 
 on:
+  # Story 134.2 (defect D9): CI used to trigger only on `main`, so every feature
+  # branch — including the one ooke's HEAD has lived on — was never verified.
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
-    branches: [main]
   # Drift gate (story 134.7): ooke builds against toke HEAD, and toke moves
   # without ooke moving. A daily run catches an upstream break the day it
   # happens rather than at the next ooke commit.
@@ -59,8 +60,22 @@ jobs:
                        -I${TOKE_ROOT}/stdlib/vendor/tomlc99 \
                        -Wno-pedantic -DTK_HAVE_OPENSSL"
 
-      # ── Tests ────────────────────────────────────────────────────────────
-      - name: Syntax check test files
+      # ── Gates ────────────────────────────────────────────────────────────
+      # Story 134.2: `make check` type-checks every .tk file in the repo from
+      # the repo root with `-I src`. It is allowed to fail the job — the old
+      # step ended in `|| echo ...`, which is why defects D7/D8/D11 survived.
+      - name: Type check every .tk file
+        run: |
+          TKC_PATH="${GITHUB_WORKSPACE}/../toke/toke"
+          TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
+
+          make check \
+               TKC="${TKC_PATH}" \
+               TOKE_ROOT="${TOKE_ROOT}" \
+               TOKE_STDLIB="${TOKE_ROOT}/src/stdlib" \
+               TOKE_VENDOR="${TOKE_ROOT}/stdlib/vendor"
+
+      - name: Type check test files
         run: |
           TKC_PATH="${GITHUB_WORKSPACE}/../toke/toke"
           TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
@@ -69,7 +84,7 @@ jobs:
                TKC="${TKC_PATH}" \
                TOKE_ROOT="${TOKE_ROOT}" \
                TOKE_STDLIB="${TOKE_ROOT}/src/stdlib" \
-               TOKE_VENDOR="${TOKE_ROOT}/stdlib/vendor" || echo "test-check completed with warnings"
+               TOKE_VENDOR="${TOKE_ROOT}/stdlib/vendor"
 
       - name: Verify binary runs
         run: |

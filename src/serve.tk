@@ -10,17 +10,19 @@ i=store:ooke.store;
 
 t=$serveerr{msg:$str};
 
-f=servegetjson(pattern:$str;json:$str):void{
+f=servegetjson(pattern:$str;json:$str):i64{
   (http.getstaticmime(pattern;json;"application/json"));
-  (log.info(str.concat("static json GET: ";pattern);@()))
+  (log.info(str.concat("static json GET: ";pattern);@()));
+  <0
 };
 
-f=servepostjson(pattern:$str;json:$str):void{
+f=servepostjson(pattern:$str;json:$str):i64{
   (http.postjson(pattern;json));
-  (log.info(str.concat("static json POST: ";pattern);@()))
+  (log.info(str.concat("static json POST: ";pattern);@()));
+  <0
 };
 
-f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;handledpaths:@$str):void{
+f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;handledpaths:@$str):i64{
   let routes=mt ookerouter.routerscan(pagesdir) {$ok:r r;$err:e @($route)};
   lp(let i=0;i<routes.len;i=i+1){
     let r=routes.get(i);
@@ -118,7 +120,8 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
         (http.postecho(apipath))
       }
     }el{}
-  }
+  };
+  <0
 };
 
 f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;corsorigins:$str;handledpaths:@$str):i64!$serveerr{

@@ -3,8 +3,8 @@
   "module": "ooke.cli",
   "version": "1.0.0",
   "exports": [
-    {"kind": "func", "name": "cliprintusage", "params": [], "return": "void"},
-    {"kind": "func", "name": "cliprintversion", "params": [], "return": "void"},
+    {"kind": "func", "name": "cliprintusage", "params": [], "return": "i64"},
+    {"kind": "func", "name": "cliprintversion", "params": [], "return": "i64"},
     {"kind": "func", "name": "clinew", "params": ["str"], "return": "i64"},
     {"kind": "func", "name": "cligen", "params": ["str", "str"], "return": "i64"},
     {"kind": "func", "name": "retcolon", "params": ["str"], "return": "str"},

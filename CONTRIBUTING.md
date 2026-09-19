@@ -7,7 +7,9 @@ Thanks for your interest in contributing to ooke.
 1. Fork the repository.
 2. Clone your fork and create a branch from `main`.
 3. Make your changes and ensure `make` builds cleanly.
-4. Run `make test` and confirm all tests pass.
+4. Run `make check` — it type-checks every `.tk` file in the repo from the
+   repo root (`tkc --check -I src`). See `docs/checking.md`.
+5. Run `make test` and confirm all tests pass.
 5. Open a pull request with a clear description of your changes.
 
 ## Language Rule

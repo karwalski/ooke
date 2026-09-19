@@ -22,7 +22,7 @@ f=testcfgdefault():bool{
   (test.eq(cfg.serverworkers;0));
   (test.eq(cfg.servercorsorigins;""));
   (test.eq(cfg.storebackend;"flat"));
-  (test.eq(cfg.logaccess;"logs/access.log"));
+  (test.eq(cfg.logaccessformat;"combined"));
   (test.eq(cfg.logmaxlines;10000));
   (test.eq(cfg.logmaxagedays;30));
   (test.eq(cfg.apiprefix;""));
