@@ -74,10 +74,11 @@ cp ooke-toke "$STAGE/ooke"
 cp VERSION LICENSE README.md "$STAGE/"
 cp docs/install.md docs/versioning.md docs/public-api.md \
    docs/release-notes-3.0.0.md CHANGELOG.md "$STAGE/"
-tar -czf "$DIST/$STAMP-$PLATFORM.tar.gz" -C "$DIST" "$STAMP-$PLATFORM"
-rm -rf "$STAGE"
 
-# ── 4. Manifest ─────────────────────────────────────────────────────────────
+# ── 4. Manifest — written INTO the tarball as well as beside it ─────────────
+# Beside it is for whoever is choosing a download; inside it is for whoever
+# has to reproduce the build six months later, by which time the two files
+# will have been separated.
 say "Manifest"
 {
   echo "ooke release manifest"
@@ -94,7 +95,11 @@ say "Manifest"
   echo "                 $(sed -n 's/^mintokedate *= *"\(.*\)"/mintokedate   \1/p'   ooke.toml)"
   echo "                 $(sed -n 's/^mintokecommit *= *"\(.*\)"/mintokecommit \1/p' ooke.toml)"
 } > "$DIST/$STAMP.manifest.txt"
+cp "$DIST/$STAMP.manifest.txt" "$STAGE/MANIFEST.txt"
 cat "$DIST/$STAMP.manifest.txt"
+
+tar -czf "$DIST/$STAMP-$PLATFORM.tar.gz" -C "$DIST" "$STAMP-$PLATFORM"
+rm -rf "$STAGE"
 
 # ── 5. Checksums ────────────────────────────────────────────────────────────
 ( cd "$DIST" && shasum -a 256 ./*.tar.gz ./*.manifest.txt > SHA256SUMS )
