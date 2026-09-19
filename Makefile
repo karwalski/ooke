@@ -128,7 +128,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -207,6 +207,59 @@ $(BIN): $(MAIN_LL) $(OOKE_LL)
 
 interfaces: $(OOKE_TKI)
 
+# ── Test-only assertion helper (story 134.17) ────────────────────────────
+# ookeassert is not part of the product, so it is not in ALL_MODS and is not
+# linked into $(BIN). It is built here rather than in test/run_tests.sh so
+# that `check` and `test-check` can resolve `i=chk:ookeassert;` as well.
+# tkc writes the .tki beside the SOURCE, hence test/support/ookeassert.tki and
+# the -I test/support on every rule that type-checks a test.
+ASSERT_SRC := test/support/ookeassert.tk
+ASSERT_TKI := test/support/ookeassert.tki
+ASSERT_LL  := build/ookeassert
+ASSERT_INC := test/support
+
+# ── Story 134.21: test-support preflight ─────────────────────────
+# $(ASSERT_SRC) is TRACKED (see .gitignore).  It had never been added, so
+# test/support/ was absent from every fresh clone and the suite died on
+# `make: *** No rule to make target 'test/support/ookeassert.tk'` before a
+# single test ran — a message that names the file but not the cause or the
+# cure.  Stop here instead, by name.  Cheap enough to run every time.
+TEST_SUPPORT_FILES := $(ASSERT_SRC)
+
+test-support-check:
+	@missing=""; \
+	for f in $(TEST_SUPPORT_FILES); do \
+	  [ -f "$$f" ] || missing="$$missing $$f"; \
+	done; \
+	if [ -n "$$missing" ]; then \
+	  echo "" >&2; \
+	  echo "ERROR: ooke's test-support sources are missing from this checkout." >&2; \
+	  echo "" >&2; \
+	  for f in $$missing; do echo "  missing: $$f" >&2; done; \
+	  echo "" >&2; \
+	  echo "  test/support holds the assertion helpers every test under" >&2; \
+	  echo "  test/*/test_*.tk imports as 'i=chk:ookeassert;'.  Without them" >&2; \
+	  echo "  'make check', 'make test-check' and test/run_tests.sh all abort" >&2; \
+	  echo "  before a single test runs." >&2; \
+	  echo "" >&2; \
+	  echo "  These files are TRACKED in this repository - they are not a" >&2; \
+	  echo "  submodule, not generated and there is no fetch step.  If they are" >&2; \
+	  echo "  missing, the checkout is incomplete or they were deleted locally." >&2; \
+	  echo "  Restore them with:" >&2; \
+	  echo "      git checkout -- test/support" >&2; \
+	  echo "" >&2; \
+	  echo "  (test/support/ookeassert.tki is NOT tracked and is not the problem:" >&2; \
+	  echo "   this Makefile regenerates it from ookeassert.tk.  See .gitignore.)" >&2; \
+	  echo "" >&2; \
+	  exit 1; \
+	fi
+
+# test-support-check comes FIRST: make walks prerequisites in order, so the
+# named error above beats make's own "No rule to make target" for $(ASSERT_SRC).
+$(ASSERT_TKI) $(ASSERT_LL): test-support-check $(ASSERT_SRC)
+	@mkdir -p build
+	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ../$(ASSERT_LL) ../$(ASSERT_SRC)
+
 # check — type-check EVERY .tk file in the repo, standalone, from the repo root.
 #
 # Story 134.2. The old rule covered 12 of 30 files, piped through `head -5` and
@@ -220,11 +273,11 @@ interfaces: $(OOKE_TKI)
 # The environment equivalent is TKC_INTERFACE_PATH=src.
 TK_SOURCES := $(shell find . -name '*.tk' -not -path './.git/*' | sort)
 
-check:
+check: test-support-check $(ASSERT_TKI)
 	@echo "=== tkc --check -I $(SRC) over $(words $(TK_SOURCES)) file(s) ==="
 	@pass=0; fail=0; \
 	for f in $(TK_SOURCES); do \
-	  if out=$$($(TKC) --check --diag-text -I $(SRC) "$$f" 2>&1); then \
+	  if out=$$($(TKC) --check --diag-text -I $(SRC) -I $(ASSERT_INC) "$$f" 2>&1); then \
 	    pass=$$((pass+1)); \
 	  else \
 	    fail=$$((fail+1)); echo "  FAIL $$f"; echo "$$out" | sed 's/^/        /'; \
@@ -243,10 +296,10 @@ test: check-versions check $(BIN) test-check test-run
 # errors that were breaking the repo, and ignored every name-resolution, type
 # and codegen error (defect D8). It is now just `check` restricted to test/,
 # with no filtering: tkc's own exit status decides.
-test-check:
+test-check: test-support-check $(ASSERT_TKI)
 	@echo "=== Type check all test files ==="
 	@pass=0; fail=0; for f in test/*/test_*.tk; do \
-	  if out=$$($(TKC) --check --diag-text -I $(SRC) "$$f" 2>&1); then \
+	  if out=$$($(TKC) --check --diag-text -I $(SRC) -I $(ASSERT_INC) "$$f" 2>&1); then \
 	    pass=$$((pass+1)); \
 	  else \
 	    fail=$$((fail+1)); echo "  FAIL: $$f"; echo "$$out" | sed 's/^/        /'; \
@@ -255,7 +308,7 @@ test-check:
 	echo "  $$pass passed, $$fail failed"; \
 	[ "$$fail" = "0" ]
 
-test-run: $(BIN)
+test-run: test-support-check $(BIN)
 	@echo "=== Run test suite ==="
 	@test/run_tests.sh
 
@@ -274,7 +327,8 @@ print-build-vars:
 	@echo 'LIBS="$(LIBS)"'
 
 clean:
-	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI) $(SRC)/_handlers.tk
+	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI) $(SRC)/_handlers.tk \
+	      $(ASSERT_TKI) $(ASSERT_LL)
 	rmdir $(IFACE_DIR) 2>/dev/null || true
 
 # ── Version and dependency gate (story 134.7) ────────────────────────────

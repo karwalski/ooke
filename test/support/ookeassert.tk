@@ -1,0 +1,65 @@
+m=ookeassert;
+i=io:std.io;
+i=str:std.str;
+
+(*
+ * ookeassert — the assertion helpers ooke's test suite actually checks with.
+ *
+ * Story 134.17. The suite used to assert through std.test's `test.eq`, which
+ * is `tk_test_eq_w(a,b) => (a == b)` on the raw i64 ABI value. For $str that
+ * compares *pointers*, not contents; it prints nothing on failure; and every
+ * ooke call site discarded its result. 157 assertions therefore could not
+ * fail, and the suite reported 12/12 partly on them. Toke story 127.68 covers
+ * giving `test.eq` real semantics upstream; until it lands, ooke asserts here.
+ *
+ * The contract every helper keeps, and that `test.eq` kept none of:
+ *   1. compare by value (str.eq for $str, == for i64/u64/bool)
+ *   2. print the mismatch on failure, with the label, the got and the want
+ *   3. return the result, so the caller folds it into the test's own result
+ *
+ * The failure line starts with "FAIL: " because test/run_tests.sh greps for
+ * that prefix, so a failed assertion fails its test even if main() returns 0.
+ *)
+
+f=boolstr(b:bool):$str{
+  if(b){<"true"};
+  <"false"
+};
+
+f=report(what:$str;got:$str;want:$str):bool{
+  (io.eprintln(str.join("";@("FAIL: ";what;": got ";got;", want ";want))));
+  <false
+};
+
+f=eqstr(got:$str;want:$str;what:$str):bool{
+  if(str.eq(got;want)){<true};
+  <report(what;str.join("";@("\"";got;"\""));str.join("";@("\"";want;"\"")))
+};
+
+f=eqint(got:i64;want:i64;what:$str):bool{
+  if(got==want){<true};
+  <report(what;str.fromint(got);str.fromint(want))
+};
+
+f=equint(got:u64;want:u64;what:$str):bool{
+  if(got==want){<true};
+  <report(what;str.fromint(got as i64);str.fromint(want as i64))
+};
+
+f=eqbool(got:bool;want:bool;what:$str):bool{
+  if(got==want){<true};
+  <report(what;boolstr(got);boolstr(want))
+};
+
+f=istrue(got:bool;what:$str):bool{
+  <eqbool(got;true;what)
+};
+
+f=isfalse(got:bool;what:$str):bool{
+  <eqbool(got;false;what)
+};
+
+f=nonzero(got:i64;what:$str):bool{
+  if(!(got==0)){<true};
+  <report(what;"0";"a non-zero value")
+};

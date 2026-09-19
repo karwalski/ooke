@@ -2,14 +2,13 @@
 ooke
 ooke-toke
 
-# Build artifacts
+# Build artifacts.  `build/` matches at any depth, which also covers
+# testproj/build/ — what the tests make `ooke build` produce from the tracked
+# fixture inputs (testproj/{content,pages,templates,ooke.toml}).
 *.o
 *.ll
 *.dSYM/
 build/
-
-# Generated interfaces
-*.tki
 
 # macOS
 .DS_Store
@@ -17,9 +16,40 @@ build/
 # agent worktrees / local
 .claude/
 
-# published interface contracts (committed; --emit-interface is flaky, see 113.B.19)
+# ── Interfaces (.tki) ───────────────────────────────────────────────────────
+# `tkc --emit-interface` writes a .tki beside its source, so a .tki is build
+# OUTPUT by default and the blanket rule below ignores the lot.  Whitelist any
+# .tki the build CONSUMES rather than produces: an ignore rule written for
+# build output must never swallow a build input (story 134.21, and toke's
+# 127.85 before it — a fresh clone that cannot build is the cost).
+*.tki
+
+# The published interface contracts.  Hand-maintained, not emitted, because
+# --emit-interface is flaky (113.B.19) — build INPUT, tracked.
 !src/ooke.*.tki
+
+# $(IFACE_DIR): the per-module .tki + LLVM IR `make interfaces` emits from the
+# tracked src/*.tk.  Genuine build OUTPUT, reproducible by `make` from a clean
+# checkout.  Correctly ignored — do not whitelist.
 src/ooke/
+
+# ── test/support — the test suite's own source (story 134.21) ───────────────
+# test/support/ookeassert.tk is a build INPUT: `make check`, `make test-check`
+# and test/run_tests.sh all abort without it, so it is TRACKED.  It had never
+# been added, and the only other file in the directory was its ignored .tki, so
+# `test/support/` was absent from every fresh clone and nobody cloning ooke
+# could run its suite.  `make test-support-check` now fails by name if it goes
+# missing again.  Anything else the suite needs to *read* belongs here too, and
+# must be tracked.
+!test/support/
+!test/support/**/*.tk
+!test/support/**/*.tkt
+!test/support/**/*.sh
+
+# ookeassert.tki is deliberately NOT whitelisted.  Unlike src/ooke.*.tki it is
+# not a published contract: the Makefile's $(ASSERT_TKI) rule regenerates it
+# from ookeassert.tk on every `make check`, so a tracked copy would silently
+# drift from its source.  Build OUTPUT, correctly ignored.
 
 # test dir, not the build output dir
 !test/build/
