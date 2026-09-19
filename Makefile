@@ -5,8 +5,22 @@
 #   2. Compile main.tk to .ll
 #   3. Link all .ll + stdlib C + vendor C into the ooke binary
 
-TKC         := /Users/matthew.watt/tk/toke/toke
-TOKE_ROOT   := /Users/matthew.watt/tk/toke
+# ── Where toke lives (story 134.10) ───────────────────────────────────────
+# These were absolute paths into one developer's home directory, so nobody
+# else could build ooke and the floor could not be re-tested against an older
+# toke (story 134.16).  They are now `?=`, so the environment or the command
+# line wins:
+#
+#     make TOKE_ROOT=/path/to/toke
+#     TOKE_ROOT=/path/to/toke make          # exported env also works
+#
+# The default assumes toke is checked out beside ooke, which is the layout
+# README and docs/install.md describe.  TKC defaults to the compiler that
+# TOKE_ROOT's own `make` produces, so pointing TOKE_ROOT at a different toke
+# moves the compiler with it; override TKC alone to pin a compiler built
+# elsewhere (e.g. a floor build) against that same tree.
+TOKE_ROOT   ?= $(abspath $(CURDIR)/../toke)
+TKC         ?= $(TOKE_ROOT)/toke
 TOKE_STDLIB := $(TOKE_ROOT)/src/stdlib
 TOKE_VENDOR := $(TOKE_ROOT)/stdlib/vendor
 

@@ -24,12 +24,27 @@ accessformat = "combined"
 apiprefix = ""
 
 [requires]
-# Minimum toke the ooke sources actually build against (story 134.7).
-# Evidence: docs/versioning.md. The semver alone is NOT sufficient — toke/VERSION
-# has read 2.8.0 since 2026-06-21 while the v0.4 syntax break (Epic 116) and the
-# ADR-0010 capability model (Epic 124) shipped under that same string — so the
-# enforceable floor is the commit/date pair. Makefile: check-toke-version reads
-# these three keys; they are the single source of truth.
+# The minimum toke ooke actually works on.  TWO floors were measured, and this
+# block carries the HIGHER one, because it is the one a user feels.
+#
+#   compile floor   b66bd8e  2026-07-06  (story 134.7)  — ooke BUILDS
+#   behaviour floor c2aa278  2026-09-19  (story 134.16) — ooke's suite PASSES
+#
+# Story 134.16 built tkc at the 134.7 compile floor and ran ooke's (now honest,
+# 187-assertion) suite against it: 10 of 12.  A compiler that compiles ooke is
+# not a compiler that runs it.  The binding defect is toke's, fixed by c2aa278
+# "consume @tk_current_error for toml.bool and toml.i64, so false and 0 are
+# values": before it, `minify = false` and `inlinecss = false` in THIS FILE are
+# read back as `true`, so a site configured not to minify silently minifies.
+# Declaring the lower floor was declaring support ooke did not have.
+#
+# The semver alone is NOT sufficient — toke/VERSION has read 2.8.0 since
+# 2026-06-21 while the v0.4 syntax break (Epic 116), the ADR-0010 capability
+# model (Epic 124) and this fix all shipped under that same string — so the
+# enforceable floor is the commit/date pair.  When toke cuts the v0.4 version
+# (story 134.15), mintoke becomes sufficient on its own and the commit/date
+# pair can be dropped.  Makefile: check-toke-version reads these three keys;
+# they are the single source of truth.  Evidence: docs/versioning.md.
 mintoke = "2.8.0"
-mintokedate = "2026-07-06"
-mintokecommit = "b66bd8e"
+mintokedate = "2026-09-19"
+mintokecommit = "c2aa278"

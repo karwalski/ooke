@@ -42,15 +42,58 @@ it: clean build, working binary, `ooke new` scaffolds a project. The same test a
 `2.8.0` (`f1e30b3`) fails at the language level. The ceiling is toke HEAD, which is
 what 134.6 and 134.8 were measured and built against.
 
-### Known imprecision
+### Known imprecision — RESOLVED, and the floor moved (story 134.16)
 
-The floor is proven for *building*. ooke's **runtime** behaviour has only ever been
-exercised against toke HEAD: several 127.x stdlib and codegen fixes landed on
-2026-09-19 (interpolation allocation, array dispatch, map semantics, json
-printing), and no one has run ooke's tests against a floor-era compiler — ooke's
-test suite has never been executed at all (story 134.5). Treat `b66bd8e` as the
-**compile** floor and toke HEAD as the only **tested** compiler until 134.5 is
-green and can be re-run at the floor.
+The table above proves a **compile** floor. Story 134.16 tested the other half and
+the answer was no.
+
+ooke's suite became honest on 2026-09-19 (134.5 made it run at all, 134.17 turned
+157 inert `test.eq` calls into 187 live assertions, each proved capable of failing
+by mutation). It was then re-run against a tkc built at `b66bd8e`:
+
+| toke | ooke suite |
+|---|---|
+| `b66bd8e` 2026-07-06 — the 134.7 compile floor | **10 of 12** |
+| `c2aa278` 2026-09-19 | **12 of 12** |
+
+Failures at `b66bd8e`:
+
+- `test_config` — `build.minify: got true, want false`, `build.inlinecss: got
+  true, want false`. A TOML `false` is read back as `true`.
+- `test_router` — `RT005: nil dereference`, a hard runtime abort.
+
+**The compiler is the cause, not the stdlib.** Crossing the two trees isolates it:
+
+| tkc | stdlib C | result |
+|---|---|---|
+| `b66bd8e` | HEAD | fails, identically |
+| HEAD | `b66bd8e` | passes |
+
+Bisected across 293 commits (9 steps, each a `make clean` rebuild of tkc — an
+incremental rebuild across commits produces a compiler that is neither endpoint,
+see §6). **First commit at which the suite passes: `c2aa278` (2026-09-19),
+"fix(llvm): consume @tk_current_error for toml.bool and toml.i64, so false and 0
+are values".** Confirmed minimal against the whole tree, not just the compiler:
+at `c2aa278` ooke is 12/12; at its parent `beff3db` it is 11/12. (`test_router`
+passes at `beff3db`, so the RT005 abort was fixed earlier in the range; the
+binding constraint is the TOML one.)
+
+**What the old floor was claiming.** `minify` and `inlinecss` live in
+`ooke.toml`, so on any toke between `b66bd8e` and `c2aa278` a site that
+configures `minify = false` is silently minified anyway — the configuration is
+obeyed as its opposite, with no diagnostic. `ooke.toml [requires]` declared
+support for that range. It no longer does:
+
+```toml
+mintoke       = "2.8.0"
+mintokedate   = "2026-09-19"
+mintokecommit = "c2aa278"
+```
+
+**Both floors are real and they are 2.5 months apart.** Keep the distinction:
+`b66bd8e` is the earliest toke that *builds* ooke, `c2aa278` the earliest that
+*runs* it correctly. `[requires]` carries the higher one, because a build that
+produces a binary which misreads its own configuration is not support.
 
 ## 2. How the floor is enforced
 
@@ -95,11 +138,23 @@ pure-toke rebuild). Since then ooke has taken changes that break consumers:
 - the 134.8 build changes (static generation of the docs tree, explicit failure
   instead of RT005).
 
-That is a major bump: the next release is **3.0.0**, tagged by story 134.10. The
-`-dev` suffix is deliberate — 3.0.0 is **not released yet**, and these are the
-gates it waits on: 134.5 (the test suite has never run), 134.13 (~1.3 KB of RSS
-leaked per request served — a web server that leaks per request cannot ship), and
-134.2/134.3 (checkability and lint).
+That is a major bump: the next release is **3.0.0**, prepared by story 134.10. The
+`-dev` suffix is deliberate — 3.0.0 is **not released yet**.
+
+Gate status as of 2026-09-19:
+
+| Gate | State |
+|---|---|
+| 134.2 checkability | done — `tkc --check -I src` 30/30 |
+| 134.3 lint | done — warnings 96 → 2, errors 0 |
+| 134.5 suite runs | done — 12/12 on 187 live assertions |
+| 134.17 assertions are real | done — every one proved able to fail, by mutation |
+| 134.7 / 134.16 floor | done — floor measured for build *and* behaviour |
+| 134.13 RSS leak | superseded → 127.65; diagnosed as **not ooke's** |
+| **134.24 `ooke build` aborts on API routes** | **OPEN, P0 — and `ooke new` scaffolds one** |
+
+**134.24 is why the artefact prepared by 134.10 is a release *candidate* and not
+a release.** See `docs/release-notes-3.0.0.md`.
 
 ## 4. The compatibility promise
 
@@ -118,8 +173,11 @@ For 3.0.0 onwards:
 
 ## 5. For downstream projects (loke, moke, toke-website)
 
-**Wait for toke `b66bd8e` (2026-07-06) or later — in practice, toke HEAD — and for
+**Wait for toke `c2aa278` (2026-09-19) or later — in practice, toke HEAD — and for
 ooke 3.0.0.**
+
+The floor is `c2aa278`, not `b66bd8e`: story 134.16 raised it by 2.5 months once
+ooke's suite could be run against an older compiler. See §1.
 
 - **toke**: no tagged release contains what ooke needs. The newest release,
   2.8.0 (2026-06-21), cannot compile ooke. What is unreleased: the v0.4 syntax
@@ -129,6 +187,20 @@ ooke 3.0.0.**
   version bump the v0.4 break requires (proposed 3.0.0; see the report for story
   134.7).
 - **ooke**: released 2.0.0 is not the ooke this repo builds and is not what loke
-  should target. Wait for **3.0.0** (story 134.10), which is blocked on 134.5,
-  134.13, 134.2 and 134.3. 134.13 is the one that matters most for anything that
-  serves traffic.
+  should target. Wait for **3.0.0**. Story 134.10 has prepared the artefact and
+  the instructions; what 3.0.0 now waits on is **134.24**, a P0 defect that makes
+  `ooke build` abort on any project containing an API route — which is every
+  project `ooke new` creates. Until that is fixed, what exists is a release
+  candidate: buildable, testable, documented, and unable to build the project it
+  scaffolds. See `docs/release-notes-3.0.0.md` and `docs/install.md`.
+
+## 6. A method note, because it changed a result
+
+The bisect in §1 first reported its own known-good endpoint as broken. The cause
+was toke's incremental build: after `git checkout` of a different commit,
+`make -j8` produced a `toke` binary that behaved like neither commit, and the
+suite failed against it. `make clean && make` at the same commit passed. Every
+measurement above therefore rebuilds tkc from clean, and any future
+"which toke commit does X" question must do the same — an incremental rebuild
+across commits is not evidence about either commit. Filed for toke as a
+build-correctness defect (see the 134.16 report).
