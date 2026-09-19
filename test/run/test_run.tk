@@ -1,6 +1,6 @@
 m=test.run;
 i=run:ooke.run;
-i=test:std.test;
+i=chk:ookeassert;
 i=file:std.file;
 i=path:std.path;
 i=str:std.str;
@@ -15,9 +15,9 @@ f=testloadclicfg():bool{
   let ok=mt result {$ok:v true;$err:e false};
   if(ok==false){<false};
   let cfg=mt result {$ok:v v;$err:e 0};
-  (test.eq(cfg.name;"mysite"));
-  (test.eq(cfg.entry;"src/app.tk"));
-  <true
+  let a0=chk.eqstr(cfg.name;"mysite";"package.name");
+  let a1=chk.eqstr(cfg.entry;"src/app.tk";"package.entry");
+  <a0&&a1
 };
 
 f=testloadclicfgdefaults():bool{
@@ -28,9 +28,9 @@ f=testloadclicfgdefaults():bool{
   if(wrok==false){<false};
   let result=run.loadclicfg(dir);
   let cfg=mt result {$ok:v v;$err:e 0};
-  (test.eq(cfg.name;"app"));
-  (test.eq(cfg.entry;"src/main.tk"));
-  <true
+  let a0=chk.eqstr(cfg.name;"app";"package.name default");
+  let a1=chk.eqstr(cfg.entry;"src/main.tk";"package.entry default");
+  <a0&&a1
 };
 
 f=testloadclicfgmissing():bool{
@@ -59,8 +59,7 @@ f=testrunmissingentry():bool{
   let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
   if(wrok==false){<false};
   let rc=run.run(dir;@());
-  (test.eq(rc;1));
-  <true
+  <chk.eqint(rc;1;"run exit code for a missing entry")
 };
 
 f=testbuildmissingentry():bool{
@@ -70,8 +69,7 @@ f=testbuildmissingentry():bool{
   let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
   if(wrok==false){<false};
   let rc=run.build(dir);
-  (test.eq(rc;1));
-  <true
+  <chk.eqint(rc;1;"build exit code for a missing entry")
 };
 
 f=main():i64{

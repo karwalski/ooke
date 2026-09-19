@@ -1,17 +1,17 @@
 m=test.store;
 i=store:ooke.store;
-i=test:std.test;
+i=chk:ookeassert;
 i=file:std.file;
 i=str:std.str;
 
 f=testdefault():bool{
   let c=store.storedefault();
-  (test.eq(c.slug;""));
-  (test.eq(c.type;"page"));
-  (test.eq(c.title;""));
-  (test.eq(c.body;""));
-  (test.eq(c.meta.len;0));
-  <true
+  let a0=chk.eqstr(c.slug;"";"storedefault slug");
+  let a1=chk.eqstr(c.type;"page";"storedefault type");
+  let a2=chk.eqstr(c.title;"";"storedefault title");
+  let a3=chk.eqstr(c.body;"";"storedefault body");
+  let a4=chk.equint(c.meta.len;0;"storedefault meta size");
+  <a0&&a1&&a2&&a3&&a4
 };
 
 f=testparsefront():bool{
@@ -20,30 +20,31 @@ f=testparsefront():bool{
   let ok=mt result {$ok:v true;$err:e false};
   if(ok==false){<false};
   let c=mt result {$ok:v v;$err:e store.storedefault()};
-  (test.eq(c.slug;"hello-world"));
-  (test.eq(c.type;"post"));
-  (test.eq(c.title;"Hello World"));
-  (test.eq(str.contains(c.body;"Hello")&&str.contains(c.body;"body");true));
-  <true
+  let a0=chk.eqstr(c.slug;"hello-world";"front matter slug");
+  let a1=chk.eqstr(c.type;"post";"front matter type");
+  let a2=chk.eqstr(c.title;"Hello World";"front matter title");
+  let a3=chk.istrue(str.contains(c.body;"Hello");"body keeps the heading");
+  let a4=chk.istrue(str.contains(c.body;"body");"body keeps the prose");
+  <a0&&a1&&a2&&a3&&a4
 };
 
 f=testparsefrontnofront():bool{
   let src="# Just a heading\n\nNo front matter here.\n";
   let result=store.storeparsefront(src);
   let c=mt result {$ok:v v;$err:e store.storedefault()};
-  (test.eq(c.slug;""));
-  (test.eq(c.type;"page"));
-  (test.eq(c.body;src));
-  <true
+  let a0=chk.eqstr(c.slug;"";"no front matter leaves slug empty");
+  let a1=chk.eqstr(c.type;"page";"no front matter defaults type");
+  let a2=chk.eqstr(c.body;src;"no front matter keeps the whole source as body");
+  <a0&&a1&&a2
 };
 
 f=testtryparse():bool{
   let c=store.storetryparse("---\nslug: a\n---\nbody\n");
-  (test.eq(c.slug;"a"));
+  let a0=chk.eqstr(c.slug;"a";"tryparse reads the slug");
   let d=store.storetryparse("plain body");
-  (test.eq(d.slug;""));
-  (test.eq(d.body;"plain body"));
-  <true
+  let a1=chk.eqstr(d.slug;"";"tryparse of plain text leaves slug empty");
+  let a2=chk.eqstr(d.body;"plain body";"tryparse of plain text keeps the body");
+  <a0&&a1&&a2
 };
 
 f=testparsejson():bool{
@@ -52,10 +53,10 @@ f=testparsejson():bool{
   let ok=mt result {$ok:v true;$err:e false};
   if(ok==false){<false};
   let c=mt result {$ok:v v;$err:e store.storedefault()};
-  (test.eq(c.slug;"news"));
-  (test.eq(c.type;"post"));
-  (test.eq(c.title;"Big News"));
-  <true
+  let a0=chk.eqstr(c.slug;"news";"json slug");
+  let a1=chk.eqstr(c.type;"post";"json type");
+  let a2=chk.eqstr(c.title;"Big News";"json title");
+  <a0&&a1&&a2
 };
 
 f=testparsejsoninvalid():bool{
@@ -66,19 +67,18 @@ f=testparsejsoninvalid():bool{
 
 f=testtryparsejson():bool{
   let c=store.storetryparsejson("{\"slug\":\"x\",\"type\":\"page\"}");
-  (test.eq(c.slug;"x"));
-  <true
+  <chk.eqstr(c.slug;"x";"tryparsejson slug")
 };
 
 f=testsqlcreate():bool{
   let fields=@("author":"str");
   let sql=store.storesqlcreate("posts";fields);
-  (test.eq(str.startswith(sql;"CREATE TABLE IF NOT EXISTS posts");true));
-  (test.eq(str.contains(sql;"id INTEGER PRIMARY KEY");true));
-  (test.eq(str.contains(sql;"slug TEXT UNIQUE");true));
-  (test.eq(str.contains(sql;"body TEXT");true));
-  (test.eq(str.endswith(sql;")");true));
-  <true
+  let a0=chk.istrue(str.startswith(sql;"CREATE TABLE IF NOT EXISTS posts");"sqlcreate prologue");
+  let a1=chk.istrue(str.contains(sql;"id INTEGER PRIMARY KEY");"sqlcreate id column");
+  let a2=chk.istrue(str.contains(sql;"slug TEXT UNIQUE");"sqlcreate slug column");
+  let a3=chk.istrue(str.contains(sql;"body TEXT");"sqlcreate body column");
+  let a4=chk.istrue(str.endswith(sql;")");"sqlcreate is closed");
+  <a0&&a1&&a2&&a3&&a4
 };
 
 f=teststoreallempty():bool{
@@ -89,8 +89,7 @@ f=teststoreallempty():bool{
   let ok=mt result {$ok:v true;$err:e false};
   if(ok==false){<false};
   let col=mt result {$ok:v v;$err:e @($content)};
-  (test.eq(col.len;0));
-  <true
+  <chk.equint(col.len;0;"storeall of an empty dir")
 };
 
 f=teststoreallflat():bool{
@@ -101,9 +100,9 @@ f=teststoreallflat():bool{
   if(wr==false){<false};
   let result=store.storeall("/tmp/test_store_flat";"pages";"flat");
   let col=mt result {$ok:v v;$err:e @($content)};
-  (test.eq(col.len;1));
-  (test.eq(col.get(0).slug;"about"));
-  <true
+  let a0=chk.equint(col.len;1;"storeall flat count");
+  if(a0==false){<false};
+  <chk.eqstr(col.get(0).slug;"about";"storeall flat slug")
 };
 
 f=mkcol():@$content{
@@ -117,9 +116,9 @@ f=teststoreslug():bool{
   let ok=mt result {$ok:v true;$err:e false};
   if(ok==false){<false};
   let c=mt result {$ok:v v;$err:e store.storedefault()};
-  (test.eq(c.slug;"contact"));
-  (test.eq(str.contains(c.body;"Contact");true));
-  <true
+  let a0=chk.eqstr(c.slug;"contact";"storeslug returns the asked-for entry");
+  let a1=chk.istrue(str.contains(c.body;"Contact");"storeslug returns its body");
+  <a0&&a1
 };
 
 f=teststoreslugmissing():bool{

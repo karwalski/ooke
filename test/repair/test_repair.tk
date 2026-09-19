@@ -1,26 +1,25 @@
 m=test.repair;
 i=repair:ooke.repair;
-i=test:std.test;
+i=chk:ookeassert;
 i=file:std.file;
 
 f=testparsediagsempty():bool{
-  (test.eq(repair.parsediags("");0));
-  (test.eq(repair.parsediags("\n\n  \n");0));
-  <true
+  let a0=chk.eqint(repair.parsediags("");0;"parsediags of the empty string");
+  let a1=chk.eqint(repair.parsediags("\n\n  \n");0;"parsediags of blank lines only");
+  <a0&&a1
 };
 
 f=testparsediagscounts():bool{
-  (test.eq(repair.parsediags("a\n\n  b  \nc\n");3));
-  (test.eq(repair.parsediags("one line");1));
-  <true
+  let a0=chk.eqint(repair.parsediags("a\n\n  b  \nc\n");3;"parsediags counts non-blank lines");
+  let a1=chk.eqint(repair.parsediags("one line");1;"parsediags of a single line");
+  <a0&&a1
 };
 
 f=testrepairfileclean():bool{
   let src="m=t;\nf=main():i64{<0};\n";
   let wrok=mt file.write("/tmp/test_repair_ok.tk";src) {$ok:v true;$err:e false};
   if(wrok==false){<false};
-  (test.eq(repair.repairfile("/tmp/test_repair_ok.tk";1);0));
-  <true
+  <chk.eqint(repair.repairfile("/tmp/test_repair_ok.tk";1);0;"a clean file reports no diagnostics")
 };
 
 f=testrepairfilebroken():bool{
@@ -28,8 +27,7 @@ f=testrepairfilebroken():bool{
   let wrok=mt file.write("/tmp/test_repair_bad.tk";src) {$ok:v true;$err:e false};
   if(wrok==false){<false};
   let n=repair.repairfile("/tmp/test_repair_bad.tk";1);
-  (test.assert(n>0;"broken file should report diagnostics"));
-  <true
+  <chk.istrue(n>0;"a broken file reports diagnostics")
 };
 
 f=main():i64{

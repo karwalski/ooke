@@ -1,6 +1,6 @@
 m=test.serve;
 i=serve:ooke.serve;
-i=test:std.test;
+i=chk:ookeassert;
 i=file:std.file;
 i=path:std.path;
 i=str:std.str;
@@ -39,9 +39,8 @@ f=testregisternoprefix():bool{
   let content=path.join(root;"content");
   let tpls=path.join(root;"templates");
   let handled=@($str);
-  (serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"";handled));
-  (test.eq(1;1));
-  <true
+  let rc=mt serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"";handled) {$ok:v v;$err:e 0-1};
+  <chk.eqint(rc;0;"register with no api prefix")
 };
 
 f=testregisterwithprefix():bool{
@@ -52,9 +51,8 @@ f=testregisterwithprefix():bool{
   let content=path.join(root;"content");
   let tpls=path.join(root;"templates");
   let handled=@($str);
-  (serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"v1";handled));
-  (test.eq(1;1));
-  <true
+  let rc=mt serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"v1";handled) {$ok:v v;$err:e 0-1};
+  <chk.eqint(rc;0;"register with an api prefix")
 };
 
 f=testregisterdedup():bool{
@@ -65,16 +63,24 @@ f=testregisterdedup():bool{
   let content=path.join(root;"content");
   let tpls=path.join(root;"templates");
   let handled=@("/";"/api/hello");
-  (serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"";handled));
-  (test.eq(1;1));
-  <true
+  let rc=mt serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"";handled) {$ok:v v;$err:e 0-1};
+  <chk.eqint(rc;0;"register skips paths a dynamic handler already owns")
 };
 
 f=testservejson():bool{
-  (serve.servegetjson("/api/status";"{\"status\":\"ok\"}"));
-  (serve.servepostjson("/api/submit";"{\"ok\":true}"));
-  (test.eq(1;1));
-  <true
+  let a0=chk.eqint(serve.servegetjson("/api/status";"{\"status\":\"ok\"}");0;"servegetjson");
+  let a1=chk.eqint(serve.servepostjson("/api/submit";"{\"ok\":true}");0;"servepostjson");
+  <a0&&a1
+};
+
+(* Story 134.18. A failed route scan used to be swallowed into an empty route
+   set, so the server started and answered 404 for everything while looking
+   healthy. It must now report the failure instead. *)
+f=testregisterfailsonmissingpages():bool{
+  let root="/tmp/ooke_serve_nopages";
+  let handled=@($str);
+  let iserr=mt serve.serveregisterstatic(path.join(root;"pages");path.join(root;"content");path.join(root;"templates");"My Site";"https://example.com";"en";"";handled) {$ok:v false;$err:e true};
+  <chk.istrue(iserr;"a missing pages dir must fail registration, not register zero routes")
 };
 
 f=main():i64{
@@ -82,7 +88,8 @@ f=main():i64{
   let r1=testregisterwithprefix();
   let r2=testregisterdedup();
   let r3=testservejson();
-  if(r0&&r1&&r2&&r3){
+  let r4=testregisterfailsonmissingpages();
+  if(r0&&r1&&r2&&r3&&r4){
     <0
   }el{
     <1

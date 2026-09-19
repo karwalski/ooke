@@ -1,51 +1,45 @@
 m=test.build;
 i=build:ooke.build;
-i=test:std.test;
+i=chk:ookeassert;
 i=file:std.file;
 i=str:std.str;
 
 f=testoutputpathroot():bool{
   let p=build.buildoutputpath("/";"build/");
-  (test.eq(p;"build/index.html"));
-  <true
+  <chk.eqstr(p;"build/index.html";"outputpath /")
 };
 
 f=testoutputpathnested():bool{
   let p=build.buildoutputpath("/about";"build");
-  (test.eq(p;"build/about/index.html"));
-  <true
+  <chk.eqstr(p;"build/about/index.html";"outputpath /about")
 };
 
 f=testoutputpathdeep():bool{
   let p=build.buildoutputpath("/blog/post";"out");
-  (test.eq(p;"out/blog/post/index.html"));
-  <true
+  <chk.eqstr(p;"out/blog/post/index.html";"outputpath /blog/post")
 };
 
 f=testminifycollapsespaces():bool{
   let out=build.buildminify("<p>a    b</p>");
-  (test.eq(out;"<p>a b</p>"));
-  <true
+  <chk.eqstr(out;"<p>a b</p>";"minify collapses spaces")
 };
 
 f=testminifystripscomment():bool{
   let out=build.buildminify("<p>x</p><!-- hidden -->");
-  (test.eq(str.contains(out;"hidden");false));
-  (test.eq(str.contains(out;"<p>x</p>");true));
-  <true
+  let a0=chk.isfalse(str.contains(out;"hidden");"minify strips comment text");
+  let a1=chk.istrue(str.contains(out;"<p>x</p>");"minify keeps markup");
+  <a0&&a1
 };
 
 f=testminifynoop():bool{
   let out=build.buildminify("<p>clean</p>");
-  (test.eq(out;"<p>clean</p>"));
-  <true
+  <chk.eqstr(out;"<p>clean</p>";"minify is a no-op on clean html")
 };
 
 f=testinlinecssnolink():bool{
   let html="<html><body>no stylesheet here</body></html>";
   let out=build.buildinlinecss(html;"/tmp/test_build_tpls");
-  (test.eq(out;html));
-  <true
+  <chk.eqstr(out;html;"inlinecss no-op without a link tag")
 };
 
 f=testinlinecssinlines():bool{
@@ -56,17 +50,16 @@ f=testinlinecssinlines():bool{
   if(cssw==false){<false};
   let html="<head><link rel=\"stylesheet\" href=\"style.css\"></head>";
   let out=build.buildinlinecss(html;dir);
-  (test.eq(str.contains(out;"<style>");true));
-  (test.eq(str.contains(out;"body{color:red}");true));
-  (test.eq(str.contains(out;"<link rel=\"stylesheet\"");false));
-  <true
+  let a0=chk.istrue(str.contains(out;"<style>");"inlinecss emits a style tag");
+  let a1=chk.istrue(str.contains(out;"body{color:red}");"inlinecss inlines the css");
+  let a2=chk.isfalse(str.contains(out;"<link rel=\"stylesheet\"");"inlinecss drops the link tag");
+  <a0&&a1&&a2
 };
 
 f=testinlinecssmissingfile():bool{
   let html="<head><link rel=\"stylesheet\" href=\"missing.css\"></head>";
   let out=build.buildinlinecss(html;"/tmp/test_build_nodir");
-  (test.eq(out;html));
-  <true
+  <chk.eqstr(out;html;"inlinecss no-op when the css file is missing")
 };
 
 f=main():i64{

@@ -1,18 +1,16 @@
 m=test.apihealth;
 i=apihealth:ooke.apihealth;
-i=test:std.test;
+i=chk:ookeassert;
 
 f=testapigetjson():bool{
   let body=apihealth.apigetjson();
   let want="{\"status\":\"ok\",\"service\":\"ooke\"}";
-  (test.eq(body;want));
-  <body==want
+  <chk.eqstr(body;want;"apigetjson body")
 };
 
 f=testget():bool{
   let res=apihealth.get(0);
-  (test.ok(res));
-  <!(res==0)
+  <chk.nonzero(res;"apihealth.get handle")
 };
 
 f=main():i64{

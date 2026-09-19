@@ -1,6 +1,6 @@
 m=test.config;
 i=config:ooke.config;
-i=test:std.test;
+i=chk:ookeassert;
 i=file:std.file;
 
 f=testloadvalid():bool{
@@ -11,15 +11,16 @@ f=testloadvalid():bool{
   let cfgok=mt result {$ok:v true;$err:e false};
   if(cfgok==false){<false};
   let cfg=mt result {$ok:v v;$err:e 0};
-  (test.eq(cfg.sitename;"ooke-test"));
-  (test.eq(cfg.siteurl;"https://test.example.com"));
-  (test.eq(cfg.sitelanguage;"fr"));
-  (test.eq(cfg.buildoutput;"dist/"));
-  (test.eq(cfg.buildinlinecss;false));
-  (test.eq(cfg.serverport;8080));
-  (test.eq(cfg.serverworkers;2));
-  (test.eq(cfg.storebackend;"flat"));
-  <true
+  let a0=chk.eqstr(cfg.sitename;"ooke-test";"site.name");
+  let a1=chk.eqstr(cfg.siteurl;"https://test.example.com";"site.url");
+  let a2=chk.eqstr(cfg.sitelanguage;"fr";"site.language");
+  let a3=chk.eqstr(cfg.buildoutput;"dist/";"build.output");
+  let a4=chk.eqbool(cfg.buildminify;false;"build.minify");
+  let a5=chk.eqbool(cfg.buildinlinecss;false;"build.inlinecss");
+  let a6=chk.eqint(cfg.serverport;8080;"server.port");
+  let a7=chk.eqint(cfg.serverworkers;2;"server.workers");
+  let a8=chk.eqstr(cfg.storebackend;"flat";"store.backend");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8
 };
 
 f=testmissingfile():bool{
@@ -36,19 +37,19 @@ f=testdefaults():bool{
   let cfgok=mt result {$ok:v true;$err:e false};
   if(cfgok==false){<false};
   let cfg=mt result {$ok:v v;$err:e 0};
-  (test.eq(cfg.sitename;"x"));
-  (test.eq(cfg.siteurl;""));
-  (test.eq(cfg.sitelanguage;"en"));
-  (test.eq(cfg.buildoutput;"build/"));
-  (test.eq(cfg.buildminify;true));
-  (test.eq(cfg.buildinlinecss;true));
-  (test.eq(cfg.serverport;3000));
-  (test.eq(cfg.serverworkers;0));
-  (test.eq(cfg.storebackend;"flat"));
-  (test.eq(cfg.logaccessformat;"combined"));
-  (test.eq(cfg.logmaxlines;10000));
-  (test.eq(cfg.logmaxagedays;30));
-  <true
+  let a0=chk.eqstr(cfg.sitename;"x";"site.name");
+  let a1=chk.eqstr(cfg.siteurl;"";"site.url default");
+  let a2=chk.eqstr(cfg.sitelanguage;"en";"site.language default");
+  let a3=chk.eqstr(cfg.buildoutput;"build/";"build.output default");
+  let a4=chk.eqbool(cfg.buildminify;true;"build.minify default");
+  let a5=chk.eqbool(cfg.buildinlinecss;true;"build.inlinecss default");
+  let a6=chk.eqint(cfg.serverport;3000;"server.port default");
+  let a7=chk.eqint(cfg.serverworkers;0;"server.workers default");
+  let a8=chk.eqstr(cfg.storebackend;"flat";"store.backend default");
+  let a9=chk.eqstr(cfg.logaccessformat;"combined";"log.accessformat default");
+  let a10=chk.eqint(cfg.logmaxlines;10000;"log.maxlines default");
+  let a11=chk.eqint(cfg.logmaxagedays;30;"log.maxagedays default");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a9&&a10&&a11
 };
 
 f=main():i64{

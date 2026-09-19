@@ -47,6 +47,17 @@ if ! make -s --no-print-directory $OOKE_LL; then
   exit 2
 fi
 
+# ── 1b. the assertion helper the tests assert through (story 134.17) ────────
+# ookeassert is test-only, so like std.test it is named here and not in the
+# Makefile's product lists — but it is built by the Makefile so `make check`
+# and `make test-check` can resolve `i=chk:ookeassert;` too.
+ASSERT_LL="$ROOT/build/ookeassert"
+ASSERT_INC="$ROOT/test/support"
+if ! make -s --no-print-directory build/ookeassert; then
+  echo "error: could not build the assertion helper (make build/ookeassert)" >&2
+  exit 2
+fi
+
 # ── 2. stdlib + vendor archive, built once and reused by every test ─────────
 # Linking ~80 C files per test made the suite too slow to run, which is part of
 # why it never was. Compile each translation unit once, cache it in build/,
@@ -90,12 +101,12 @@ for f in "${tests[@]}"; do
   log="$BIN_DIR/$bn.log"
 
   # Compile from src/ so `i=…:ooke.*` imports resolve against the .tki files.
-  if ! (cd "$ROOT/src" && "$TKC" --emit-llvm "../$f" --out "$ll") >"$log" 2>&1; then
+  if ! (cd "$ROOT/src" && "$TKC" --emit-llvm -I "$ASSERT_INC" "../$f" --out "$ll") >"$log" 2>&1; then
     printf "  FAIL %-24s (codegen)\n" "$bn"; sed 's/^/       /' "$log" | head -5
     fail=$((fail+1)); failed_names+=("$bn:codegen"); continue
   fi
 
-  if ! clang -x ir "$ll" $OOKE_LL -x none "$LIB" \
+  if ! clang -x ir "$ll" $OOKE_LL "$ASSERT_LL" -x none "$LIB" \
         $LDFLAGS $LIBS -o "$exe" >"$log" 2>&1; then
     printf "  FAIL %-24s (link)\n" "$bn"
     grep -v '\-Woverride-module\|warning generated' "$log" | sed 's/^/       /' | head -8
@@ -104,13 +115,14 @@ for f in "${tests[@]}"; do
 
   output=$("$exe" 2>&1); rc=$?
 
-  # std.test assertions are advisory: tk_test_assert_*() prints
-  # `DIAGNOSTIC: kind=assertion_failed` to stderr and RETURNS a bool. Every
-  # ooke test calls them as bare statements — `(test.eq(a;b));` — and then
-  # returns `<true` regardless, so a failed assertion never reached the exit
-  # status. Before 134.5 that meant the whole suite could have been green with
-  # every assertion in it failing. The runner therefore fails a test on a
-  # printed assertion failure as well as on a non-zero exit.
+  # A test fails on a printed assertion failure as well as on a non-zero exit.
+  # Both paths are load-bearing. Assertions report through ookeassert (story
+  # 134.17), which prints `FAIL: <what>: got <x>, want <y>` AND returns the
+  # result, and every test now folds those results into its own return value —
+  # so a failure reaches the exit status. The printed-failure check stays as
+  # the backstop for std.test's own `test.assert`/`test.fail`, whose results
+  # are still discarded at their call sites, and for any assertion a future
+  # test forgets to fold in.
   asserts=$(printf '%s' "$output" | grep -cE 'kind=assertion_failed|^ASSERT(_[A-Z]+)? FAILED|^FAIL: ')
 
   if [ "$rc" -eq 0 ] && [ "$asserts" -eq 0 ]; then

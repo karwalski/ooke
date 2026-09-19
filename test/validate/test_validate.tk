@@ -1,6 +1,6 @@
 m=test.validate;
 i=validate:ooke.validate;
-i=test:std.test;
+i=chk:ookeassert;
 i=file:std.file;
 
 f=writemodel():bool{
@@ -15,16 +15,17 @@ f=testloadmodel():bool{
   let ok=mt r {$ok:v true;$err:e false};
   if(ok==false){<false};
   let m=mt r {$ok:v v;$err:e validate.validateempty() as $modeldef};
-  (test.eq(m.name;"post"));
-  (test.eq(m.fields.len as i64;3));
-  (test.eq(m.fields.get(0).name;"title"));
-  (test.eq(m.fields.get(0).fieldtype;"str"));
-  (test.eq(m.fields.get(0).required;true));
-  (test.eq(m.fields.get(1).name;"views"));
-  (test.eq(m.fields.get(1).fieldtype;"int"));
-  (test.eq(m.fields.get(1).required;false));
-  (test.eq(m.fields.get(2).fieldtype;"bool"));
-  <true
+  let a0=chk.eqstr(m.name;"post";"model name");
+  let a1=chk.equint(m.fields.len;3;"model field count");
+  if(a1==false){<false};
+  let a2=chk.eqstr(m.fields.get(0).name;"title";"field 0 name");
+  let a3=chk.eqstr(m.fields.get(0).fieldtype;"str";"field 0 type");
+  let a4=chk.istrue(m.fields.get(0).required;"field 0 required");
+  let a5=chk.eqstr(m.fields.get(1).name;"views";"field 1 name");
+  let a6=chk.eqstr(m.fields.get(1).fieldtype;"int";"field 1 type");
+  let a7=chk.isfalse(m.fields.get(1).required;"field 1 required");
+  let a8=chk.eqstr(m.fields.get(2).fieldtype;"bool";"field 2 type");
+  <a0&&a2&&a3&&a4&&a5&&a6&&a7&&a8
 };
 
 f=testloadmodelmissing():bool{
@@ -42,9 +43,9 @@ f=testcontentvalid():bool{
   meta=meta.set("views";"42");
   meta=meta.set("published";"true");
   let res=validate.validatecontent(model;meta;"posts/hello.md");
-  (test.eq(res.errors.len as i64;0));
-  (test.eq(res.warnings.len as i64;0));
-  <true
+  let a0=chk.equint(res.errors.len;0;"valid content has no errors");
+  let a1=chk.equint(res.warnings.len;0;"valid content has no warnings");
+  <a0&&a1
 };
 
 f=testcontentmissingrequired():bool{
@@ -54,9 +55,9 @@ f=testcontentmissingrequired():bool{
   let meta=mut.@($str:$str);
   meta=meta.set("views";"7");
   let res=validate.validatecontent(model;meta;"posts/bad.md");
-  (test.eq(res.errors.len as i64;1));
-  (test.eq(res.errors.get(0).field;"title"));
-  <true
+  let a0=chk.equint(res.errors.len;1;"missing required field error count");
+  if(a0==false){<false};
+  <chk.eqstr(res.errors.get(0).field;"title";"missing required field name")
 };
 
 f=testcontentbadint():bool{
@@ -67,9 +68,9 @@ f=testcontentbadint():bool{
   meta=meta.set("title";"Hi");
   meta=meta.set("views";"notanumber");
   let res=validate.validatecontent(model;meta;"posts/badint.md");
-  (test.eq(res.errors.len as i64;1));
-  (test.eq(res.errors.get(0).field;"views"));
-  <true
+  let a0=chk.equint(res.errors.len;1;"bad int error count");
+  if(a0==false){<false};
+  <chk.eqstr(res.errors.get(0).field;"views";"bad int field name")
 };
 
 f=testcontentbadbool():bool{
@@ -80,16 +81,16 @@ f=testcontentbadbool():bool{
   meta=meta.set("title";"Hi");
   meta=meta.set("published";"maybe");
   let res=validate.validatecontent(model;meta;"posts/badbool.md");
-  (test.eq(res.errors.len as i64;1));
-  (test.eq(res.errors.get(0).field;"published"));
-  <true
+  let a0=chk.equint(res.errors.len;1;"bad bool error count");
+  if(a0==false){<false};
+  <chk.eqstr(res.errors.get(0).field;"published";"bad bool field name")
 };
 
 f=testempty():bool{
   let res=validate.validateempty();
-  (test.eq(res.errors.len as i64;0));
-  (test.eq(res.warnings.len as i64;0));
-  <true
+  let a0=chk.equint(res.errors.len;0;"empty result has no errors");
+  let a1=chk.equint(res.warnings.len;0;"empty result has no warnings");
+  <a0&&a1
 };
 
 f=testmerge():bool{
@@ -102,16 +103,16 @@ f=testmerge():bool{
   be=be.append($valerror{filepath:"b.md";field:"y";msg:"err b"});
   b=$valresult{errors:be;warnings:b.warnings};
   let merged=validate.validatemerge(a;b);
-  (test.eq(merged.errors.len as i64;2));
-  (test.eq(merged.errors.get(0).field;"x"));
-  (test.eq(merged.errors.get(1).field;"y"));
-  <true
+  let a0=chk.equint(merged.errors.len;2;"merge error count");
+  if(a0==false){<false};
+  let a1=chk.eqstr(merged.errors.get(0).field;"x";"merge keeps the left error first");
+  let a2=chk.eqstr(merged.errors.get(1).field;"y";"merge appends the right error");
+  <a1&&a2
 };
 
 f=testlogresult():bool{
   let res=validate.validateempty();
-  (validate.validatelogresult(res));
-  <true
+  <chk.eqint(validate.validatelogresult(res);0;"validatelogresult on an empty result")
 };
 
 f=main():i64{

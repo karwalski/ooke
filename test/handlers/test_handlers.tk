@@ -1,18 +1,17 @@
 m=test.handlers;
 i=handlers:ooke.handlers;
-i=test:std.test;
+i=chk:ookeassert;
 
 f=testhapihealthget():bool{
   let res=handlers.hapihealthget(0);
-  (test.ok(res));
-  <!(res==0)
+  <chk.nonzero(res;"hapihealthget handle")
 };
 
 f=testregisterall():bool{
   let paths=handlers.registerall();
-  (test.eq(paths.len;1));
-  (test.eq(paths.get(0);"/api/health"));
-  <(paths.len==1)&&(paths.get(0)=="/api/health")
+  let a0=chk.equint(paths.len;1;"registerall path count");
+  if(a0==false){<false};
+  <chk.eqstr(paths.get(0);"/api/health";"registerall path 0")
 };
 
 f=main():i64{
