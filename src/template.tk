@@ -1,5 +1,6 @@
 m=ooke.template;
 i=file:std.file;
+i=log:std.log;
 i=str:std.str;
 i=path:std.path;
 i=md:std.md;
@@ -374,7 +375,12 @@ f=tplrender(
   if(str.len(layoutname)>0){
     let layoutpath=path.join(templatesdir;str.concat(layoutname;".tkt"));
     if(!file.exists(layoutpath)){
-      <$tplerr{msg:str.concat("no layout template: ";layoutpath)}
+      (* 134.24: log where the message exists. A caller cannot read `e.msg` off
+         this payload (RT005, toke 127.78, open), so an unlogged $tplerr is a
+         message that reaches nobody. *)
+      let ml=str.concat("template: no layout template: ";layoutpath);
+      (log.error(ml;@()));
+      <$tplerr{msg:ml}
     }el{};
     let layoutsrc=file.read(layoutpath)!$tplerr;
     let layouttokens=tpllex(layoutsrc)!$tplerr;
@@ -399,7 +405,10 @@ f=tplrenderfile(
   templatesdir:$str
 ):$str!$tplerr{
   if(!file.exists(templatepath)){
-    <$tplerr{msg:str.concat("no template file: ";templatepath)}
+    (* 134.24: see the layout case above — an unlogged $tplerr reaches nobody. *)
+    let mt0=str.concat("template: no template file: ";templatepath);
+    (log.error(mt0;@()));
+    <$tplerr{msg:mt0}
   }el{};
   let src=file.read(templatepath)!$tplerr;
   let tokens=tpllex(src)!$tplerr;

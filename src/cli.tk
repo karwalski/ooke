@@ -279,8 +279,15 @@ f=runserve(projectdir:$str):i64{
 f=runbuild(projectdir:$str):i64{
   let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {$ok:v v;$err:e cfgdefault()};
   let report=mt build.buildrun(projectdir;cfg) {$ok:v v;$err:e $buildreport{pagesbuilt:0-1;assetscopy:0;valerrors:0;valwarnings:0;pagesskipped:0}};
+  (* Story 134.24, second defect. This discarded the $builderr it was handed and
+     logged the word "build failed" — no route, no template, no reason — which
+     is why 134.24 took a four-build bisect to find. The payload's own `e.msg`
+     still cannot be read here (RT005, toke 127.78, open — the same constraint
+     clireportserveerr states), so build.tk logs the reason where the error is
+     raised and this names the project, says nothing was written, and points at
+     it. When 127.78 is fixed, print the payload here instead. *)
   if(report.pagesbuilt<0){
-    (log.error("build failed";@()));
+    (log.error(str.join("";@("ooke build failed for ";projectdir;" — no site was written. The route that failed and the template it could not render are named in the error above."));@()));
     <1
   }el{};
   (log.info(str.concat("pages built: ";str.fromint(report.pagesbuilt));@()));

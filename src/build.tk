@@ -66,12 +66,42 @@ f=buildpage(templatepath:$str;pattern:$str;sitename:$str;siteurl:$str;sitelangua
     "site.url":siteurl;
     "site.language":sitelanguage
   );
-  let rendered=tpl.tplrenderfile(templatepath;ctx;templatesdir)!$builderr;
+  (* Story 134.24, the second defect. Every failure here used to leave by a bare
+     `!$builderr`, which carries a message nothing ever prints: the operator got
+     the word "build failed" from cli.tk and no route, no template and no
+     reason. That is why a route being rendered as a page took a four-build
+     bisect to find. The reason is logged HERE, where the data still exists,
+     because reading `e.msg` off a struct-style error payload traps RT005 —
+     toke 127.78, open, the same constraint serve.tk:33 works around. When that
+     is fixed, cli.tk can print the payload and these logs can go. *)
+  if(!file.exists(templatepath)){
+    let m0=str.join("";@("build: route ";pattern;" has no template. ooke derives a page's template from its path — pages/a/b.tk needs templates/a/b.tkt — and expected ";templatepath;", resolved from the directory `ooke build` runs in."));
+    (log.error(m0;@()));
+    <$builderr{msg:m0}
+  }el{};
+  let render=tpl.tplrenderfile(templatepath;ctx;templatesdir);
+  let renderfailed=mt render {$ok:h false;$err:e true};
+  if(renderfailed){
+    let m1=str.join("";@("build: route ";pattern;" — ";templatepath;" exists but could not be rendered; the template's own error is logged above."));
+    (log.error(m1;@()));
+    <$builderr{msg:m1}
+  }el{};
+  let rendered=mt render {$ok:h h;$err:e ""};
   let html=buildfinish(rendered;templatesdir;doinlinecss;dominify);
   let outpath=buildoutputpath(pattern;buildoutput);
   let parentdir=path.dir(outpath);
-  (file.mkdir(parentdir)!$builderr);
-  (file.write(outpath;html)!$builderr);
+  let mkok=mt file.mkdir(parentdir) {$ok:v true;$err:e false};
+  if(!mkok){
+    let m2=str.join("";@("build: route ";pattern;" — could not create the output directory ";parentdir));
+    (log.error(m2;@()));
+    <$builderr{msg:m2}
+  }el{};
+  let writeok=mt file.write(outpath;html) {$ok:v true;$err:e false};
+  if(!writeok){
+    let m3=str.join("";@("build: route ";pattern;" — could not write ";outpath));
+    (log.error(m3;@()));
+    <$builderr{msg:m3}
+  }el{};
   <0
 };
 
@@ -203,7 +233,16 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
   let templatesdir=path.join(projectdir;"templates");
   let modelsdir=path.join(projectdir;"models");
 
-  let routes=router.routerscan(pagesdir)!$builderr;
+  (* 134.24: same rule as buildpage — say which directory failed to scan rather
+     than propagating a message no one can read. *)
+  let scan=router.routerscan(pagesdir);
+  let scanfailed=mt scan {$ok:r false;$err:e true};
+  if(scanfailed){
+    let ms=str.concat("build: could not scan the pages directory: ";pagesdir);
+    (log.error(ms;@()));
+    <$builderr{msg:ms}
+  }el{};
+  let routes=mt scan {$ok:r r;$err:e @($route)};
 
   let pagescount=mut.0;
   let skippedcount=mut.0;
