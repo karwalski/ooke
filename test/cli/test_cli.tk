@@ -5,9 +5,60 @@ i=chk:ookeassert;
 i=path:std.path;
 i=cli:ooke.cli;
 i=cfgmod:ooke.config;
+i=router:ooke.router;
+i=build:ooke.build;
 
 f=delfile(p:$str):bool{
   <mt file.delete(p) {$ok:v true;$err:e false}
+};
+
+f=hasfile(p:$str):bool{
+  <mt file.exists(p) {$ok:v v;$err:e false}
+};
+
+f=readfile(p:$str):$str{
+  <mt file.read(p) {$ok:v v;$err:e ""}
+};
+
+(* Story 134.24 regression. `ooke new` wrote one template, templates/base.tkt,
+   while the route it also writes — pages/index.tk, i.e. "/" — derives
+   templates/index.tkt. The scaffold therefore could not be built, which is the
+   first thing a downstream consumer does with it. Assert the invariant rather
+   than the file list: every page route the scaffold creates must have the
+   template the router derives for it. *)
+f=testscaffoldtemplatesmatchitsroutes():bool{
+  let proj="/tmp/test_cli_13424_new";
+  let rc=cli.clinew(proj);
+  let a0=chk.eqint(rc;0;"clinew exit code");
+  let scan=router.routerscan(path.join(proj;"pages"));
+  let routes=mt scan {$ok:r r;$err:e @($route)};
+  let a1=chk.istrue(routes.len>0;"the scaffold writes at least one route");
+  let missing=mut.0;
+  lp(let i=0;i<routes.len;i=i+1){
+    if(build.buildisstaticpage(routes.get(i))){
+      if(!hasfile(path.join(proj;routes.get(i).templatepath))){
+        missing=missing+1
+      }el{}
+    }el{}
+  };
+  let a2=chk.eqint(missing;0;"every page the scaffold writes has the template it derives");
+  <a0&&a1&&a2
+};
+
+(* The one template it did write was not a layout either: it used {{title}} and
+   {{content}}, which are not ooke template syntax, so both would have reached
+   the browser verbatim. *)
+f=testscaffoldtemplatesuseookesyntax():bool{
+  let proj="/tmp/test_cli_13424_new";
+  (cli.clinew(proj));
+  let base=readfile(path.join(path.join(proj;"templates");"base.tkt"));
+  let home=readfile(path.join(path.join(proj;"templates");"index.tkt"));
+  let a0=chk.istrue(str.contains(base;"{! yield(\"content\") !}");"base.tkt yields a content block");
+  let a1=chk.istrue(str.contains(home;"{! layout(\"base\") !}");"index.tkt declares its layout");
+  let a2=chk.istrue(str.contains(home;"{! block(\"content\") !}");"index.tkt fills the content block");
+  let a3=chk.isfalse(str.contains(base;"{{");"base.tkt has no non-ooke placeholder");
+  let a4=chk.isfalse(str.contains(home;"{{");"index.tkt has no non-ooke placeholder");
+  <a0&&a1&&a2&&a3&&a4
 };
 
 f=testcfgdefault():bool{
@@ -145,7 +196,9 @@ f=main():i64{
   let r6=testgenspecunknown();
   let r7=testgenpage();
   let r8=testgenspecstackfile();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8){
+  let r9=testscaffoldtemplatesmatchitsroutes();
+  let r10=testscaffoldtemplatesuseookesyntax();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10){
     <0
   }el{
     <1
