@@ -258,12 +258,19 @@ f=tplrender(
   templatesdir:$str;
   blocks:@$block
 ):$str!$tplerr{
-  let buf=mut."";
+  (* Story 134.4. Both accumulators were `x=str.concat(x;part)` chains. That
+     is the form the Epic 131 catalogue measures as worse-bigO on `str-build-
+     loop` -- it copies the whole accumulator on every token, so rendering a
+     63 KB page from N tokens copies O(N x 63 KB). The catalogue's canonical
+     form is str.builder/str.add/str.build, one growing buffer. 134.3 left
+     this site alone because no lint rule covers string-building loops
+     (131.64); the macro numbers are what found it. *)
+  let buf=str.builder();
   let hasislands=mut.false;
 
   let inblock=mut.false;
   let currentblockname=mut."";
-  let currentblockbuf=mut."";
+  let currentblockbuf=mut.str.builder();
   let collectedblocks=mut.@();
 
   let layoutname=mut."";
@@ -273,18 +280,18 @@ f=tplrender(
 
     if(tok.kind.raw){
       if(inblock){
-        currentblockbuf=str.concat(currentblockbuf;tok.content)
+        str.add(currentblockbuf;tok.content)
       }el{
-        buf=str.concat(buf;tok.content)
+        str.add(buf;tok.content)
       }
     }el{};
 
     if(tok.kind.expr){
       let val=tplresolveexpr(tok.content;ctx);
       if(inblock){
-        currentblockbuf=str.concat(currentblockbuf;val)
+        str.add(currentblockbuf;val)
       }el{
-        buf=str.concat(buf;val)
+        str.add(buf;val)
       }
     }el{};
 
@@ -298,15 +305,15 @@ f=tplrender(
         if(dname=="block"){
           inblock=true;
           currentblockname=darg;
-          currentblockbuf=""
+          currentblockbuf=str.builder()
         }el{
           if(dname=="end"){
             if(inblock){
-              let b=$block{name:currentblockname;content:currentblockbuf};
+              let b=$block{name:currentblockname;content:str.build(currentblockbuf)};
               collectedblocks=collectedblocks.append(b);
               inblock=false;
               currentblockname="";
-              currentblockbuf=""
+              currentblockbuf=str.builder()
             }el{}
           }el{
             if(dname=="var"){
@@ -314,15 +321,15 @@ f=tplrender(
               let varraw=mt vargot {$ok:v v;$err:e ""};
               let varval=tplescape(varraw);
               if(inblock){
-                currentblockbuf=str.concat(currentblockbuf;varval)
+                str.add(currentblockbuf;varval)
               }el{
-                buf=str.concat(buf;varval)
+                str.add(buf;varval)
               }
             }el{
             if(dname=="yield"){
               let blockcontent=tplfindblock(blocks;darg);
               if(str.len(blockcontent)>0){
-                buf=str.concat(buf;blockcontent)
+                str.add(buf;blockcontent)
               }el{}
             }el{
               if(dname=="partial"){
@@ -333,9 +340,9 @@ f=tplrender(
                   let partialtokens=tpllex(partialsrc)!$tplerr;
                   let partialout=tplrender(partialtokens;ctx;templatesdir;@())!$tplerr;
                   if(inblock){
-                    currentblockbuf=str.concat(currentblockbuf;partialout)
+                    str.add(currentblockbuf;partialout)
                   }el{
-                    buf=str.concat(buf;partialout)
+                    str.add(buf;partialout)
                   }
                 }el{}
               }el{
@@ -347,9 +354,9 @@ f=tplrender(
                   let ihydrate=mt ihydrateg {$ok:v v;$err:e "load"};
                   let idiv=str.join("";@("<div data-island=\"";iname;"\" data-hydrate=\"";ihydrate;"\"></div>"));
                   if(inblock){
-                    currentblockbuf=str.concat(currentblockbuf;idiv)
+                    str.add(currentblockbuf;idiv)
                   }el{
-                    buf=str.concat(buf;idiv)
+                    str.add(buf;idiv)
                   };
                   hasislands=true
                 }el{}
@@ -379,9 +386,9 @@ f=tplrender(
     }
   }el{
     if(hasislands){
-      <str.concat(buf;islandscript)
+      <str.concat(str.build(buf);islandscript)
     }el{
-      <buf
+      <str.build(buf)
     }
   }
 };
