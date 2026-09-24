@@ -276,8 +276,34 @@ f=clireportserveerr():i64{
   <1
 };
 
+(* Story 134.42. runserve and runbuild used to read the config as
+   `{$err:e cfgdefault()}`, so an ooke.toml that failed to parse was served or
+   built with default settings -- port 3000, output build/, minify on -- and
+   no message. A MISSING ooke.toml still means "use the defaults"; a PRESENT
+   one that cannot be loaded is now an error. The parser's own message cannot
+   be printed: the toml error payload is unreadable from toke (E4034 on toke
+   main, RT005 at the declared floor, and `!$configerr` propagation drops it),
+   so this names the file and the cause class instead. *)
+f=clicfgloads(cfgpath:$str):bool{
+  if(file.exists(cfgpath)){
+    let ok=mt config.configload(cfgpath) {$ok:v true;$err:e false};
+    <ok
+  }el{
+    <true
+  }
+};
+
+f=clireportcfgerr(cfgpath:$str):i64{
+  (log.error(str.join("";@(cfgpath;" could not be read or is not valid TOML; refusing to fall back to default settings. Fix the file, or remove it to use the defaults."));@()));
+  <1
+};
+
 f=runserve(projectdir:$str):i64{
-  let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {$ok:v v;$err:e cfgdefault()};
+  let cfgpath=path.join(projectdir;"ooke.toml");
+  if(!clicfgloads(cfgpath)){
+    <clireportcfgerr(cfgpath)
+  }el{};
+  let cfg=mt config.configload(cfgpath) {$ok:v v;$err:e cfgdefault()};
   let port=cfg.serverport;
   let workers=cfg.serverworkers;
   let output=cfg.buildoutput;
@@ -298,7 +324,11 @@ f=runserve(projectdir:$str):i64{
 };
 
 f=runbuild(projectdir:$str):i64{
-  let cfg=mt config.configload(path.join(projectdir;"ooke.toml")) {$ok:v v;$err:e cfgdefault()};
+  let cfgpath=path.join(projectdir;"ooke.toml");
+  if(!clicfgloads(cfgpath)){
+    <clireportcfgerr(cfgpath)
+  }el{};
+  let cfg=mt config.configload(cfgpath) {$ok:v v;$err:e cfgdefault()};
   let report=mt build.buildrun(projectdir;cfg) {$ok:v v;$err:e $buildreport{pagesbuilt:0-1;assetscopy:0;valerrors:0;valwarnings:0;pagesskipped:0}};
   (* Story 134.24, second defect. This discarded the $builderr it was handed and
      logged the word "build failed" — no route, no template, no reason — which

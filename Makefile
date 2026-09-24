@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-deps test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-deps test-cli-contract test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -342,7 +342,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-deps
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-deps test-cli-contract
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -354,6 +354,12 @@ test-cwd: $(BIN)
 # must render the project's templates exactly as a serve from the project root.
 test-serve-cwd: $(BIN)
 	@test/serve/serve_from_parent.sh ./$(BIN)
+
+# test-cli-contract — stories 134.42 and 134.43: `--version` on stdout exactly,
+# and a malformed ooke.toml fails `build` and `serve` instead of falling back
+# to defaults.
+test-cli-contract: $(BIN)
+	@test/cli/cli_contract.sh ./$(BIN)
 
 # test-deps — story 134.37: a page at any depth under pages/ is a prerequisite
 # of src/_handlers.tk. Needs no compiler.
