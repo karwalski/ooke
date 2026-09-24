@@ -14,7 +14,7 @@ f=cliprintusage():i64{
   (log.info("";@()));
   (log.info("Usage:";@()));
   (log.info("  ooke new <name>       scaffold a new project";@()));
-  (log.info("  ooke serve [options]  start development server";@()));
+  (log.info("  ooke serve [path]     start development server";@()));
   (log.info("  ooke build [path]     build static HTML (default: current directory)";@()));
   (log.info("  ooke gen <type> <name>  scaffold component";@()));
   (log.info("  ooke gen spec <container> <type>  generate type-specialised code";@()));
@@ -41,10 +41,12 @@ f=cliprintcmdusage(cmd:$str):i64{
   if(str.eq(cmd;"serve")){
     (log.info("ooke serve — start the development server";@()));
     (log.info("";@()));
-    (log.info("Usage: ooke serve";@()));
+    (log.info("Usage: ooke serve [path]";@()));
     (log.info("";@()));
-    (log.info("Serves the project in the current directory. Port, workers,";@()));
-    (log.info("CORS origins and the API prefix all come from ooke.toml.";@()));
+    (log.info("Serves the project at [path] (default: the current directory).";@()));
+    (log.info("Templates resolve against the project, not where you run the";@()));
+    (log.info("command. Port, workers, CORS origins and the API prefix all";@()));
+    (log.info("come from the project's ooke.toml.";@()));
     <0
   }el{};
   if(str.eq(cmd;"build")){

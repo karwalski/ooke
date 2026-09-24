@@ -82,7 +82,7 @@ Error type for `serverun`.
 
 **Error handling:** None.
 
-### `serveregisterstatic(pagesdir: $str; contentdir: $str; templatesdir: $str; sitename: $str; siteurl: $str; sitelanguage: $str; apiprefix: $str; handledpaths: @$str): i64!$serveerr`
+### `serveregisterstatic(projectdir: $str; pagesdir: $str; contentdir: $str; templatesdir: $str; sitename: $str; siteurl: $str; sitelanguage: $str; apiprefix: $str; handledpaths: @$str): i64!$serveerr`
 
 **Purpose:** Scan the pages directory and register every page as a static HTTP
 route, in three passes: plain static pages, dynamic content pages, and API
@@ -93,6 +93,7 @@ takes precedence over a static fallback.
 
 | Name | Type | Description |
 |------|------|-------------|
+| `projectdir` | `$str` | Project root. Each route's project-relative `templatepath` is anchored to it with `build.buildresolve` before rendering, so serving works from any working directory (story 134.37). |
 | `pagesdir` | `$str` | Directory scanned for page routes. |
 | `contentdir` | `$str` | Directory of content collections (for dynamic routes). |
 | `templatesdir` | `$str` | Directory used as the template render base. |
@@ -122,7 +123,8 @@ failed.
       set it `true` if any equals `webpath` (via `str.eq`).
    c. If `alreadyhandled`, log a skip line and do nothing else.
    d. Otherwise build a context map `@("site.name":sitename; "site.url":siteurl;
-      "site.language":sitelanguage)` and render the route's `templatepath` with
+      "site.language":sitelanguage)` and render the route's `templatepath`, resolved as
+      `tpath = build.buildresolve(projectdir; templatepath)`, with
       `tpl.tplrenderfile(tpath; ctx; templatesdir)`, matched `{$ok:h h; $err:e ""}`.
       - If the rendered `html` is non-empty: log `"reg static: " + webpath` and
         register it via `http.getstatic(webpath; html)`.
@@ -139,7 +141,7 @@ failed.
       `store.storeallflat(contentdir; ctype)`, matched `{$ok:c c; $err:e @()}`.
    b. Loop `k` over the collection. For each item read `slug`, `body`, `title`,
       build a context map adding `slug`/`body`/`title` to the site fields, and
-      render the route's `templatepath`.
+      render the route's `templatepath`, resolved the same way.
       - If the rendered `html2` is non-empty: compute `fullurl` by replacing
         `":slug"` in the route pattern with the item's `slug`, log
         `"reg dyn: " + fullurl`, and register via `http.getstatic(fullurl; html2)`.
@@ -190,7 +192,7 @@ the type permits `$serveerr` for plumbing parity.
 
 1. Join `projectdir` with `"pages"`, `"content"`, `"templates"` to get the three
    subdirectories.
-2. Call `serveregisterstatic` with those directories, the site context, the
+2. Call `serveregisterstatic` with `projectdir`, those directories, the site context, the
    `apiprefix`, and `handledpaths` to register every static route.
 3. If `corsorigins` is non-empty, call `http.setcors(corsorigins)` and log
    `"CORS enabled: " + corsorigins`. Otherwise do nothing.

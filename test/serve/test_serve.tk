@@ -39,7 +39,7 @@ f=testregisternoprefix():bool{
   let content=path.join(root;"content");
   let tpls=path.join(root;"templates");
   let handled=@($str);
-  let rc=mt serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"";handled) {$ok:v v;$err:e 0-1};
+  let rc=mt serve.serveregisterstatic(root;pages;content;tpls;"My Site";"https://example.com";"en";"";handled) {$ok:v v;$err:e 0-1};
   <chk.eqint(rc;0;"register with no api prefix")
 };
 
@@ -51,7 +51,7 @@ f=testregisterwithprefix():bool{
   let content=path.join(root;"content");
   let tpls=path.join(root;"templates");
   let handled=@($str);
-  let rc=mt serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"v1";handled) {$ok:v v;$err:e 0-1};
+  let rc=mt serve.serveregisterstatic(root;pages;content;tpls;"My Site";"https://example.com";"en";"v1";handled) {$ok:v v;$err:e 0-1};
   <chk.eqint(rc;0;"register with an api prefix")
 };
 
@@ -63,7 +63,7 @@ f=testregisterdedup():bool{
   let content=path.join(root;"content");
   let tpls=path.join(root;"templates");
   let handled=@("/";"/api/hello");
-  let rc=mt serve.serveregisterstatic(pages;content;tpls;"My Site";"https://example.com";"en";"";handled) {$ok:v v;$err:e 0-1};
+  let rc=mt serve.serveregisterstatic(root;pages;content;tpls;"My Site";"https://example.com";"en";"";handled) {$ok:v v;$err:e 0-1};
   <chk.eqint(rc;0;"register skips paths a dynamic handler already owns")
 };
 
@@ -79,7 +79,7 @@ f=testservejson():bool{
 f=testregisterfailsonmissingpages():bool{
   let root="/tmp/ooke_serve_nopages";
   let handled=@($str);
-  let iserr=mt serve.serveregisterstatic(path.join(root;"pages");path.join(root;"content");path.join(root;"templates");"My Site";"https://example.com";"en";"";handled) {$ok:v false;$err:e true};
+  let iserr=mt serve.serveregisterstatic(root;path.join(root;"pages");path.join(root;"content");path.join(root;"templates");"My Site";"https://example.com";"en";"";handled) {$ok:v false;$err:e true};
   <chk.istrue(iserr;"a missing pages dir must fail registration, not register zero routes")
 };
 

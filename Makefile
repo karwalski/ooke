@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-deps test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-deps test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -216,7 +216,8 @@ $(IFACE_DIR)/build.tki $(IFACE_DIR)/build: \
 $(IFACE_DIR)/serve.tki $(IFACE_DIR)/serve: \
     $(SRC)/serve.tk \
     $(IFACE_DIR)/config.tki $(IFACE_DIR)/router.tki \
-    $(IFACE_DIR)/template.tki $(IFACE_DIR)/store.tki | $(IFACE_DIR)
+    $(IFACE_DIR)/template.tki $(IFACE_DIR)/store.tki \
+    $(IFACE_DIR)/build.tki | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/serve serve.tk
 
 # ── API modules ─────────────────────────────────────────────────────────
@@ -341,13 +342,18 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-deps
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-deps
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
 # run from the project root, and must write nothing where it was run.
 test-cwd: $(BIN)
 	@test/build/build_from_parent.sh ./$(BIN)
+
+# test-serve-cwd — story 134.37: `ooke serve <path>` from a parent and from /
+# must render the project's templates exactly as a serve from the project root.
+test-serve-cwd: $(BIN)
+	@test/serve/serve_from_parent.sh ./$(BIN)
 
 # test-deps — story 134.37: a page at any depth under pages/ is a prerequisite
 # of src/_handlers.tk. Needs no compiler.

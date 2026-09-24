@@ -10,7 +10,7 @@ Story 134.10. Semver applies to §1 and to nothing else. If it is not listed in
 | Command | Contract |
 |---|---|
 | `ooke new <name>` | scaffolds `ooke.toml`, `pages/index.tk`, `templates/base.tkt`, `templates/index.tkt` |
-| `ooke serve [options]` | serves the project in the working directory |
+| `ooke serve [path]` | serves the project at `path` (default: the working directory); templates resolve against the project (story 134.37) |
 | `ooke build` | renders the project to the `[build] output` directory |
 | `ooke compile [path]` | per-app serve binary with handlers compiled in |
 | `ooke run [path]` | compile and run a CLI package |
