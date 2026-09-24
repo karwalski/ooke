@@ -54,6 +54,22 @@ src/ooke/
 # test dir, not the build output dir
 !test/build/
 !test/build/**
+# ...but the negation above re-includes EVERYTHING under test/build/, which
+# would un-ignore any generated .tki written there (the blanket *.tki rule sits
+# earlier, and in gitignore the last matching pattern wins).  Re-assert it here,
+# after the negation, so an emitted interface in test/build/ stays ignored
+# (story 134.22; latent — none exist today).
+test/build/**/*.tki
+
+# ── src/_handlers.tk — generated, build OUTPUT (story 134.22) ───────────────
+# Produced from pages/ by scripts/gen_handlers.sh via the Makefile's
+# $(SRC)/_handlers.tk rule, and deleted by `make clean`.  It used to be tracked
+# as well, so the working tree and a fresh clone disagreed about it in
+# whichever direction someone last ran a command.  Its inputs (pages/**/*.tk and
+# the generator) are tracked; the file itself is not.  `make`, `make check` and
+# `make test` all regenerate it.  Its documentation, src/_handlers.tkc.md, is
+# hand-written and stays tracked.
+/src/_handlers.tk
 
 # Release artefacts (story 134.10): built by scripts/package_release.sh
 dist/

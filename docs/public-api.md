@@ -59,8 +59,9 @@ output changes meaning — silently producing escaped text rather than failing.
   build the ooke binary, they change with ooke's internals, and nothing tests
   them as a consumer surface. If you import them, pin an exact ooke commit and
   expect to follow it. Making them supportable is not scheduled.
-- **`src/_handlers.tk`** — generated from `pages/` by `scripts/gen_handlers.sh`,
-  and inconsistently tracked (story 134.22).
+- **`src/_handlers.tk`** — generated from `pages/` by `scripts/gen_handlers.sh`
+  on every build. Build output: not tracked, ignored, and removed by
+  `make clean` (story 134.22).
 - **`test/support/ookeassert.tk`** — ooke's own test helper. Tracked so a clone
   can run the suite (story 134.21), not published for reuse.
 - **Everything in `bench/`, `scripts/`, `testproj/`.**

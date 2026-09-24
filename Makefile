@@ -285,9 +285,12 @@ $(ASSERT_TKI) $(ASSERT_LL): test-support-check $(ASSERT_SRC)
 # directory. The build rules hide this by doing `cd $(SRC)` first; anything run
 # from the repo root — a human, a linter, CI — needs the flag (defect D10).
 # The environment equivalent is TKC_INTERFACE_PATH=src.
-TK_SOURCES := $(shell find . -name '*.tk' -not -path './.git/*' | sort)
+# src/_handlers.tk is generated build output (story 134.22), so a fresh clone
+# does not have it until the build runs.  Name it explicitly and make `check`
+# generate it, so it is type-checked whether or not `make` ran first.
+TK_SOURCES := $(sort $(shell find . -name '*.tk' -not -path './.git/*') ./$(SRC)/_handlers.tk)
 
-check: test-support-check $(ASSERT_TKI)
+check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk
 	@echo "=== tkc --check -I $(SRC) over $(words $(TK_SOURCES)) file(s) ==="
 	@pass=0; fail=0; \
 	for f in $(TK_SOURCES); do \
@@ -340,6 +343,8 @@ print-build-vars:
 	@echo 'LDFLAGS="$(LDFLAGS)"'
 	@echo 'LIBS="$(LIBS)"'
 
+# $(SRC)/_handlers.tk is generated from pages/ and is NOT tracked (story
+# 134.22, see .gitignore), so removing it here is correct: `make` regenerates it.
 clean:
 	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI) $(SRC)/_handlers.tk \
 	      $(ASSERT_TKI) $(ASSERT_LL)
