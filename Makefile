@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -304,7 +304,13 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run
+test: check-versions check $(BIN) test-check test-run test-cwd
+
+# test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
+# unrelated directory must write the same site, into the project, as a build
+# run from the project root, and must write nothing where it was run.
+test-cwd: $(BIN)
+	@test/build/build_from_parent.sh ./$(BIN)
 
 # test-check — type-check the test programs.
 #

@@ -37,6 +37,25 @@ f=buildisdynamicpage(r:$route):bool{
   <r.isdynamic&&!r.isapi
 };
 
+(* Story 134.25. A route's templatepath ("templates/a/b.tkt", from
+   router.routederivetemplate) and [build].output ("build/") are both relative
+   to the PROJECT, but they were used as-is, i.e. relative to whatever directory
+   `ooke build` ran in, while layouts and partials already resolved against
+   path.join(projectdir;"templates"). Building from anywhere but the project
+   root therefore failed on the first template, or wrote the site into the
+   caller's directory. buildresolve anchors a project-relative path to the
+   project. An absolute path is kept, and projectdir "." (build run from the
+   root) returns the path unchanged, so that case is byte-identical to before.
+   The trailing slash of an output directory is preserved, which
+   str.concat(outputdir;"index.html") below depends on. *)
+f=buildresolve(projectdir:$str;p:$str):$str{
+  if(str.startswith(p;"/")||str.len(projectdir)==0||projectdir=="."){
+    <p
+  }el{
+    <str.join("";@(str.trimsuffix(projectdir;"/");"/";p))
+  }
+};
+
 f=buildoutputpath(pattern:$str;outputdir:$str):$str{
   if(pattern=="/"){
     <str.concat(outputdir;"index.html")
@@ -75,7 +94,7 @@ f=buildpage(templatepath:$str;pattern:$str;sitename:$str;siteurl:$str;sitelangua
      toke 127.78, open, the same constraint serve.tk:33 works around. When that
      is fixed, cli.tk can print the payload and these logs can go. *)
   if(!file.exists(templatepath)){
-    let m0=str.join("";@("build: route ";pattern;" has no template. ooke derives a page's template from its path — pages/a/b.tk needs templates/a/b.tkt — and expected ";templatepath;", resolved from the directory `ooke build` runs in."));
+    let m0=str.join("";@("build: route ";pattern;" has no template. ooke derives a page's template from its path — pages/a/b.tk needs templates/a/b.tkt — and expected ";templatepath;", resolved against the project directory."));
     (log.error(m0;@()));
     <$builderr{msg:m0}
   }el{};
@@ -232,6 +251,8 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
   let contentdir=path.join(projectdir;"content");
   let templatesdir=path.join(projectdir;"templates");
   let modelsdir=path.join(projectdir;"models");
+  (* 134.25: project-relative, not cwd-relative. See buildresolve. *)
+  let outdir=buildresolve(projectdir;config.buildoutput);
 
   (* 134.24: same rule as buildpage — say which directory failed to scan rather
      than propagating a message no one can read. *)
@@ -255,7 +276,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
       apicount=apicount+1
     }el{};
     if(buildisstaticpage(routes.get(i))){
-      let bp=buildpage(routes.get(i).templatepath;routes.get(i).pattern;config.sitename;config.siteurl;config.sitelanguage;config.buildoutput;templatesdir;config.buildinlinecss;config.buildminify)!$builderr;
+      let bp=buildpage(buildresolve(projectdir;routes.get(i).templatepath);routes.get(i).pattern;config.sitename;config.siteurl;config.sitelanguage;outdir;templatesdir;config.buildinlinecss;config.buildminify)!$builderr;
       pagescount=pagescount+1
     }el{}
   };
@@ -297,7 +318,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
           "body":body;
           "title":title
         );
-        let renderedhtml=mt tpl.tplrenderfile(routes.get(j).templatepath;ctx;templatesdir) {$ok:h h;$err:e ""};
+        let renderedhtml=mt tpl.tplrenderfile(buildresolve(projectdir;routes.get(j).templatepath);ctx;templatesdir) {$ok:h h;$err:e ""};
         let html=buildfinish(renderedhtml;templatesdir;config.buildinlinecss;config.buildminify);
         if(str.len(html)==0&&str.len(slug)>0){
           (log.error(str.join("";@("build: render produced no output for ";routes.get(j).templatepath;" slug=";slug));@()));
@@ -305,7 +326,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
         }el{};
         if(str.len(html)>0&&str.len(slug)>0){
           let slugpattern=str.replace(routes.get(j).pattern;":slug";slug);
-          let outpath=buildoutputpath(slugpattern;config.buildoutput);
+          let outpath=buildoutputpath(slugpattern;outdir);
           let parentdir=path.dir(outpath);
           let mkr3=mt file.mkdir(parentdir) {$ok:v true;$err:e false};
           let writeok=mt file.write(outpath;html) {$ok:v true;$err:e false};
@@ -320,7 +341,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
 
   (validate.validatelogresult(allval));
 
-  let assetscount=mt buildcopyassets(projectdir;config.buildoutput) {$ok:n n;$err:e 0};
+  let assetscount=mt buildcopyassets(projectdir;outdir) {$ok:n n;$err:e 0};
 
   let notfoundtpl=path.join(templatesdir;"errors/404.tkt");
   if(file.exists(notfoundtpl)){
@@ -333,7 +354,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     let nfrendered=mt tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir) {$ok:h h;$err:e ""};
     let nfhtml=buildfinish(nfrendered;templatesdir;config.buildinlinecss;config.buildminify);
     if(str.len(nfhtml)>0){
-      let nfpath=str.concat(config.buildoutput;"404.html");
+      let nfpath=str.concat(outdir;"404.html");
       let nfwrite=mt file.write(nfpath;nfhtml) {$ok:v true;$err:e false};
       if(nfwrite){
         pagescount=pagescount+1

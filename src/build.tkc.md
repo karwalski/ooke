@@ -51,6 +51,17 @@ Summary of a completed build, returned by `buildrun`.
 
 ## Functions
 
+### `buildresolve(projectdir: $str; p: $str): $str`
+
+**Purpose:** Anchor a project-relative path (a route's `templatepath`, or
+`[build].output`) to the project directory, so `ooke build <path>` works from
+any working directory (story 134.25).
+
+**Returns:** `p` unchanged when it is absolute or when `projectdir` is `""` or
+`"."` (so a build run from the project root is unchanged); otherwise
+`projectdir` (trailing `/` trimmed) + `"/"` + `p`. A trailing `/` on `p` is
+preserved.
+
 ### `buildoutputpath(pattern: $str; outputdir: $str): $str`
 
 **Purpose:** Map a route pattern to the on-disk output file path.
