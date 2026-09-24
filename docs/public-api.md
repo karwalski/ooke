@@ -10,7 +10,7 @@ Story 134.10. Semver applies to §1 and to nothing else. If it is not listed in
 | Command | Contract |
 |---|---|
 | `ooke new <name>` | scaffolds `ooke.toml`, `pages/index.tk`, `templates/base.tkt`, `templates/index.tkt` |
-| `ooke serve [options]` | serves the project in the working directory |
+| `ooke serve [path]` | serves the project at `path` (default: the working directory); templates resolve against the project (story 134.37) |
 | `ooke build` | renders the project to the `[build] output` directory |
 | `ooke compile [path]` | per-app serve binary with handlers compiled in |
 | `ooke run [path]` | compile and run a CLI package |
@@ -29,8 +29,9 @@ failing on them (story 134.24).
 
 ### 1.2 `ooke.toml`
 
-The `[site]`, `[build]`, `[server]`, `[store]`, `[log]`, `[paths]` and
-`[requires]` sections, and the keys ooke reads from them. Key names follow the
+The `[site]`, `[build]`, `[server]`, `[log]`, `[paths]` and `[requires]`
+sections, and the keys ooke reads from them. (`[store]` is not among them: its
+one key, `backend`, selected nothing and was removed in 3.0.0 — story 134.34.) Key names follow the
 **no-underscore convention** (`inlinecss`, `accessformat`, `apiprefix`,
 `mintokecommit`) — toke's Profile-1 character set excludes `_`, so this is a
 language constraint, not a style choice.

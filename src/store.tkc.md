@@ -332,6 +332,11 @@ entry: `storeall(..."flat")` → `storeallflat` → `file.listall` + per-file
 `storetryparse`/`storetryparsejson`, which wrap the fallible
 `storeparsefront`/`storeparsejson`. The SQLite path is `storeall(..."sqlite")`
 → `storeallsql`, with `storewrite` for upserts and `storesqlcreate` for DDL.
+The SQLite functions are library pieces only: they query whatever database the
+caller has already opened with `db.open`, and nothing in ooke opens one, creates
+the tables or copies flat files in. ooke's own build and serve paths call
+`storeallflat` directly, and there is no configuration key that selects the SQLite
+path (`[store].backend` was parsed and then ignored; removed by story 134.34).
 `storeslug`/`storefind` are post-load lookups over an already-loaded
 collection. `storedefault` is the shared total fallback for the `try*`
 wrappers.

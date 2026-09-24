@@ -130,7 +130,7 @@ endif
 # ── LLVM IR targets ────────────────────────────────────────────────────────
 IFACE_DIR := $(SRC)/ooke
 
-BASE_MODS    := config store router template validate repair run
+BASE_MODS    := config store router template validate repair run floor
 DERIVED_MODS := build serve
 API_MODS     := apihealth
 GEN_MODS     := handlers
@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-deps test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -177,6 +177,34 @@ $(IFACE_DIR)/repair.tki $(IFACE_DIR)/repair: $(SRC)/repair.tk | $(IFACE_DIR)
 $(IFACE_DIR)/run.tki $(IFACE_DIR)/run: $(SRC)/run.tk | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/run run.tk
 
+# ── Generated toke floor (story 134.35) ──────────────────────────────────
+# `ooke new` writes a [requires] block into every project it scaffolds.  It
+# used to carry its own literal copy in cli.tk, which stayed at the 134.7
+# compile floor (b66bd8e, 2026-07-06) after ooke.toml moved to 6cc9061, so new
+# projects declared a floor ooke itself does not build on.  The block is now
+# generated from ooke.toml [requires] -- the same three keys check-toke-version
+# and the release workflow read -- so there is one source.  Build OUTPUT, like
+# _handlers.tk: not tracked, regenerated whenever ooke.toml changes.
+# Regenerated on every make (FORCE) but only rewritten when its content changes,
+# so a same-second edit of ooke.toml cannot leave a stale floor behind and an
+# unchanged floor does not trigger a relink.
+.PHONY: FORCE
+FORCE:
+$(SRC)/_floor.tk: FORCE
+	@test -n "$(MIN_TOKE_VERSION)" -a -n "$(MIN_TOKE_DATE)" -a -n "$(MIN_TOKE_COMMIT)" || \
+	  { echo "ERROR: ooke.toml [requires] must set mintoke, mintokedate and mintokecommit" >&2; exit 1; }
+	@printf '%s\n' \
+	  '(* GENERATED from ooke.toml [requires] by the Makefile (story 134.35). Do not edit. *)' \
+	  'm=ooke.floor;' \
+	  'f=floortoml():$$str{' \
+	  '  <"[requires]\nmintoke = \"$(MIN_TOKE_VERSION)\"\nmintokedate = \"$(MIN_TOKE_DATE)\"\nmintokecommit = \"$(MIN_TOKE_COMMIT)\"\n"' \
+	  '};' > $@.tmp
+	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; \
+	  echo "Generated: $@ (toke floor $(MIN_TOKE_VERSION) / $(MIN_TOKE_COMMIT) / $(MIN_TOKE_DATE))"; fi
+
+$(IFACE_DIR)/floor.tki $(IFACE_DIR)/floor: $(SRC)/_floor.tk | $(IFACE_DIR)
+	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/floor _floor.tk
+
 # ── Derived modules ──────────────────────────────────────────────────────
 $(IFACE_DIR)/build.tki $(IFACE_DIR)/build: \
     $(SRC)/build.tk \
@@ -188,7 +216,8 @@ $(IFACE_DIR)/build.tki $(IFACE_DIR)/build: \
 $(IFACE_DIR)/serve.tki $(IFACE_DIR)/serve: \
     $(SRC)/serve.tk \
     $(IFACE_DIR)/config.tki $(IFACE_DIR)/router.tki \
-    $(IFACE_DIR)/template.tki $(IFACE_DIR)/store.tki | $(IFACE_DIR)
+    $(IFACE_DIR)/template.tki $(IFACE_DIR)/store.tki \
+    $(IFACE_DIR)/build.tki | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/serve serve.tk
 
 # ── API modules ─────────────────────────────────────────────────────────
@@ -196,7 +225,15 @@ $(IFACE_DIR)/apihealth.tki $(IFACE_DIR)/apihealth: $(SRC)/apihealth.tk | $(IFACE
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/apihealth apihealth.tk
 
 # ── Generated handler registry (auto-scans pages/ for get/post handlers) ──
-$(SRC)/_handlers.tk: scripts/gen_handlers.sh $(wildcard pages/**/*.tk) $(wildcard pages/*.tk) | $(IFACE_DIR)
+# Story 134.37: this used `$(wildcard pages/**/*.tk) $(wildcard pages/*.tk)`.
+# make's wildcard has no recursive `**` -- it is a plain `*`, one directory --
+# so pages/a/b/c.tk was never a prerequisite and editing it did not regenerate
+# the registry, although gen_handlers.sh itself scans recursively with find.
+# Use the same find here, so the prerequisites are exactly what the generator
+# reads.
+PAGES_TK := $(shell find pages -name '*.tk' -type f 2>/dev/null)
+
+$(SRC)/_handlers.tk: scripts/gen_handlers.sh $(PAGES_TK) | $(IFACE_DIR)
 	./scripts/gen_handlers.sh pages $(SRC)/_handlers.tk
 
 $(IFACE_DIR)/handlers.tki $(IFACE_DIR)/handlers: $(SRC)/_handlers.tk $(IFACE_DIR)/apihealth.tki | $(IFACE_DIR)
@@ -206,7 +243,8 @@ $(IFACE_DIR)/handlers.tki $(IFACE_DIR)/handlers: $(SRC)/_handlers.tk $(IFACE_DIR
 $(IFACE_DIR)/cli.tki $(IFACE_DIR)/cli: \
     $(SRC)/cli.tk \
     $(IFACE_DIR)/config.tki $(IFACE_DIR)/serve.tki \
-    $(IFACE_DIR)/build.tki $(IFACE_DIR)/handlers.tki | $(IFACE_DIR)
+    $(IFACE_DIR)/build.tki $(IFACE_DIR)/handlers.tki \
+    $(IFACE_DIR)/floor.tki | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/cli cli.tk
 
 # ── main.ll ──────────────────────────────────────────────────────────────
@@ -288,9 +326,9 @@ $(ASSERT_TKI) $(ASSERT_LL): test-support-check $(ASSERT_SRC)
 # src/_handlers.tk is generated build output (story 134.22), so a fresh clone
 # does not have it until the build runs.  Name it explicitly and make `check`
 # generate it, so it is type-checked whether or not `make` ran first.
-TK_SOURCES := $(sort $(shell find . -name '*.tk' -not -path './.git/*') ./$(SRC)/_handlers.tk)
+TK_SOURCES := $(sort $(shell find . -name '*.tk' -not -path './.git/*') ./$(SRC)/_handlers.tk ./$(SRC)/_floor.tk)
 
-check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk
+check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk
 	@echo "=== tkc --check -I $(SRC) over $(words $(TK_SOURCES)) file(s) ==="
 	@pass=0; fail=0; \
 	for f in $(TK_SOURCES); do \
@@ -304,13 +342,23 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-deps
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
 # run from the project root, and must write nothing where it was run.
 test-cwd: $(BIN)
 	@test/build/build_from_parent.sh ./$(BIN)
+
+# test-serve-cwd — story 134.37: `ooke serve <path>` from a parent and from /
+# must render the project's templates exactly as a serve from the project root.
+test-serve-cwd: $(BIN)
+	@test/serve/serve_from_parent.sh ./$(BIN)
+
+# test-deps — story 134.37: a page at any depth under pages/ is a prerequisite
+# of src/_handlers.tk. Needs no compiler.
+test-deps:
+	@test/build/handlers_deps.sh
 
 # test-check — type-check the test programs.
 #
@@ -319,7 +367,7 @@ test-cwd: $(BIN)
 # errors that were breaking the repo, and ignored every name-resolution, type
 # and codegen error (defect D8). It is now just `check` restricted to test/,
 # with no filtering: tkc's own exit status decides.
-test-check: test-support-check $(ASSERT_TKI)
+test-check: test-support-check $(ASSERT_TKI) $(SRC)/_floor.tk
 	@echo "=== Type check all test files ==="
 	@pass=0; fail=0; for f in test/*/test_*.tk; do \
 	  if out=$$($(TKC) --check --diag-text -I $(SRC) -I $(ASSERT_INC) "$$f" 2>&1); then \
@@ -352,7 +400,7 @@ print-build-vars:
 # $(SRC)/_handlers.tk is generated from pages/ and is NOT tracked (story
 # 134.22, see .gitignore), so removing it here is correct: `make` regenerates it.
 clean:
-	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI) $(SRC)/_handlers.tk \
+	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk \
 	      $(ASSERT_TKI) $(ASSERT_LL)
 	rmdir $(IFACE_DIR) 2>/dev/null || true
 

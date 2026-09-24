@@ -14,9 +14,6 @@ workers = 0
 admin = false
 # corsorigins = "http://localhost:11432"
 
-[store]
-backend = "flat"
-
 [log]
 accessformat = "combined"
 

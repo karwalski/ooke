@@ -61,6 +61,33 @@ f=testscaffoldtemplatesuseookesyntax():bool{
   <a0&&a1&&a2&&a3&&a4
 };
 
+(* Story 134.35 regression. `ooke new` wrote its own copy of the toke floor
+   into the scaffold's [requires] (b66bd8e, 2026-07-06) while ooke.toml, the
+   declared floor the Makefile and the release enforce, had moved to 6cc9061.
+   Assert each floor key the scaffold writes equals the one in the repo's
+   ooke.toml -- the test runs from the repo root (test/run_tests.sh). *)
+f=tomlline(src:$str;key:$str):$str{
+  let lines=str.split(src;"\n");
+  let found=mut."";
+  lp(let i=0;i<lines.len;i=i+1){
+    let line=str.trim(lines.get(i));
+    if(str.startswith(line;str.concat(key;" "))||str.startswith(line;str.concat(key;"="))){found=line}el{}
+  };
+  <found
+};
+
+f=testscaffoldfloormatchesdeclared():bool{
+  let proj="/tmp/test_cli_13435_new";
+  (cli.clinew(proj));
+  let scaffold=readfile(path.join(proj;"ooke.toml"));
+  let declared=readfile("ooke.toml");
+  let a0=chk.istrue(str.len(tomlline(declared;"mintokecommit"))>0;"repo ooke.toml declares mintokecommit (run from the repo root)");
+  let a1=chk.eqstr(tomlline(scaffold;"mintoke");tomlline(declared;"mintoke");"scaffold mintoke == ooke.toml");
+  let a2=chk.eqstr(tomlline(scaffold;"mintokedate");tomlline(declared;"mintokedate");"scaffold mintokedate == ooke.toml");
+  let a3=chk.eqstr(tomlline(scaffold;"mintokecommit");tomlline(declared;"mintokecommit");"scaffold mintokecommit == ooke.toml");
+  <a0&&a1&&a2&&a3
+};
+
 f=testcfgdefault():bool{
   let cfg=cli.cfgdefault();
   let a0=chk.eqstr(cfg.sitename;"my-site";"cfgdefault site.name");
@@ -72,12 +99,11 @@ f=testcfgdefault():bool{
   let a6=chk.eqint(cfg.serverport;3000;"cfgdefault server.port");
   let a7=chk.eqint(cfg.serverworkers;0;"cfgdefault server.workers");
   let a8=chk.eqstr(cfg.servercorsorigins;"";"cfgdefault server.corsorigins");
-  let a9=chk.eqstr(cfg.storebackend;"flat";"cfgdefault store.backend");
   let a10=chk.eqstr(cfg.logaccessformat;"combined";"cfgdefault log.accessformat");
   let a11=chk.eqint(cfg.logmaxlines;10000;"cfgdefault log.maxlines");
   let a12=chk.eqint(cfg.logmaxagedays;30;"cfgdefault log.maxagedays");
   let a13=chk.eqstr(cfg.apiprefix;"";"cfgdefault paths.apiprefix");
-  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a9&&a10&&a11&&a12&&a13
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a10&&a11&&a12&&a13
 };
 
 f=testretcolon():bool{
@@ -198,7 +224,8 @@ f=main():i64{
   let r8=testgenspecstackfile();
   let r9=testscaffoldtemplatesmatchitsroutes();
   let r10=testscaffoldtemplatesuseookesyntax();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10){
+  let r11=testscaffoldfloormatchesdeclared();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11){
     <0
   }el{
     <1

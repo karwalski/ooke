@@ -12,9 +12,6 @@ inlinecss = true
 port = 8092
 workers = 4
 
-[store]
-backend = "flat"
-
 [log]
 accessformat = "combined"
 maxlines = 10000

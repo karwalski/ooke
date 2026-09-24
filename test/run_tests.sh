@@ -75,9 +75,14 @@ done
 
 if [ ${#stale[@]} -gt 0 ]; then
   echo "=== Compiling ${#stale[@]} C translation unit(s) for the test archive ==="
-  printf '%s\n' "${stale[@]}" |
-    CFLAGS="$CFLAGS" xargs -P "$(sysctl -n hw.ncpu 2>/dev/null || echo 4)" -I{} \
-      bash -c 'IFS="|" read -r s o <<< "{}"; clang $CFLAGS -c "$s" -o "$o"' || {
+  # The pair is passed as an argument ($1), not spliced in with `xargs -I{}`:
+  # BSD xargs caps an -I replacement at 255 bytes (its -S default), and a toke
+  # checkout at a longer path than ../toke pushed the command past it, so the
+  # suite died with "command line cannot be assembled, too long" before a
+  # single test ran. -0 and -n 1 work the same on BSD and GNU xargs.
+  printf '%s\0' "${stale[@]}" |
+    CFLAGS="$CFLAGS" xargs -0 -n 1 -P "$(sysctl -n hw.ncpu 2>/dev/null || echo 4)" \
+      bash -c 'IFS="|" read -r s o <<< "$1"; clang $CFLAGS -c "$s" -o "$o"' _ || {
         echo "error: stdlib/vendor compile failed" >&2; exit 2; }
 fi
 rm -f "$LIB"

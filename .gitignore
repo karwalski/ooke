@@ -71,5 +71,8 @@ test/build/**/*.tki
 # hand-written and stays tracked.
 /src/_handlers.tk
 
+# src/_floor.tk -- generated from ooke.toml [requires], build OUTPUT (134.35).
+/src/_floor.tk
+
 # Release artefacts (story 134.10): built by scripts/package_release.sh
 dist/

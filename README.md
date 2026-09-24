@@ -33,13 +33,11 @@ and nowhere else.*
 - **JSON content** -- `.json` files alongside `.md` for structured content collections.
 - **Content validation** -- define TOML models in `models/` with field types and required flags. ooke validates content against them automatically.
 - **Island architecture** -- interactive client-side components with `{! island("name"; hydrate="visible") !}` directives and the `ooke-islands.js` hydration loader. Scaffold new islands with `ooke gen island <name>`.
-- **SQLite store** -- optional SQLite backend for content storage with automatic migration from the default flat-file store.
 - **Static site generation** -- `ooke build` renders your entire site to static HTML in `build/`. Deploy anywhere.
-- **TLS/HTTPS** -- built-in TLS support for production serving. No reverse proxy required.
+- **HTTP serving** -- `ooke serve` serves plain HTTP. It does not terminate TLS: it passes no certificate to the server and `ooke.toml` has no key for one, so put it behind a TLS-terminating proxy for production.
 - **Worker scaling** -- set `workers = 0` for automatic CPU-count detection, or override at runtime with `TK_HTTP_WORKERS`.
 - **Custom error pages** -- drop templates into `templates/errors/` (e.g. `404.tkt`) for branded error handling.
-- **Error log** -- separate `error.log` with rotation and gzip compression for 4xx/5xx responses.
-- **JSON access log** -- switch to NDJSON access logging with `log.accessformat("json")` for machine-readable output.
+- **Logging** -- `ooke serve` writes its own startup and route-registration messages as JSON lines on standard error. It does not open an access log or an error log (see [Log](#log)).
 - **Repair command** -- `ooke repair <file>` diagnoses compiler errors and suggests fixes.
 - **Lint command** -- `tkc --lint` checks toke source for issues; add `--fix` for auto-repair.
 - **Single binary deployment** -- one file, no runtime, no dependencies. Copy it to a server and run it.
@@ -210,36 +208,36 @@ inlinecss = true
 [server]
 port = 3000
 workers = 0        # 0 = auto-detect CPU count
-admin = true       # enable admin routes
-
-[store]
-backend = "flat"   # "flat" (default) or "sqlite"
 
 [log]
-accessformat = "combined"   # "combined" (default) or "json" (NDJSON)
+accessformat = "combined"   # read, but not used yet -- see Log below
 ```
 
 ### Server
 
 | Key       | Default | Description |
 |-----------|---------|-------------|
-| `port`    | `3000`  | HTTP listen port. Also configurable with `env.getint("PORT")` in toke. |
+| `port`    | `3000`  | HTTP listen port. |
 | `workers` | `0`     | Worker thread count. `0` auto-detects CPU count. Override at runtime with `TK_HTTP_WORKERS` env var. |
-| `admin`   | `false` | Enable the admin interface. |
+| `corsorigins` | `""` | CORS allow-origin sent by `ooke serve`. Empty disables CORS. |
 
-### Store
+### Content store
 
-| Key       | Default  | Description |
-|-----------|----------|-------------|
-| `backend` | `"flat"` | Content storage backend. `"flat"` uses the filesystem. `"sqlite"` uses an embedded SQLite database with automatic migration from flat files. |
+Content is read from the filesystem: Markdown and JSON files under `content/`.
+There is no other content backend and no `[store]` section — an older
+`ooke.toml` that still has `[store] backend = ...` loads, and the table is
+ignored (story 134.34).
 
 ### Log
 
-| Key              | Default      | Description |
-|------------------|--------------|-------------|
-| `accessformat`   | `"combined"` | Access log format. `"combined"` for Apache-style lines. `"json"` for NDJSON (one JSON object per request). |
-
-Errors (4xx and 5xx responses) are also written to a separate `error.log` with automatic rotation and gzip compression.
+`[log]` accepts `accessformat` (default `"combined"`), `maxlines` (default
+`10000`) and `maxagedays` (default `30`), and ooke reads them into its
+configuration -- but **nothing uses them yet**. `ooke serve` never opens an
+access log or an error log, so no request is logged to a file, in any format,
+and none of these keys changes what ooke does. They are kept so an existing
+`ooke.toml` keeps loading; do not rely on them. (The toke stdlib has the
+machinery -- `log.openaccess`, `log.openerror`, rotation and gzip -- but ooke
+does not call it. Story 134.39.)
 
 ## Extension API
 
@@ -253,7 +251,7 @@ See [docs/extension-api.md](docs/extension-api.md) for the full API reference.
 
 - [toke compiler](https://github.com/karwalski/toke) (`tkc`), built from `main` —
   the newest tagged toke (2.8.0) **cannot** build ooke. The floor is commit
-  `b66bd8e` (2026-07-06); it is declared in `ooke.toml [requires]` and enforced by
+  `6cc9061` (2026-09-19); it is declared in `ooke.toml [requires]` and enforced by
   `make check-versions`, which `make` runs first. See
   [`docs/versioning.md`](docs/versioning.md) for the evidence and for what a
   downstream project should wait for.

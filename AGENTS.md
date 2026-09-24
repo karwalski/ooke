@@ -15,8 +15,8 @@ Read this file in full before touching anything.
 ## 1. What This Project Is
 
 ooke is a CMS and web application framework implemented **entirely in toke**:
-file-system routing, a `.tkt` template engine, a flat-file (and SQLite) content
-store, static build mode, a dynamic HTTP serve mode, and a CLI scaffold. The
+file-system routing, a `.tkt` template engine, a flat-file content store (store.tk
+has SQLite query helpers, but nothing opens a database or selects them -- 134.34), static build mode, a dynamic HTTP serve mode, and a CLI scaffold. The
 binary is produced by compiling toke source with `tkc`.
 
 This repo is the **pure-toke rebuild**. It is seeded from the previous `toke-ooke`

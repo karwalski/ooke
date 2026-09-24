@@ -39,7 +39,14 @@ f=main():i64{
           }
         }el{
           if(str.eq(cmd;"serve")){
-            <cli.runserve(".")
+            (* 134.37: `ooke serve <path>` serves the project at <path>, as
+               `ooke build <path>` builds it (134.25). It took no argument. *)
+            let servearg=mt args.get(2 as u64) {$ok:v v;$err:e ""};
+            if(str.len(servearg)>0){
+              <cli.runserve(servearg)
+            }el{
+              <cli.runserve(".")
+            }
           }el{
             if(str.eq(cmd;"build")){
               let buildarg=mt args.get(2 as u64) {$ok:v v;$err:e ""};

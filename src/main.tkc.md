@@ -42,8 +42,8 @@ command's exit code (0 success, non-zero failure).
 | `--version` | print version, exit 0 |
 | `<cmd> --help` / `-h` / `help` | `cli.cliprintcmdusage(cmd)`, exit 0 — checked **before** dispatch, so no command can act on a help request (story 134.19) |
 | `new <name>` | `cli.clinew` (usage error → 1) |
-| `serve` | `cli.runserve(".")` |
-| `build` | `cli.runbuild(".")` |
+| `serve [path]` | `cli.runserve(path)`, default `"."` (story 134.37) |
+| `build [path]` | `cli.runbuild(path)`, default `"."` (story 134.25) |
 | `build --cli [path]` | `run.build(path)` |
 | `run [path] [args…]` | `run.run(path; args)` |
 | `compile [path]` | gen app Makefile + `make -f Makefile.serve` |

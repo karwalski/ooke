@@ -12,8 +12,8 @@ not one:
 ```toml
 [requires]
 mintoke       = "2.8.0"
-mintokedate   = "2026-07-06"
-mintokecommit = "b66bd8e"
+mintokedate   = "2026-09-19"
+mintokecommit = "6cc9061"
 ```
 
 **A semver floor alone is meaningless for toke today.** `toke/VERSION` has read
@@ -202,7 +202,10 @@ For 3.0.0 onwards:
 - **The toke floor is part of the contract**: a consumer pinning ooke 3.x must
   also honour `[requires]`. `ooke new` now writes a `[requires]` block into every
   scaffolded project, so a new project inherits the floor instead of having none
-  (it previously wrote no floor at all).
+  (it previously wrote no floor at all). That block is generated at build time
+  from this repository's `ooke.toml [requires]` (`src/_floor.tk`, story 134.35);
+  it used to be a second, hand-kept copy in `src/cli.tk`, which was left at the
+  `b66bd8e` compile floor after the declared floor moved to `6cc9061`.
 
 ## 5. For downstream projects (loke, moke, toke-website)
 

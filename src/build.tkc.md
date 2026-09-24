@@ -264,7 +264,7 @@ file does not abort the whole copy.
 5. **Dynamic pass:** loop `j` over routes; for each dynamic route
    (`routes.get(j).isdynamic`):
    a. `ctype = routes.get(j).contenttype`.
-   b. Load the collection `col = store.storeall(contentdir; ctype; "flat")`
+   b. Load the collection `col = store.storeallflat(contentdir; ctype)`
       (matched to empty `@()` on error).
    c. Load `model = validate.validateloadmodel(modelsdir; ctype)`, matched on
       error to an empty `$modeldef{name:""; fields:@($fielddef)}`. Set
