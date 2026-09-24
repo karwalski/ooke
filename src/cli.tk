@@ -2,6 +2,7 @@ m=ooke.cli;
 i=str:std.str;
 i=file:std.file;
 i=log:std.log;
+i=io:std.io;
 i=path:std.path;
 i=config:ooke.config;
 i=serve:ooke.serve;
@@ -95,8 +96,10 @@ f=cliprintcmdusage(cmd:$str):i64{
   <cliprintusage()
 };
 
+(* Story 134.43. public-api.md section 1.1: `--version` prints
+   `ooke <VERSION>`. It went through log.info, i.e. a JSON record on stderr. *)
 f=cliprintversion():i64{
-  (log.info("ooke 3.0.0-rc.1";@()));
+  (io.println("ooke 3.0.0-rc.1"));
   <0
 };
 

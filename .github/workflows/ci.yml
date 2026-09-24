@@ -68,16 +68,15 @@ jobs:
         run: make test TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
 
       # The old step ended in `|| echo "Binary executes"`, so it passed for a
-      # binary that could not run. It must now start, exit 0 and name its
-      # version. (--version currently prints a JSON log record on stderr,
-      # {"level":"info","msg":"ooke <VERSION>",...}, hence 2>&1 and a
-      # substring match rather than an exact stdout compare.)
+      # binary that could not run. It must now start, exit 0 and print exactly
+      # `ooke <VERSION>` on stdout (public-api.md 1.1). Since 134.43 --version
+      # no longer emits a JSON log record on stderr, so the compare is exact.
       - name: Verify binary runs
         run: |
           ls -la ooke-toke
-          out=$(./ooke-toke --version 2>&1)
+          out=$(./ooke-toke --version)
           echo "${out}"
-          printf '%s' "${out}" | grep -F "\"ooke $(cat VERSION)\""
+          test "${out}" = "ooke $(cat VERSION)"
 
   drift:
     name: Drift - ooke against toke main (unpinned)
