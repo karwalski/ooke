@@ -40,7 +40,9 @@ f=testregisternoprefix():bool{
   let tpls=path.join(root;"templates");
   let handled=@($str);
   let rc=mt serve.serveregisterstatic(root;pages;content;tpls;"My Site";"https://example.com";"en";"";handled) {$ok:v v;$err:e 0-1};
-  <chk.eqint(rc;0;"register with no api prefix")
+  (* "/" from templates/index.tkt and /blog/post1 from templates/blog/[slug].tkt,
+     both resolved against the fixture, not the working directory (134.37). *)
+  <chk.eqint(rc;2;"register with no api prefix renders 2 routes from their templates")
 };
 
 f=testregisterwithprefix():bool{
@@ -52,7 +54,7 @@ f=testregisterwithprefix():bool{
   let tpls=path.join(root;"templates");
   let handled=@($str);
   let rc=mt serve.serveregisterstatic(root;pages;content;tpls;"My Site";"https://example.com";"en";"v1";handled) {$ok:v v;$err:e 0-1};
-  <chk.eqint(rc;0;"register with an api prefix")
+  <chk.eqint(rc;2;"register with an api prefix renders 2 routes from their templates")
 };
 
 f=testregisterdedup():bool{
@@ -64,7 +66,8 @@ f=testregisterdedup():bool{
   let tpls=path.join(root;"templates");
   let handled=@("/";"/api/hello");
   let rc=mt serve.serveregisterstatic(root;pages;content;tpls;"My Site";"https://example.com";"en";"";handled) {$ok:v v;$err:e 0-1};
-  <chk.eqint(rc;0;"register skips paths a dynamic handler already owns")
+  (* "/" is owned by a handler, so only /blog/post1 is rendered. *)
+  <chk.eqint(rc;1;"register skips paths a dynamic handler already owns")
 };
 
 f=testservejson():bool{

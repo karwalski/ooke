@@ -47,6 +47,11 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
     <$serveerr{msg:str.concat("route scan failed: ";pagesdir)}
   }el{};
   let routes=mt scan {$ok:r r;$err:e @($route)};
+  (* Story 134.43: the count of routes registered from a real template render,
+     i.e. not a fallback. It used to return 0 whatever happened, so a test could
+     assert only rc=0 and could not see a page served from the wrong template
+     or as the empty-template fallback (134.37). *)
+  let rendered=mut.0;
   lp(let i=0;i<routes.len;i=i+1){
     let r=routes.get(i);
     let isdyn=r.isdynamic;
@@ -74,7 +79,8 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
         let html=mt tpl.tplrenderfile(tpath;ctx;templatesdir) {$ok:h h;$err:e ""};
         if(str.len(html)>0){
           (log.info(str.concat("reg static: ";webpath);@()));
-          (http.getstatic(webpath;html))
+          (http.getstatic(webpath;html));
+          rendered=rendered+1
         }el{
           let isapiroute=str.startswith(webpath;"/api/");
           if(isapiroute){
@@ -113,7 +119,8 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
         if(str.len(html2)>0){
           let fullurl=str.replace(routes.get(j).pattern;":slug";slug);
           (log.info(str.concat("reg dyn: ";fullurl);@()));
-          (http.getstatic(fullurl;html2))
+          (http.getstatic(fullurl;html2));
+          rendered=rendered+1
         }el{
           (log.info(str.concat("skip dyn (no html): ";slug);@()))
         }
@@ -144,7 +151,7 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
       }
     }el{}
   };
-  <0
+  <rendered
 };
 
 f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;corsorigins:$str;handledpaths:@$str):i64!$serveerr{

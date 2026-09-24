@@ -60,12 +60,19 @@ jobs:
       - name: Clone and build tkc at ooke's declared floor
         run: |
           PIN=$(sed -n 's/^mintokecommit *= *"\(.*\)"/\1/p' ooke.toml)
+          test -n "${PIN}" || { echo "ooke.toml [requires] has no mintokecommit"; exit 1; }
           echo "ooke.toml pins toke to ${PIN}"
           git clone https://github.com/karwalski/toke.git ../toke
           cd ../toke
           git checkout "${PIN}"
-          make CFLAGS="-std=c99 -D_GNU_SOURCE -O2 -DNDEBUG -Wall -Wextra -Wpedantic -Wno-misleading-indentation -DTKC_STDLIB_DIR='\"./src/stdlib\"'"
-          echo "TKC built successfully: $(./toke --version 2>&1 || echo 'ok')"
+          # Story 134.41: plain `make`, exactly as ci.yml's build job (134.36).
+          # The CFLAGS override this replaced baked TKC_STDLIB_DIR="./src/stdlib"
+          # into tkc -- relative to wherever tkc runs, i.e. ooke's src/ -- so the
+          # ooke build died on `E3011 identifier 'row' is not declared` in
+          # src/store.tk, and a tagged release could not have built at all.
+          # toke's Makefile bakes an absolute stdlib path.
+          make
+          ./toke --version
           echo "toke pinned: $(git rev-parse HEAD) $(git log -1 --format=%cs) VERSION=$(cat VERSION)"
           shasum -a 256 toke || sha256sum toke
 
