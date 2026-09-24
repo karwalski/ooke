@@ -5,6 +5,7 @@ i=log:std.log;
 i=path:std.path;
 i=config:ooke.config;
 i=serve:ooke.serve;
+i=floor:ooke.floor;
 i=build:ooke.build;
 i=handlers:ooke.handlers;
 
@@ -103,7 +104,9 @@ f=clinew(name:$str):i64{
   (mt file.mkdir(path.join(name;"templates")) {$ok:v v;$err:e false});
   (mt file.mkdir(path.join(name;"content")) {$ok:v v;$err:e false});
   (mt file.mkdir(path.join(name;"static")) {$ok:v v;$err:e false});
-  let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[paths]\napiprefix = \"\"\n\n[log]\naccessformat = \"combined\"\nmaxlines = 10000\nmaxagedays = 30\n\n[requires]\nmintoke = \"2.8.0\"\nmintokedate = \"2026-07-06\"\nmintokecommit = \"b66bd8e\"\n"));
+  (* 134.35: the [requires] block is generated from ooke.toml (src/_floor.tk),
+     not restated here. It had drifted to a floor ooke no longer builds on. *)
+  let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[paths]\napiprefix = \"\"\n\n[log]\naccessformat = \"combined\"\nmaxlines = 10000\nmaxagedays = 30\n\n";floor.floortoml()));
   (mt file.write(path.join(name;"ooke.toml");tomlcontent) {$ok:v v;$err:e false});
   let indexcontent="m=pages.index;\n";
   (mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {$ok:v v;$err:e false});

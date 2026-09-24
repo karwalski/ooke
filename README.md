@@ -250,7 +250,7 @@ See [docs/extension-api.md](docs/extension-api.md) for the full API reference.
 
 - [toke compiler](https://github.com/karwalski/toke) (`tkc`), built from `main` —
   the newest tagged toke (2.8.0) **cannot** build ooke. The floor is commit
-  `b66bd8e` (2026-07-06); it is declared in `ooke.toml [requires]` and enforced by
+  `6cc9061` (2026-09-19); it is declared in `ooke.toml [requires]` and enforced by
   `make check-versions`, which `make` runs first. See
   [`docs/versioning.md`](docs/versioning.md) for the evidence and for what a
   downstream project should wait for.
