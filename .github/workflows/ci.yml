@@ -6,16 +6,32 @@ on:
   push:
     branches: ["**"]
   pull_request:
-  # Drift gate (story 134.7): ooke builds against toke HEAD, and toke moves
-  # without ooke moving. A daily run catches an upstream break the day it
-  # happens rather than at the next ooke commit.
+  # Drift gate (story 134.7): the `drift` job below builds ooke against toke
+  # HEAD once a day, so an upstream break is seen the day it lands.
   schedule:
     - cron: "17 6 * * *"
   workflow_dispatch:
 
+# Story 134.36. This workflow used to clone toke `main` unpinned, run only
+# `make check` / `make test-check` / `make test-cwd`, and end in a "Verify binary
+# runs" step whose `|| echo` could not fail. So ooke's own suite (`test-run`)
+# never ran in CI, a binary that did not start was reported as fine, and the
+# result depended on whatever toke `main` was that minute -- on 2026-09-24 toke
+# main could not compile ooke at all (toke 127.164), which would have turned
+# every ooke push red for a defect ooke does not own.
+#
+# Now:
+#   build  -- every push and PR. toke is PINNED to ooke.toml [requires]
+#             mintokecommit, the floor ooke declares, and the job runs the full
+#             `make test`. This is what makes the floor a tested claim rather
+#             than a written one: CI builds and tests ooke on exactly the toke
+#             it tells users to pin, as the release workflow already does.
+#   drift  -- daily and on demand. toke `main`, unpinned, full `make test`.
+#             Red here means toke moved and broke ooke; it is the 134.7 drift
+#             gate, kept, but no longer blocking unrelated ooke pushes.
 jobs:
   build:
-    name: Build and test
+    name: Build and test (toke pinned to the declared floor)
     runs-on: ubuntu-latest
 
     steps:
@@ -24,74 +40,64 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y zlib1g-dev libssl-dev libsqlite3-dev clang
+          sudo apt-get install -y zlib1g-dev libssl-dev libsqlite3-dev clang curl
 
-      # ── Build tkc (the toke compiler) ────────────────────────────────────
-      - name: Clone and build tkc
+      # ── Build tkc (the toke compiler) at ooke's declared floor ───────────
+      - name: Clone and build tkc at ooke.toml [requires] mintokecommit
+        run: |
+          PIN=$(sed -n 's/^mintokecommit *= *"\(.*\)"/\1/p' ooke.toml)
+          test -n "${PIN}" || { echo "ooke.toml [requires] has no mintokecommit"; exit 1; }
+          echo "ooke.toml pins toke to ${PIN}"
+          git clone https://github.com/karwalski/toke.git ../toke
+          cd ../toke
+          git checkout "${PIN}"
+          echo "toke pinned: $(git rev-parse --short HEAD) $(git log -1 --format=%cs) VERSION=$(cat VERSION)"
+          # Plain `make`, as toke's own CI builds it. The CFLAGS override this
+          # replaced baked TKC_STDLIB_DIR="./src/stdlib" into tkc -- a path
+          # relative to wherever tkc runs, i.e. ooke's src/ -- so tkc could not
+          # find the std.db row namespace and every ooke CI run on record died
+          # on `E3011 identifier 'row' is not declared` in src/store.tk before
+          # any gate ran (134.36). toke's Makefile bakes an absolute path.
+          make
+
+      # ── The whole suite (story 134.36) ───────────────────────────────────
+      # `make test` = check-versions + check (every .tk file) + the ooke binary
+      # + test-check + test-run (ooke's 12 test programs) + test-cwd (134.25)
+      # + test-serve-cwd and test-deps (134.37). Each exits non-zero on failure.
+      - name: make test
+        run: make test TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
+
+      # The old step ended in `|| echo "Binary executes"`, so it passed for a
+      # binary that could not run. It must now start, exit 0 and name its
+      # version. (--version currently prints a JSON log record on stderr,
+      # {"level":"info","msg":"ooke <VERSION>",...}, hence 2>&1 and a
+      # substring match rather than an exact stdout compare.)
+      - name: Verify binary runs
+        run: |
+          ls -la ooke-toke
+          out=$(./ooke-toke --version 2>&1)
+          echo "${out}"
+          printf '%s' "${out}" | grep -F "\"ooke $(cat VERSION)\""
+
+  drift:
+    name: Drift - ooke against toke main (unpinned)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zlib1g-dev libssl-dev libsqlite3-dev clang curl
+
+      - name: Clone and build tkc at toke main
         run: |
           git clone https://github.com/karwalski/toke.git ../toke
           cd ../toke
           echo "toke HEAD: $(git rev-parse --short HEAD) $(git log -1 --format=%cs) VERSION=$(cat VERSION)"
-          make CFLAGS="-std=c99 -D_GNU_SOURCE -O2 -DNDEBUG -Wall -Wextra -Wpedantic -Wno-misleading-indentation -DTKC_STDLIB_DIR='\"./src/stdlib\"'"
+          make    # not the CFLAGS override; see the build job
 
-      # ── Version floor gate (story 134.7) ─────────────────────────────────
-      # Fails the build if the toke checkout is below the floor declared in
-      # ooke.toml [requires], or if ooke's own version strings disagree.
-      - name: Check version floor
-        run: |
-          TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
-          make check-versions \
-               TOKE_ROOT="${TOKE_ROOT}" \
-               TOKE_STDLIB="${TOKE_ROOT}/src/stdlib"
-
-      # ── Build ooke ───────────────────────────────────────────────────────
-      - name: Build ooke
-        run: |
-          TKC_PATH="${GITHUB_WORKSPACE}/../toke/toke"
-          TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
-
-          make TKC="${TKC_PATH}" \
-               TOKE_ROOT="${TOKE_ROOT}" \
-               TOKE_STDLIB="${TOKE_ROOT}/src/stdlib" \
-               TOKE_VENDOR="${TOKE_ROOT}/stdlib/vendor" \
-               CFLAGS="-std=c99 -D_GNU_SOURCE -O2 \
-                       -iquote ${TOKE_ROOT}/src/stdlib \
-                       -I${TOKE_ROOT}/stdlib/vendor/cmark/src \
-                       -I${TOKE_ROOT}/stdlib/vendor/tomlc99 \
-                       -Wno-pedantic -DTK_HAVE_OPENSSL"
-
-      # ── Gates ────────────────────────────────────────────────────────────
-      # Story 134.2: `make check` type-checks every .tk file in the repo from
-      # the repo root with `-I src`. It is allowed to fail the job — the old
-      # step ended in `|| echo ...`, which is why defects D7/D8/D11 survived.
-      - name: Type check every .tk file
-        run: |
-          TKC_PATH="${GITHUB_WORKSPACE}/../toke/toke"
-          TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
-
-          make check \
-               TKC="${TKC_PATH}" \
-               TOKE_ROOT="${TOKE_ROOT}" \
-               TOKE_STDLIB="${TOKE_ROOT}/src/stdlib" \
-               TOKE_VENDOR="${TOKE_ROOT}/stdlib/vendor"
-
-      - name: Type check test files
-        run: |
-          TKC_PATH="${GITHUB_WORKSPACE}/../toke/toke"
-          TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
-
-          make test-check \
-               TKC="${TKC_PATH}" \
-               TOKE_ROOT="${TOKE_ROOT}" \
-               TOKE_STDLIB="${TOKE_ROOT}/src/stdlib" \
-               TOKE_VENDOR="${TOKE_ROOT}/stdlib/vendor"
-
-      # Story 134.25: the build must work when driven from outside the project,
-      # which is how CI and downstream consumers run it.
-      - name: Build from outside the project
-        run: make test-cwd
-
-      - name: Verify binary runs
-        run: |
-          ./ooke-toke --help || ./ooke-toke version || echo "Binary executes"
-          ls -la ooke-toke
+      - name: make test
+        run: make test TOKE_ROOT="${GITHUB_WORKSPACE}/../toke"
