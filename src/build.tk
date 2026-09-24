@@ -295,7 +295,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     }el{};
     if(isdyn2&&dyncount==1){
       let ctype=routes.get(j).contenttype;
-      let col=mt store.storeall(contentdir;ctype;"flat") {$ok:c c;$err:e @()};
+      let col=mt store.storeallflat(contentdir;ctype) {$ok:c c;$err:e @()};
       let model=mt validate.validateloadmodel(modelsdir;ctype) {$ok:m m;$err:e $modeldef{name:"";fields:@($fielddef)}};
       let hasmodel=model.fields.len>0;
       lp(let k=0;k<col.len;k=k+1){

@@ -89,7 +89,7 @@ f=serveregisterstatic(pagesdir:$str;contentdir:$str;templatesdir:$str;sitename:$
     let isapi2=routes.get(j).isapi;
     if(isdyn2&&!isapi2){
       let ctype=routes.get(j).contenttype;
-      let col=mt store.storeall(contentdir;ctype;"flat") {$ok:c c;$err:e @()};
+      let col=mt store.storeallflat(contentdir;ctype) {$ok:c c;$err:e @()};
       lp(let k=0;k<col.len;k=k+1){
         let slug=col.get(k).slug;
         let body=col.get(k).body;

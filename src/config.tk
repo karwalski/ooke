@@ -12,7 +12,6 @@ t=$ookecfg{
   serverport:i64;
   serverworkers:i64;
   servercorsorigins:$str;
-  storebackend:$str;
   logaccessformat:$str;
   logmaxlines:i64;
   logmaxagedays:i64;
@@ -28,7 +27,6 @@ f=configload(path:$str):$ookecfg!$configerr{
   let site=mt toml.section(tab;"site") {$ok:v v;$err:e tab};
   let build=mt toml.section(tab;"build") {$ok:v v;$err:e tab};
   let server=mt toml.section(tab;"server") {$ok:v v;$err:e tab};
-  let store=mt toml.section(tab;"store") {$ok:v v;$err:e tab};
   let log=mt toml.section(tab;"log") {$ok:v v;$err:e tab};
   let paths=mt toml.section(tab;"paths") {$ok:v v;$err:e tab};
 
@@ -44,7 +42,13 @@ f=configload(path:$str):$ookecfg!$configerr{
   let serverworkers=mt toml.i64(server;"workers") {$ok:v v;$err:e 0};
   let servercorsorigins=mt toml.str(server;"corsorigins") {$ok:v v;$err:e ""};
 
-  let storebackend=mt toml.str(store;"backend") {$ok:v v;$err:e "flat"};
+  (* Story 134.34. `[store].backend` used to be read here into `storebackend`,
+     documented as "flat" or "sqlite", and then read by nothing: build.tk and
+     serve.tk both hardcoded "flat". There is no SQLite content backend to
+     select -- nothing opens a database, creates its tables or migrates flat
+     files into it -- so the key is gone rather than wired. ooke's content
+     store is the flat-file one. An old ooke.toml that still carries a
+     `[store]` table loads unchanged; the table is ignored. *)
 
   let logaccessformat=mt toml.str(log;"accessformat") {$ok:v v;$err:e "combined"};
   let logmaxlines=mt toml.i64(log;"maxlines") {$ok:v v;$err:e 10000};
@@ -62,7 +66,6 @@ f=configload(path:$str):$ookecfg!$configerr{
     serverport:serverport;
     serverworkers:serverworkers;
     servercorsorigins:servercorsorigins;
-    storebackend:storebackend;
     logaccessformat:logaccessformat;
     logmaxlines:logmaxlines;
     logmaxagedays:logmaxagedays;

@@ -103,7 +103,7 @@ f=clinew(name:$str):i64{
   (mt file.mkdir(path.join(name;"templates")) {$ok:v v;$err:e false});
   (mt file.mkdir(path.join(name;"content")) {$ok:v v;$err:e false});
   (mt file.mkdir(path.join(name;"static")) {$ok:v v;$err:e false});
-  let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[store]\nbackend = \"flat\"\n\n[paths]\napiprefix = \"\"\n\n[log]\naccessformat = \"combined\"\nmaxlines = 10000\nmaxagedays = 30\n\n[requires]\nmintoke = \"2.8.0\"\nmintokedate = \"2026-07-06\"\nmintokecommit = \"b66bd8e\"\n"));
+  let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[paths]\napiprefix = \"\"\n\n[log]\naccessformat = \"combined\"\nmaxlines = 10000\nmaxagedays = 30\n\n[requires]\nmintoke = \"2.8.0\"\nmintokedate = \"2026-07-06\"\nmintokecommit = \"b66bd8e\"\n"));
   (mt file.write(path.join(name;"ooke.toml");tomlcontent) {$ok:v v;$err:e false});
   let indexcontent="m=pages.index;\n";
   (mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {$ok:v v;$err:e false});
@@ -255,7 +255,7 @@ f=cfgdefault():$ookecfg{
   <$ookecfg{
     sitename:"my-site";siteurl:"";sitelanguage:"en";
     buildoutput:"build/";buildminify:true;buildinlinecss:true;
-    serverport:3000;serverworkers:0;servercorsorigins:"";storebackend:"flat";
+    serverport:3000;serverworkers:0;servercorsorigins:"";
     logaccessformat:"combined";logmaxlines:10000;logmaxagedays:30;
     apiprefix:""
   }

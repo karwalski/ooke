@@ -37,7 +37,6 @@ prefixed field names; there is no nested config type).
 | `serverport` | `i64` | `[server].port` — HTTP listen port. Default `3000`. |
 | `serverworkers` | `i64` | `[server].workers` — worker count (`0` = auto-detect CPU). Default `0`. |
 | `servercorsorigins` | `$str` | `[server].corsorigins` — CORS allow-origin. Default `""`. |
-| `storebackend` | `$str` | `[store].backend` — `"flat"` or `"sqlite"`. Default `"flat"`. |
 | `logaccessformat` | `$str` | `[log].accessformat` — access-log line format. Default `"combined"`. (There is no access-log *path* key; the old `[log].access` / `logaccess` read was removed — story 134.23.) |
 | `logmaxlines` | `i64` | `[log].maxlines` — access-log rotation line cap. Default `10000`. |
 | `logmaxagedays` | `i64` | `[log].maxagedays` — access-log retention days. Default `30`. |
@@ -72,7 +71,7 @@ file cannot be read or the TOML cannot be parsed.
 1. Read the file at `path` with `file.read`; propagate failure as `$configerr`
    via the `!$configerr` operator.
 2. Parse the source with `toml.load`; propagate parse failure as `$configerr`.
-3. Look up the six sections `site`, `build`, `server`, `store`, `log`, `paths`
+3. Look up the five sections `site`, `build`, `server`, `log`, `paths`
    with `toml.section`. Each lookup is matched `{$ok:v v; $err:e tab}` — a
    missing section falls back to the **root table** `tab` (not an empty table),
    so a key lookup against a missing section degrades to a top-level lookup

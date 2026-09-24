@@ -30,6 +30,13 @@ breaks a 2.0.0-era consumer.
   Previously it wrote no floor at all.
 - **No-underscore naming** for configuration keys and stdlib call names, imposed
   by toke's Profile-1 character set.
+- **`[store].backend` is gone, and `$ookecfg` lost its `storebackend` field.**
+  The key was documented as `"flat"` or `"sqlite"` "with automatic migration",
+  parsed, and then read by nothing: build and serve always used the flat-file
+  store. No SQLite content backend exists to select — nothing opens a database,
+  creates its tables or migrates content into it. An `ooke.toml` that still has
+  a `[store]` table loads unchanged; the table is ignored. Code importing
+  `ooke.config` that read `storebackend` no longer compiles. (134.34)
 
 ### Fixed
 

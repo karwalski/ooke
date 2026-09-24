@@ -29,8 +29,9 @@ failing on them (story 134.24).
 
 ### 1.2 `ooke.toml`
 
-The `[site]`, `[build]`, `[server]`, `[store]`, `[log]`, `[paths]` and
-`[requires]` sections, and the keys ooke reads from them. Key names follow the
+The `[site]`, `[build]`, `[server]`, `[log]`, `[paths]` and `[requires]`
+sections, and the keys ooke reads from them. (`[store]` is not among them: its
+one key, `backend`, selected nothing and was removed in 3.0.0 — story 134.34.) Key names follow the
 **no-underscore convention** (`inlinecss`, `accessformat`, `apiprefix`,
 `mintokecommit`) — toke's Profile-1 character set excludes `_`, so this is a
 language constraint, not a style choice.

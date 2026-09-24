@@ -33,7 +33,6 @@ and nowhere else.*
 - **JSON content** -- `.json` files alongside `.md` for structured content collections.
 - **Content validation** -- define TOML models in `models/` with field types and required flags. ooke validates content against them automatically.
 - **Island architecture** -- interactive client-side components with `{! island("name"; hydrate="visible") !}` directives and the `ooke-islands.js` hydration loader. Scaffold new islands with `ooke gen island <name>`.
-- **SQLite store** -- optional SQLite backend for content storage with automatic migration from the default flat-file store.
 - **Static site generation** -- `ooke build` renders your entire site to static HTML in `build/`. Deploy anywhere.
 - **TLS/HTTPS** -- built-in TLS support for production serving. No reverse proxy required.
 - **Worker scaling** -- set `workers = 0` for automatic CPU-count detection, or override at runtime with `TK_HTTP_WORKERS`.
@@ -212,9 +211,6 @@ port = 3000
 workers = 0        # 0 = auto-detect CPU count
 admin = true       # enable admin routes
 
-[store]
-backend = "flat"   # "flat" (default) or "sqlite"
-
 [log]
 accessformat = "combined"   # "combined" (default) or "json" (NDJSON)
 ```
@@ -227,11 +223,12 @@ accessformat = "combined"   # "combined" (default) or "json" (NDJSON)
 | `workers` | `0`     | Worker thread count. `0` auto-detects CPU count. Override at runtime with `TK_HTTP_WORKERS` env var. |
 | `admin`   | `false` | Enable the admin interface. |
 
-### Store
+### Content store
 
-| Key       | Default  | Description |
-|-----------|----------|-------------|
-| `backend` | `"flat"` | Content storage backend. `"flat"` uses the filesystem. `"sqlite"` uses an embedded SQLite database with automatic migration from flat files. |
+Content is read from the filesystem: Markdown and JSON files under `content/`.
+There is no other content backend and no `[store]` section — an older
+`ooke.toml` that still has `[store] backend = ...` loads, and the table is
+ignored (story 134.34).
 
 ### Log
 

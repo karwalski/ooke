@@ -136,7 +136,7 @@ failed.
 3. **Pass 2 — dynamic, non-API pages.** Loop `j` over routes. For each route
    where `isdynamic && !isapi`:
    a. Take its `contenttype` and load the collection via
-      `store.storeall(contentdir; ctype; "flat")`, matched `{$ok:c c; $err:e @()}`.
+      `store.storeallflat(contentdir; ctype)`, matched `{$ok:c c; $err:e @()}`.
    b. Loop `k` over the collection. For each item read `slug`, `body`, `title`,
       build a context map adding `slug`/`body`/`title` to the site fields, and
       render the route's `templatepath`.

@@ -4,7 +4,7 @@ i=chk:ookeassert;
 i=file:std.file;
 
 f=testloadvalid():bool{
-  let tomlsrc="[site]\nname = \"ooke-test\"\nurl = \"https://test.example.com\"\nlanguage = \"fr\"\n\n[build]\noutput = \"dist/\"\nminify = false\ninlinecss = false\n\n[server]\nport = 8080\nworkers = 2\n\n[store]\nbackend = \"flat\"\n";
+  let tomlsrc="[site]\nname = \"ooke-test\"\nurl = \"https://test.example.com\"\nlanguage = \"fr\"\n\n[build]\noutput = \"dist/\"\nminify = false\ninlinecss = false\n\n[server]\nport = 8080\nworkers = 2\n\n[store]\nbackend = \"sqlite\"\n";
   let wrok=mt file.write("/tmp/test_ooke.toml";tomlsrc) {$ok:v true;$err:e false};
   if(wrok==false){<false};
   let result=config.configload("/tmp/test_ooke.toml");
@@ -19,8 +19,7 @@ f=testloadvalid():bool{
   let a5=chk.eqbool(cfg.buildinlinecss;false;"build.inlinecss");
   let a6=chk.eqint(cfg.serverport;8080;"server.port");
   let a7=chk.eqint(cfg.serverworkers;2;"server.workers");
-  let a8=chk.eqstr(cfg.storebackend;"flat";"store.backend");
-  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7
 };
 
 f=testmissingfile():bool{
@@ -45,11 +44,10 @@ f=testdefaults():bool{
   let a5=chk.eqbool(cfg.buildinlinecss;true;"build.inlinecss default");
   let a6=chk.eqint(cfg.serverport;3000;"server.port default");
   let a7=chk.eqint(cfg.serverworkers;0;"server.workers default");
-  let a8=chk.eqstr(cfg.storebackend;"flat";"store.backend default");
   let a9=chk.eqstr(cfg.logaccessformat;"combined";"log.accessformat default");
   let a10=chk.eqint(cfg.logmaxlines;10000;"log.maxlines default");
   let a11=chk.eqint(cfg.logmaxagedays;30;"log.maxagedays default");
-  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a9&&a10&&a11
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a9&&a10&&a11
 };
 
 f=main():i64{
