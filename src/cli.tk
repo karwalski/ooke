@@ -14,7 +14,7 @@ f=cliprintusage():i64{
   (log.info("Usage:";@()));
   (log.info("  ooke new <name>       scaffold a new project";@()));
   (log.info("  ooke serve [options]  start development server";@()));
-  (log.info("  ooke build            build static HTML";@()));
+  (log.info("  ooke build [path]     build static HTML (default: current directory)";@()));
   (log.info("  ooke gen <type> <name>  scaffold component";@()));
   (log.info("  ooke gen spec <container> <type>  generate type-specialised code";@()));
   (log.info("  ooke repair <file>    run diagnostic repair";@()));
@@ -49,7 +49,10 @@ f=cliprintcmdusage(cmd:$str):i64{
   if(str.eq(cmd;"build")){
     (log.info("ooke build — build the static site into [build].output";@()));
     (log.info("";@()));
-    (log.info("Usage: ooke build";@()));
+    (log.info("Usage: ooke build [path]";@()));
+    (log.info("       Builds the project at [path] (default: the current";@()));
+    (log.info("       directory). Templates and [build].output resolve";@()));
+    (log.info("       against the project, not where you run the command.";@()));
     (log.info("       ooke build --cli [path]   compile the CLI binary only";@()));
     <0
   }el{};

@@ -85,6 +85,20 @@ f=testoutputpathdeep():bool{
   <chk.eqstr(p;"out/blog/post/index.html";"outputpath /blog/post")
 };
 
+(* Story 134.25: templatepath and [build].output are project-relative. *)
+f=testresolvefromroot():bool{
+  let a0=chk.eqstr(build.buildresolve(".";"templates/a.tkt");"templates/a.tkt";"resolve . keeps path");
+  let a1=chk.eqstr(build.buildresolve("";"build/");"build/";"resolve empty keeps path");
+  <a0&&a1
+};
+
+f=testresolvefromparent():bool{
+  let a0=chk.eqstr(build.buildresolve("site";"templates/a.tkt");"site/templates/a.tkt";"resolve template under project");
+  let a1=chk.eqstr(build.buildresolve("site/";"build/");"site/build/";"resolve output keeps trailing slash");
+  let a2=chk.eqstr(build.buildresolve("/x/site";"/abs/out/");"/abs/out/";"resolve keeps absolute path");
+  <a0&&a1&&a2
+};
+
 f=testminifycollapsespaces():bool{
   let out=build.buildminify("<p>a    b</p>");
   <chk.eqstr(out;"<p>a b</p>";"minify collapses spaces")
@@ -143,5 +157,7 @@ f=main():i64{
   let r11=testplainpageisastaticpage();
   let r12=testslugpageisadynamicpage();
   let r13=testscannerflagsapiroutes();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13){<0}el{<1}
+  let r14=testresolvefromroot();
+  let r15=testresolvefromparent();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15){<0}el{<1}
 };

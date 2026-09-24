@@ -7,6 +7,7 @@
     {"kind": "type", "name": "buildreport", "fields": [{"name": "pagesbuilt", "type": "i64"}, {"name": "assetscopy", "type": "i64"}, {"name": "valerrors", "type": "i64"}, {"name": "valwarnings", "type": "i64"}, {"name": "pagesskipped", "type": "i64"}]},
     {"kind": "func", "name": "buildisstaticpage", "params": ["route"], "return": "bool"},
     {"kind": "func", "name": "buildisdynamicpage", "params": ["route"], "return": "bool"},
+    {"kind": "func", "name": "buildresolve", "params": ["str", "str"], "return": "str"},
     {"kind": "func", "name": "buildoutputpath", "params": ["str", "str"], "return": "str"},
     {"kind": "func", "name": "buildfinish", "params": ["str", "str", "bool", "bool"], "return": "str"},
     {"kind": "func", "name": "buildpage", "params": ["str", "str", "str", "str", "str", "str", "str", "bool", "bool"], "return": "i64", "error": "builderr"},

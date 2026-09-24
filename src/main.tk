@@ -47,7 +47,14 @@ f=main():i64{
                 let clipath=mt args.get(3 as u64) {$ok:v v;$err:e "."};
                 <run.build(clipath)
               }el{
-                <cli.runbuild(".")
+                (* 134.25: `ooke build <path>` builds the project at <path>.
+                   The argument used to be read and then ignored, so it
+                   silently built the current directory instead. *)
+                if(str.len(buildarg)>0){
+                  <cli.runbuild(buildarg)
+                }el{
+                  <cli.runbuild(".")
+                }
               }
             }el{
               if(str.eq(cmd;"run")){

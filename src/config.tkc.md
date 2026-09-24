@@ -38,7 +38,7 @@ prefixed field names; there is no nested config type).
 | `serverworkers` | `i64` | `[server].workers` — worker count (`0` = auto-detect CPU). Default `0`. |
 | `servercorsorigins` | `$str` | `[server].corsorigins` — CORS allow-origin. Default `""`. |
 | `storebackend` | `$str` | `[store].backend` — `"flat"` or `"sqlite"`. Default `"flat"`. |
-| `logaccess` | `$str` | `[log].access` — access-log file path. Default `"logs/access.log"`. |
+| `logaccessformat` | `$str` | `[log].accessformat` — access-log line format. Default `"combined"`. (There is no access-log *path* key; the old `[log].access` / `logaccess` read was removed — story 134.23.) |
 | `logmaxlines` | `i64` | `[log].maxlines` — access-log rotation line cap. Default `10000`. |
 | `logmaxagedays` | `i64` | `[log].maxagedays` — access-log retention days. Default `30`. |
 | `apiprefix` | `$str` | `[paths].apiprefix` — API route namespace prefix. Default `""`. |

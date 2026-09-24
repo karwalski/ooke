@@ -86,6 +86,11 @@ jobs:
                TOKE_STDLIB="${TOKE_ROOT}/src/stdlib" \
                TOKE_VENDOR="${TOKE_ROOT}/stdlib/vendor"
 
+      # Story 134.25: the build must work when driven from outside the project,
+      # which is how CI and downstream consumers run it.
+      - name: Build from outside the project
+        run: make test-cwd
+
       - name: Verify binary runs
         run: |
           ./ooke-toke --help || ./ooke-toke version || echo "Binary executes"
