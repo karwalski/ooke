@@ -103,8 +103,11 @@ takes precedence over a static fallback.
 | `apiprefix` | `$str` | When non-empty, namespaces `/api/...` paths as `/api/<prefix>/...`. |
 | `handledpaths` | `@$str` | Paths already served by a dynamic handler; skip these. |
 
-**Returns:** `i64!$serveerr` — `0` on success, `$serveerr` if the route scan
-failed.
+**Returns:** `i64!$serveerr` — on success, the number of routes registered
+from a real template render (static pages plus dynamic content pages; API
+fallbacks and empty-template fallbacks are not counted); `$serveerr` if the
+route scan failed. (Story 134.43: this returned `0` unconditionally, so the unit
+tests could assert nothing but success.)
 
 **Logic:**
 
