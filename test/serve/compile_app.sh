@@ -12,6 +12,8 @@
 #             the answer proves the app's pages were compiled in
 #   [log]     it writes the [log] access file (134.40), as `ooke serve` does
 #   config    a malformed ooke.toml is refused (134.42), as `ooke serve` does
+#   locate    the script is found beside the binary (by path or on $PATH) or
+#             under $OOKE_ROOT, never in the cwd (134.45)
 #   bind      with the port held by another listener, both `ooke serve` and the
 #             compiled binary exit non-zero and say so (134.40's $serveerr on a
 #             failed listen; no test covered it), with 1 worker and with 4
@@ -64,8 +66,12 @@ cp -R "$ROOT/testproj" "$proj" && rm -rf "$proj/build" || exit 2
 setport "$proj/ooke.toml" "$port" 1
 
 # ── compile ─────────────────────────────────────────────────────────────────
-if "$BIN" compile "$proj" >"$tmp/compile.out" 2>&1; then
-  ok "compile: ooke compile exits 0"
+# Story 134.45: run from the project's PARENT, naming it by a relative path.
+# ooke compile ran scripts/gen_app_makefile.sh relative to the cwd, so this
+# failed anywhere but the ooke checkout; it now finds the script beside the
+# binary. $tmp holds no scripts/ directory, so a cwd lookup cannot pass.
+if (cd "$tmp" && "$BIN" compile proj) >"$tmp/compile.out" 2>&1; then
+  ok "compile: ooke compile exits 0 (run from the project's parent)"
 else
   bad "compile: ooke compile exited non-zero"
   grep -v 'override-module\|warning generated' "$tmp/compile.out" | tail -8 | sed 's/^/       /'
@@ -114,6 +120,37 @@ if [ -x "$app" ]; then
   else bad "config: malformed ooke.toml gave rc=$rc"; tail -3 "$tmp/cfg.err" | sed 's/^/       /'; fi
   cp "$tmp/good.toml" "$proj/ooke.toml"
 fi
+
+# ── locate (134.45) ─────────────────────────────────────────────────────────
+# Where ooke compile looks for scripts/gen_app_makefile.sh, shown with a stub
+# script that only records that it ran and fails (so nothing is built):
+#   beside the binary, when the binary is named by a path or found on $PATH;
+#   $OOKE_ROOT/scripts when set; and a clear error when there is none.
+inst=$tmp/inst; mkdir -p "$inst/scripts" "$tmp/else/scripts" "$tmp/cwd/scripts" || exit 2
+cp "$BIN" "$inst/ooke-toke" || exit 2
+for d in "$inst" "$tmp/else" "$tmp/cwd"; do
+  printf '#!/bin/sh\necho "stub:%s" >"%s/ran"\nexit 7\n' "$d" "$d" >"$d/scripts/gen_app_makefile.sh"
+done
+# stubran LABEL DIR -> the stub in DIR ran, no other stub did, and ooke
+# compile failed naming it
+stubran() {
+  nran=$(ls "$tmp/inst/ran" "$tmp/else/ran" "$tmp/cwd/ran" 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$rc" -ne 0 ] && [ -f "$2/ran" ] && [ "$nran" -eq 1 ] && grep -q "Makefile generation failed: .*gen_app_makefile.sh" "$tmp/loc.out"
+  then ok "locate: $1"; else bad "locate: $1 (rc=$rc)"; tail -3 "$tmp/loc.out" | sed 's/^/       /'; fi
+  rm -f "$tmp/inst/ran" "$tmp/else/ran" "$tmp/cwd/ran"
+}
+# $tmp/cwd has a scripts/ of its own: the old cwd lookup would run that one.
+(cd "$tmp/cwd" && env -u OOKE_ROOT "$inst/ooke-toke" compile ../proj) >"$tmp/loc.out" 2>&1; rc=$?
+stubran "an absolute binary path finds scripts/ beside the binary, not the cwd's" "$inst"
+(cd "$tmp/cwd" && env -u OOKE_ROOT PATH="$inst:$PATH" ooke-toke compile ../proj) >"$tmp/loc.out" 2>&1; rc=$?
+stubran "a binary found on PATH finds scripts/ beside it" "$inst"
+(cd "$tmp/cwd" && OOKE_ROOT="$tmp/else" "$inst/ooke-toke" compile ../proj) >"$tmp/loc.out" 2>&1; rc=$?
+stubran "OOKE_ROOT overrides the binary's directory" "$tmp/else"
+mkdir -p "$tmp/bare" && cp "$BIN" "$tmp/bare/ooke-toke" || exit 2
+(cd "$tmp/cwd" && env -u OOKE_ROOT "$tmp/bare/ooke-toke" compile ../proj) >"$tmp/loc.out" 2>&1; rc=$?
+if [ "$rc" -ne 0 ] && grep -q "cannot find scripts/gen_app_makefile.sh" "$tmp/loc.out" && [ ! -f "$tmp/cwd/ran" ]
+then ok "locate: no script beside the binary is a clear error ($rc), not the cwd's"
+else bad "locate: missing script gave rc=$rc"; tail -3 "$tmp/loc.out" | sed 's/^/       /'; fi
 
 # ── bind ────────────────────────────────────────────────────────────────────
 # Another process holds the port (without SO_REUSEPORT, so the server cannot

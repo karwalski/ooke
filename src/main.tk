@@ -3,9 +3,43 @@ i=args:std.args;
 i=str:std.str;
 i=log:std.log;
 i=process:std.process;
+i=env:std.env;
+i=file:std.file;
+i=path:std.path;
 i=cli:ooke.cli;
 i=repair:ooke.repair;
 i=run:ooke.run;
+
+(* Story 134.45. `ooke compile` ran scripts/gen_app_makefile.sh relative to
+   the current directory, so it worked only when run from the ooke checkout.
+   The script is part of the ooke installation, so find it from there:
+   $OOKE_ROOT if set, else the directory of the ooke binary itself (argv[0],
+   searched on $PATH when it holds no slash). A symlinked binary is not
+   followed -- set OOKE_ROOT for that layout. Returns "" if none is found. *)
+f=bindir(argv0:$str):$str{
+  if(str.contains(argv0;"/")){<path.dir(argv0)}el{};
+  let dirs=str.split(env.getor("PATH";"");":");
+  lp(let i=0;i<dirs.len;i=i+1){
+    let d=dirs.get(i);
+    if(str.len(d)>0){
+      if(file.exists(path.join(d;argv0))){<d}el{}
+    }el{}
+  };
+  <""
+};
+
+f=genscript():$str{
+  let rel="scripts/gen_app_makefile.sh";
+  let root=env.getor("OOKE_ROOT";"");
+  if(str.len(root)>0){<path.join(root;rel)}el{};
+  let argv0=mt args.get(0 as u64) {$ok:v v;$err:e ""};
+  let dir=bindir(argv0);
+  if(str.len(dir)>0){
+    let cand=path.join(dir;rel);
+    if(file.exists(cand)){<cand}el{}
+  }el{};
+  <""
+};
 
 f=main():i64{
   let count=args.count() as i64;
@@ -76,7 +110,12 @@ f=main():i64{
               if(str.eq(cmd;"compile")){
                 let compilepath=mt args.get(2 as u64) {$ok:v v;$err:e "."};
                 (log.info(str.concat("generating app build for ";compilepath);@()));
-                let genh=mt process.spawn(@("sh";"scripts/gen_app_makefile.sh";compilepath)) {$ok:v v;$err:e 0};
+                let gen=genscript();
+                if(str.len(gen)==0){
+                  (log.error("cannot find scripts/gen_app_makefile.sh beside the ooke binary; set OOKE_ROOT to the ooke checkout";@()));
+                  <1
+                }el{};
+                let genh=mt process.spawn(@("sh";gen;compilepath)) {$ok:v v;$err:e 0};
                 if(genh==0){
                   (log.info("failed to run gen_app_makefile.sh";@()));
                   <1
@@ -89,7 +128,7 @@ f=main():i64{
                 if(!(genexit==0)){
                   let generr=mt process.stderr(genh) {$ok:v v;$err:e ""};
                   if(str.len(generr)>0){(log.error(generr;@()))}el{};
-                  (log.error("Makefile generation failed (scripts/gen_app_makefile.sh, run from the ooke checkout)";@()));
+                  (log.error(str.concat("Makefile generation failed: ";gen);@()));
                   <1
                 }el{};
                 (log.info("building with make -f Makefile.serve";@()));

@@ -25,7 +25,7 @@ f=repairfile(filepath:$str;maxiters:i64):i64{
     (log.info("repair: failed to spawn tkc";@()));
     <1
   }el{};
-  (mt process.wait(h) {$ok:v v;$err:e 0-1});
+  (process.wait(h));
   let errout=mt process.stderr(h) {$ok:v v;$err:e ""};
   if(str.len(errout)==0){
     (log.info("repair: clean";@()));

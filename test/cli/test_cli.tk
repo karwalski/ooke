@@ -13,7 +13,7 @@ f=delfile(p:$str):bool{
 };
 
 f=hasfile(p:$str):bool{
-  <mt file.exists(p) {$ok:v v;$err:e false}
+  <file.exists(p)
 };
 
 f=readfile(p:$str):$str{
@@ -194,7 +194,7 @@ f=testgenpage():bool{
   let rc=cli.cligen("page";"mypage");
   let a0=chk.eqint(rc;0;"cligen page exit code");
   let pagepath=path.join("pages";"mypage.tk");
-  let exists=mt file.exists(pagepath) {$ok:v v;$err:e false};
+  let exists=file.exists(pagepath);
   let contentok=mt file.read(pagepath) {$ok:src str.contains(src;"m=pages.mypage;");$err:e false};
   (delfile(pagepath));
   let a1=chk.istrue(exists;"gen page file exists");
@@ -206,7 +206,7 @@ f=testgenspecstackfile():bool{
   let rc=cli.cligenspec("stack";"i64stk");
   let a0=chk.eqint(rc;0;"cligenspec stack exit code");
   let fpath="stacki64stk.tk";
-  let exists=mt file.exists(fpath) {$ok:v v;$err:e false};
+  let exists=file.exists(fpath);
   let contentok=mt file.read(fpath) {$ok:src str.contains(src;"t=$stacki64stk=stk.$stack;");$err:e false};
   (delfile(fpath));
   let a1=chk.istrue(exists;"gen spec stack file exists");
