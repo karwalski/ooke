@@ -81,9 +81,15 @@ f=main():i64{
                   (log.info("failed to run gen_app_makefile.sh";@()));
                   <1
                 }el{};
-                let genexit=mt process.wait(genh) {$ok:v v;$err:e 1};
+                (* Story 134.44. process.wait returns a plain i32, not a
+                   result; matching it with $ok/$err arms compiled and always
+                   took the $err arm, so this reported "Makefile generation
+                   failed" for every project, and the same for make. *)
+                let genexit=process.wait(genh);
                 if(!(genexit==0)){
-                  (log.info("Makefile generation failed";@()));
+                  let generr=mt process.stderr(genh) {$ok:v v;$err:e ""};
+                  if(str.len(generr)>0){(log.error(generr;@()))}el{};
+                  (log.error("Makefile generation failed (scripts/gen_app_makefile.sh, run from the ooke checkout)";@()));
                   <1
                 }el{};
                 (log.info("building with make -f Makefile.serve";@()));
@@ -92,13 +98,13 @@ f=main():i64{
                   (log.info("failed to run make";@()));
                   <1
                 }el{};
-                let makeexit=mt process.wait(makeh) {$ok:v v;$err:e 1};
+                let makeexit=process.wait(makeh);
                 let makeout=mt process.stdout(makeh) {$ok:v v;$err:e ""};
                 let makeerr=mt process.stderr(makeh) {$ok:v v;$err:e ""};
                 if(str.len(makeout)>0){(log.info(makeout;@()))}el{};
                 if(str.len(makeerr)>0){(log.info(makeerr;@()))}el{};
                 if(!(makeexit==0)){
-                  (log.info("compilation failed";@()));
+                  (log.error("compilation failed";@()));
                   <1
                 }el{};
                 (log.info("compile complete";@()));
