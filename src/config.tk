@@ -12,11 +12,17 @@ t=$ookecfg{
   serverport:i64;
   serverworkers:i64;
   servercorsorigins:$str;
+  logaccess:$str;
+  logerror:$str;
   logaccessformat:$str;
-  logmaxlines:i64;
-  logmaxagedays:i64;
+  tlscert:$str;
+  tlskey:$str;
   apiprefix:$str
 };
+(* 15 fields. Keep it at 16 or fewer: toke's code generator drops every struct
+   field past the 16th (TKC_MAX_PARAMS in toke's src/llvm.c StructInfo) --
+   `tkc --check` passes and the build fails with E4025 "no field". Measured with
+   a 17-field struct during story 134.40. *)
 
 t=$configerr{msg:$str};
 
@@ -29,6 +35,7 @@ f=configload(path:$str):$ookecfg!$configerr{
   let server=mt toml.section(tab;"server") {$ok:v v;$err:e tab};
   let log=mt toml.section(tab;"log") {$ok:v v;$err:e tab};
   let paths=mt toml.section(tab;"paths") {$ok:v v;$err:e tab};
+  let tls=mt toml.section(tab;"tls") {$ok:v v;$err:e tab};
 
   let sitename=mt toml.str(site;"name") {$ok:v v;$err:e "my-site"};
   let siteurl=mt toml.str(site;"url") {$ok:v v;$err:e ""};
@@ -50,9 +57,19 @@ f=configload(path:$str):$ookecfg!$configerr{
      store is the flat-file one. An old ooke.toml that still carries a
      `[store]` table loads unchanged; the table is ignored. *)
 
+  (* Story 134.40. [log] is applied by `ooke serve` (serve.serveopenlogs);
+     docs/logging-and-tls.md is the design. `access` and `error` each take a
+     file path (relative to the project), "-" for stderr, or "" for off.
+     `maxlines` and `maxagedays` are no longer read: std.log's rotation loses
+     lines (see configlogunsupported below). *)
+  let logaccess=mt toml.str(log;"access") {$ok:v v;$err:e "-"};
+  let logerror=mt toml.str(log;"error") {$ok:v v;$err:e ""};
   let logaccessformat=mt toml.str(log;"accessformat") {$ok:v v;$err:e "combined"};
-  let logmaxlines=mt toml.i64(log;"maxlines") {$ok:v v;$err:e 10000};
-  let logmaxagedays=mt toml.i64(log;"maxagedays") {$ok:v v;$err:e 30};
+
+  (* Story 134.40. [tls] cert/key: both or neither (serve.servetlscheck); when
+     set, `ooke serve` speaks HTTPS. Absent, both are "" and serve is HTTP. *)
+  let tlscert=mt toml.str(tls;"cert") {$ok:v v;$err:e ""};
+  let tlskey=mt toml.str(tls;"key") {$ok:v v;$err:e ""};
 
   let apiprefix=mt toml.str(paths;"apiprefix") {$ok:v v;$err:e ""};
 
@@ -66,9 +83,31 @@ f=configload(path:$str):$ookecfg!$configerr{
     serverport:serverport;
     serverworkers:serverworkers;
     servercorsorigins:servercorsorigins;
+    logaccess:logaccess;
+    logerror:logerror;
     logaccessformat:logaccessformat;
-    logmaxlines:logmaxlines;
-    logmaxagedays:logmaxagedays;
+    tlscert:tlscert;
+    tlskey:tlskey;
     apiprefix:apiprefix
   }
+};
+
+(* Story 134.40. `[log] maxlines` and `[log] maxagedays` configured rotation
+   that ooke never applied. std.log does rotate (log.openaccess takes both),
+   but measured against this build it loses the log: with maxlines = 5 and 40
+   requests, 4 pre-fork workers kept 4 of 40 lines, and one worker kept 15 of
+   40 when two rotations fell in the same second (the rotated name has
+   one-second resolution, so the second overwrites the first). So the keys are
+   not wired; serve names any that are still set, and ignores them, the way
+   an old [store] table is ignored (134.34). Returns the keys found, or "". *)
+f=configlogunsupported(path:$str):$str!$configerr{
+  let src=file.read(path)!$configerr;
+  let tab=toml.load(src)!$configerr;
+  let log=mt toml.section(tab;"log") {$ok:v v;$err:e tab};
+  let hasml=mt toml.i64(log;"maxlines") {$ok:v true;$err:e false};
+  let hasma=mt toml.i64(log;"maxagedays") {$ok:v true;$err:e false};
+  if(hasml&&hasma){<"maxlines, maxagedays"}el{};
+  if(hasml){<"maxlines"}el{};
+  if(hasma){<"maxagedays"}el{};
+  <""
 };

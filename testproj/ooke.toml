@@ -13,6 +13,5 @@ port = 8092
 workers = 4
 
 [log]
+access = "-"
 accessformat = "combined"
-maxlines = 10000
-maxagedays = 30

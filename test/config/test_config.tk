@@ -45,16 +45,50 @@ f=testdefaults():bool{
   let a6=chk.eqint(cfg.serverport;3000;"server.port default");
   let a7=chk.eqint(cfg.serverworkers;0;"server.workers default");
   let a9=chk.eqstr(cfg.logaccessformat;"combined";"log.accessformat default");
-  let a10=chk.eqint(cfg.logmaxlines;10000;"log.maxlines default");
-  let a11=chk.eqint(cfg.logmaxagedays;30;"log.maxagedays default");
-  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a9&&a10&&a11
+  let a10=chk.eqstr(cfg.logaccess;"-";"log.access default (stderr)");
+  let a11=chk.eqstr(cfg.logerror;"";"log.error default (off)");
+  let a12=chk.eqstr(cfg.tlscert;"";"tls.cert default");
+  let a13=chk.eqstr(cfg.tlskey;"";"tls.key default");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a9&&a10&&a11&&a12&&a13
+};
+
+(* Story 134.40: [log] access/error/accessformat and [tls] cert/key are read. *)
+f=testlogtls():bool{
+  let tomlsrc="[site]\nname = \"x\"\n\n[log]\naccess = \"logs/access.log\"\nerror = \"-\"\naccessformat = \"json\"\n\n[tls]\ncert = \"certs/c.pem\"\nkey = \"certs/k.pem\"\n";
+  let wrok=mt file.write("/tmp/test_ooke_logtls.toml";tomlsrc) {$ok:v true;$err:e false};
+  if(wrok==false){<false};
+  let result=config.configload("/tmp/test_ooke_logtls.toml");
+  let cfgok=mt result {$ok:v true;$err:e false};
+  if(cfgok==false){<false};
+  let cfg=mt result {$ok:v v;$err:e 0};
+  let a0=chk.eqstr(cfg.logaccess;"logs/access.log";"log.access");
+  let a1=chk.eqstr(cfg.logerror;"-";"log.error");
+  let a2=chk.eqstr(cfg.logaccessformat;"json";"log.accessformat");
+  let a3=chk.eqstr(cfg.tlscert;"certs/c.pem";"tls.cert");
+  let a4=chk.eqstr(cfg.tlskey;"certs/k.pem";"tls.key");
+  let a5=chk.eqstr(cfg.apiprefix;"";"paths.apiprefix after tls (field 15)");
+  <a0&&a1&&a2&&a3&&a4&&a5
+};
+
+(* Story 134.40: maxlines/maxagedays are named as unsupported, not applied. *)
+f=testlogunsupported():bool{
+  let w0=mt file.write("/tmp/test_ooke_rot.toml";"[log]\nmaxlines = 5\nmaxagedays = 3\n") {$ok:v true;$err:e false};
+  let w1=mt file.write("/tmp/test_ooke_norot.toml";"[log]\naccess = \"-\"\n") {$ok:v true;$err:e false};
+  if(!(w0&&w1)){<false};
+  let both=mt config.configlogunsupported("/tmp/test_ooke_rot.toml") {$ok:v v;$err:e "ERR"};
+  let none=mt config.configlogunsupported("/tmp/test_ooke_norot.toml") {$ok:v v;$err:e "ERR"};
+  let a0=chk.eqstr(both;"maxlines, maxagedays";"configlogunsupported names both keys");
+  let a1=chk.eqstr(none;"";"configlogunsupported is empty when neither is set");
+  <a0&&a1
 };
 
 f=main():i64{
   let r0=testloadvalid();
   let r1=testmissingfile();
   let r2=testdefaults();
-  if(r0&&r1&&r2){
+  let r3=testlogtls();
+  let r4=testlogunsupported();
+  if(r0&&r1&&r2&&r3&&r4){
     <0
   }el{
     <1

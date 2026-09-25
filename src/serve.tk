@@ -154,6 +154,84 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
   <rendered
 };
 
+(* Story 134.40. The [log] keys used to be read and applied by nothing: serve
+   opened no log, so no request was ever logged anywhere. std.log already has
+   the capability -- openaccess/openerror open a log that std.http writes one
+   line per request to, and accessformat picks "combined" or "json". This is
+   the wiring. Rotation is deliberately not wired: std.log's rotation loses
+   lines (config.configlogunsupported). Design: docs/logging-and-tls.md.
+   A log path is "-" (stderr), "" (off) or a file, relative to the project.
+   A configured log that cannot be opened is an error, not a silent no-log. *)
+f=servelogtarget(projectdir:$str;p:$str):$str{
+  if(p=="-"){<"/dev/stderr"}el{};
+  <build.buildresolve(projectdir;p)
+};
+
+f=serveopenlogs(projectdir:$str;access:$str;errorlog:$str;format:$str):i64!$serveerr{
+  if(!(format=="combined"||format=="json")){
+    let m0=str.join("";@("[log] accessformat must be \"combined\" or \"json\", got \"";format;"\""));
+    (log.error(m0;@()));
+    <$serveerr{msg:m0}
+  }el{};
+  (log.accessformat(format));
+  if(str.len(access)>0){
+    let at=servelogtarget(projectdir;access);
+    let ar=log.openaccess(at;0;0;0);
+    if(!(ar==0)){
+      let m2=str.concat("[log] access log could not be opened: ";at);
+      (log.error(m2;@()));
+      <$serveerr{msg:m2}
+    }el{}
+  }el{};
+  if(str.len(errorlog)>0){
+    let et=servelogtarget(projectdir;errorlog);
+    let er=log.openerror(et;0;0;0);
+    if(!(er==0)){
+      let m3=str.concat("[log] error log could not be opened: ";et);
+      (log.error(m3;@()));
+      <$serveerr{msg:m3}
+    }el{}
+  }el{};
+  <0
+};
+
+(* Story 134.40. [tls] cert/key, resolved against the project. Both or
+   neither; a named file that does not exist is an error before anything
+   binds. *)
+f=servetlscheck(projectdir:$str;cert:$str;key:$str):i64!$serveerr{
+  if(str.len(cert)==0&&str.len(key)==0){<0}el{};
+  if(str.len(cert)==0||str.len(key)==0){
+    let m0="[tls] needs both cert and key, or neither";
+    (log.error(m0;@()));
+    <$serveerr{msg:m0}
+  }el{};
+  let cp=build.buildresolve(projectdir;cert);
+  let kp=build.buildresolve(projectdir;key);
+  if(!file.exists(cp)){
+    let m1=str.concat("[tls] cert not found: ";cp);
+    (log.error(m1;@()));
+    <$serveerr{msg:m1}
+  }el{};
+  if(!file.exists(kp)){
+    let m2=str.concat("[tls] key not found: ";kp);
+    (log.error(m2;@()));
+    <$serveerr{msg:m2}
+  }el{};
+  <0
+};
+
+f=serverlisten(projectdir:$str;port:i64;uport:u64;uworkers:u64;tlscert:$str;tlskey:$str):i64{
+  if(str.len(tlscert)>0){
+    let cp=build.buildresolve(projectdir;tlscert);
+    let kp=build.buildresolve(projectdir;tlskey);
+    (log.info(str.concat("mode: HTTPS (TLS) on port ";str.fromint(port));@()));
+    <http.servetls(uport;cp;kp)
+  }el{
+    (log.info(str.concat("mode: HTTP on port ";str.fromint(port));@()));
+    <http.serveworkers(uport;uworkers)
+  }
+};
+
 f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;corsorigins:$str;handledpaths:@$str):i64!$serveerr{
   let pagesdir=path.join(projectdir;"pages");
   let contentdir=path.join(projectdir;"content");
@@ -189,11 +267,14 @@ f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tl
   (log.info("servedir done, starting listen";@()));
   let uport=port as u64;
   let uworkers=workers as u64;
-  if(!(tlscert=="")){
-    (log.info(str.concat("mode: HTTPS (TLS) on port ";str.fromint(port));@()));
-    (http.servetls(uport;tlscert;tlskey))
-  }el{
-    (log.info(str.concat("mode: HTTP (no TLS certs) on port ";str.fromint(port));@()));
-    (http.serveworkers(uport;uworkers))
-  }
+  (* Story 134.40: the listen call's result used to be discarded in a tail
+     `if`, so a certificate that failed to load (or a port that failed to
+     bind) ended the process with status 0 and no message. *)
+  let rc=serverlisten(projectdir;port;uport;uworkers;tlscert;tlskey);
+  if(!(rc==0)){
+    let m=str.concat("server stopped with an error on port ";str.fromint(port));
+    (log.error(m;@()));
+    <$serveerr{msg:m}
+  }el{};
+  <0
 };
