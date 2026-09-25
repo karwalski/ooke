@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-deps test-cli-contract test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-deps test-cli-contract test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -342,7 +342,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-deps test-cli-contract
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-deps test-cli-contract
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -360,6 +360,14 @@ test-serve-cwd: $(BIN)
 # pair made locally with openssl; nothing leaves the machine).
 test-serve-logs: $(BIN)
 	@test/serve/serve_logs_tls.sh ./$(BIN)
+
+# test-compile-app — story 134.44: `ooke compile` on a copy of testproj builds
+# a per-app binary that serves the app's own handlers and [log]; and `ooke
+# serve` (and that binary) exit non-zero on a port they cannot bind. TOKE_ROOT
+# and TKC are passed through because `ooke compile` generates a Makefile that
+# builds against them.
+test-compile-app: $(BIN)
+	@TOKE_ROOT=$(TOKE_ROOT) TKC=$(TKC) test/serve/compile_app.sh ./$(BIN)
 
 # test-cli-contract — stories 134.42 and 134.43: `--version` on stdout exactly,
 # and a malformed ooke.toml fails `build` and `serve` instead of falling back
