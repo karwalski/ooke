@@ -362,9 +362,11 @@ wrappers.
   to the not-found path. (Track B: treat struct-field maps as maps in `.get`.)
   Building/storing non-empty `meta` is unaffected; only reading it back out of
   a `$content` is broken.
-- **Not-found is signalled via `file.listall("")`.** `storeslug`/`storefind`
-  reproduce the reference idiom of forcing a `$storeerr` by propagating a
-  guaranteed `file.listall("")` failure — preserved for behavioural parity.
+- **Not-found is an explicit `$storeerr`.** `storeslug`/`storefind` used to
+  force the error by propagating `file.listall("")`, on the assumption that it
+  always fails. It does not always fail, and then the function fell off its end
+  and returned a null `$content` (story 127.127; toke now rejects the shape as
+  E4071). Both now return `<$storeerr{msg:...}` naming what was not found.
 - **Build harness.** ooke `.tki` interface files are gitignored, so a fresh
   worktree has none and cross-module imports fail until each `src/*.tk` is run
   through `tkc --emit-interface --out <mod>` (matching `scripts/testmod.sh`'s
