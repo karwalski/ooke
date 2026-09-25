@@ -37,9 +37,11 @@ prefixed field names; there is no nested config type).
 | `serverport` | `i64` | `[server].port` — HTTP listen port. Default `3000`. |
 | `serverworkers` | `i64` | `[server].workers` — worker count (`0` = auto-detect CPU). Default `0`. |
 | `servercorsorigins` | `$str` | `[server].corsorigins` — CORS allow-origin. Default `""`. |
-| `logaccessformat` | `$str` | `[log].accessformat` — access-log line format. Default `"combined"`. (There is no access-log *path* key; the old `[log].access` / `logaccess` read was removed — story 134.23.) |
-| `logmaxlines` | `i64` | `[log].maxlines` — access-log rotation line cap. Default `10000`. |
-| `logmaxagedays` | `i64` | `[log].maxagedays` — access-log retention days. Default `30`. |
+| `logaccess` | `$str` | `[log].access` — access log: a path relative to the project, `"-"` for stderr, `""` for off. Default `"-"`. Applied by `serve.serveopenlogs` (story 134.40). |
+| `logerror` | `$str` | `[log].error` — error log (the access line again for status >= 400); same values. Default `""`. |
+| `logaccessformat` | `$str` | `[log].accessformat` — `"combined"` or `"json"`. Default `"combined"`. |
+| `tlscert` | `$str` | `[tls].cert` — certificate path, relative to the project. Default `""` (plain HTTP). |
+| `tlskey` | `$str` | `[tls].key` — private key path. Default `""`. Both or neither (`serve.servetlscheck`). |
 | `apiprefix` | `$str` | `[paths].apiprefix` — API route namespace prefix. Default `""`. |
 
 ### `$configerr`
@@ -109,7 +111,8 @@ one record-literal return. No loops, no recursion, no mutable state.
   `corsorigins`, `apiprefix`, `[log].accessformat`. The `[log]` key is now
   `accessformat` (default `"combined"`), matching the real stdlib capability
   `tk_log_accessformat_w`; the old dead `access` *path* read was removed.
-  Wiring `accessformat` into serve startup is a separate follow-up story — not
-  done here. The no-op `imageoptimize` key was dropped (no image-optimize
+  (Story 134.40 wired `[log]` into serve and added `access`/`error` path keys
+  and `[tls]`; `maxlines`/`maxagedays` were removed — std.log's rotation loses
+  lines. See docs/logging-and-tls.md and `configlogunsupported`.) The no-op `imageoptimize` key was dropped (no image-optimize
   feature exists).
 - **Dropped the unused `std.str` import** the reference module carried.

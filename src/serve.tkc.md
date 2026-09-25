@@ -210,9 +210,20 @@ the type permits `$serveerr` for plumbing parity.
 5. Log "starting servedir" and mount the static directory with
    `http.servedir("/static"; projectdir)`, then log "servedir done".
 6. Cast `port` and `workers` to `u64` as `uport`/`uworkers`.
-7. If `tlscert` is not equal to `""` (i.e. TLS certs were provided): log the
-   HTTPS mode line and call `http.servetls(uport; tlscert; tlskey)`. Otherwise
-   log the HTTP mode line and call `http.serveworkers(uport; uworkers)`.
+7. Call `serverlisten`: if `tlscert` is non-empty, resolve `tlscert`/`tlskey`
+   against `projectdir` (`build.buildresolve`), log the HTTPS mode line and
+   call `http.servetls(uport; cert; key)`; otherwise log the HTTP mode line and
+   call `http.serveworkers(uport; uworkers)`.
+8. If the listener returned non-zero (a cert that does not load, a port that
+   does not bind), log it and return `$serveerr`. Before story 134.40 this
+   result was discarded and the process exited 0 with no message.
+
+Callers apply `[tls]` and `[log]` first: `servetlscheck(projectdir; cert;
+key)` refuses half a pair or a missing file, and `serveopenlogs(projectdir;
+access; error; format)` opens the std.log access/error logs (`"-"` = stderr,
+`""` = off, else a project-relative path) and refuses an unknown format or an
+unopenable file. Both return `i64!$serveerr` and log their reason. Design:
+docs/logging-and-tls.md.
 
 **Error handling:** `serveregisterstatic` propagates its `$serveerr` through
 `!$serveerr`, so a failed route scan aborts startup before anything is bound

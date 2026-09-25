@@ -57,8 +57,11 @@ logic was moved here as `ooke.cli` and the entry kept as `ooke.main`.
   containers log and return 1.
 - `cfgdefault(): $ookecfg` — return a fully-populated default `$ookecfg`, used
   as the fallback when `ooke.toml` cannot be loaded.
-- `runserve(projectdir: $str): i64` — load config (or default), register dynamic
-  handlers, and run the dev server. Returns the server exit code.
+- `runserve(projectdir: $str): i64` — load config (or default), check `[tls]`
+  (`serve.servetlscheck`), warn on the removed `[log]` rotation keys
+  (`config.configlogunsupported`), open the `[log]` logs (`serve.serveopenlogs`),
+  register dynamic handlers, and run the server. Any refusal returns 1
+  (story 134.40).
 - `runbuild(projectdir: $str): i64` — load config (or default), run the static
   build, and report page/asset counts and validation errors/warnings.
 

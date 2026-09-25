@@ -34,10 +34,10 @@ and nowhere else.*
 - **Content validation** -- define TOML models in `models/` with field types and required flags. ooke validates content against them automatically.
 - **Island architecture** -- interactive client-side components with `{! island("name"; hydrate="visible") !}` directives and the `ooke-islands.js` hydration loader. Scaffold new islands with `ooke gen island <name>`.
 - **Static site generation** -- `ooke build` renders your entire site to static HTML in `build/`. Deploy anywhere.
-- **HTTP serving** -- `ooke serve` serves plain HTTP. It does not terminate TLS: it passes no certificate to the server and `ooke.toml` has no key for one, so put it behind a TLS-terminating proxy for production.
+- **HTTP and HTTPS serving** -- `ooke serve` serves plain HTTP, or HTTPS when `[tls]` names a certificate and key (see [TLS](#tls)).
 - **Worker scaling** -- set `workers = 0` for automatic CPU-count detection, or override at runtime with `TK_HTTP_WORKERS`.
 - **Custom error pages** -- drop templates into `templates/errors/` (e.g. `404.tkt`) for branded error handling.
-- **Logging** -- `ooke serve` writes its own startup and route-registration messages as JSON lines on standard error. It does not open an access log or an error log (see [Log](#log)).
+- **Logging** -- `ooke serve` writes its startup messages as JSON lines on standard error, and one access-log line per request -- to standard error by default, or to a file (see [Log](#log)).
 - **Repair command** -- `ooke repair <file>` diagnoses compiler errors and suggests fixes.
 - **Lint command** -- `tkc --lint` checks toke source for issues; add `--fix` for auto-repair.
 - **Single binary deployment** -- one file, no runtime, no dependencies. Copy it to a server and run it.
@@ -210,7 +210,8 @@ port = 3000
 workers = 0        # 0 = auto-detect CPU count
 
 [log]
-accessformat = "combined"   # read, but not used yet -- see Log below
+access = "-"                # "-" = stderr, "" = off, or a file path
+accessformat = "combined"   # or "json"
 ```
 
 ### Server
@@ -230,14 +231,33 @@ ignored (story 134.34).
 
 ### Log
 
-`[log]` accepts `accessformat` (default `"combined"`), `maxlines` (default
-`10000`) and `maxagedays` (default `30`), and ooke reads them into its
-configuration -- but **nothing uses them yet**. `ooke serve` never opens an
-access log or an error log, so no request is logged to a file, in any format,
-and none of these keys changes what ooke does. They are kept so an existing
-`ooke.toml` keeps loading; do not rely on them. (The toke stdlib has the
-machinery -- `log.openaccess`, `log.openerror`, rotation and gzip -- but ooke
-does not call it. Story 134.39.)
+| Key | Default | Description |
+|-----|---------|-------------|
+| `access` | `"-"` | Access log: one line per request. `"-"` is standard error, `""` is off, anything else is a file path, relative to the project. |
+| `error` | `""` | Error log: the access line again for every response with status 400 or above. Same values as `access`. |
+| `accessformat` | `"combined"` | `"combined"` (Apache Combined Log Format) or `"json"` (one JSON object per line). Any other value stops serve at startup. |
+
+A log file that cannot be opened stops serve at startup. ooke does not rotate
+logs. `maxlines` and `maxagedays` are no longer read, because the toke
+stdlib's rotation loses lines. If they are set, serve names them in a warning
+and ignores them. Rotate with an external tool that truncates in place, such
+as `logrotate` with `copytruncate`. Details: [docs/logging-and-tls.md](docs/logging-and-tls.md)
+(story 134.40).
+
+### TLS
+
+```toml
+[tls]
+cert = "certs/cert.pem"
+key = "certs/key.pem"
+```
+
+Set both or neither. When they are set, `ooke serve` speaks HTTPS on
+`[server].port`. The paths are relative to the project. If one of the pair is
+missing, or a file does not exist or does not load, serve stops with an error.
+Under TLS the worker count comes from `TK_HTTP_WORKERS` or the CPU count, not
+from `[server].workers`: the toke stdlib's `http.servetls` takes no worker
+count.
 
 ## Extension API
 
