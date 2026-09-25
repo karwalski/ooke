@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-deps test-cli-contract test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-run-cli test-deps test-cli-contract test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -342,7 +342,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-deps test-cli-contract
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-run-cli test-deps test-cli-contract
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -368,6 +368,13 @@ test-serve-logs: $(BIN)
 # builds against them.
 test-compile-app: $(BIN)
 	@TOKE_ROOT=$(TOKE_ROOT) TKC=$(TKC) test/serve/compile_app.sh ./$(BIN)
+
+# test-run-cli — story 134.45: `ooke run` exits 0 for a program that exits 0,
+# with the program's own status when it fails, and non-zero on a compile
+# error; `ooke build --cli` writes the binary. ooke run spawns tkc, so
+# TOKE_ROOT is passed through.
+test-run-cli: $(BIN)
+	@TOKE_ROOT=$(TOKE_ROOT) test/run/run_cli.sh ./$(BIN)
 
 # test-cli-contract — stories 134.42 and 134.43: `--version` on stdout exactly,
 # and a malformed ooke.toml fails `build` and `serve` instead of falling back

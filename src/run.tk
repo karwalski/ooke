@@ -35,7 +35,11 @@ f=runcompile(projectdir:$str;cfg:$clicfg):$str!$runerr{
     (log.info("failed to spawn tkc";@()));
     <""
   }el{};
-  let ecode=mt process.wait(h) {$ok:v v;$err:e 0-1};
+  (* Story 134.45. process.wait returns a plain i32 exit status, not a
+     result. Matched with $ok/$err arms it compiled and always took the $err
+     arm (127.202), so every compile, successful or not, reported "tkc error"
+     and ooke run/build --cli never ran anything. Compare the status. *)
+  let ecode=process.wait(h);
   let errout=mt process.stderr(h) {$ok:v v;$err:e ""};
   if(!(ecode==0)){
     (log.info(str.concat("tkc error: ";errout);@()));
@@ -62,7 +66,9 @@ f=runexec(binpath:$str;passargs:@$str):i64{
     (log.info("failed to spawn binary";@()));
     <1
   }el{};
-  let ecode=mt process.wait(h) {$ok:v v;$err:e 0-1};
+  (* Story 134.45: a plain i32, as in runcompile. It used to read -1 for
+     every child, so ooke run exited 255 even when the program exited 0. *)
+  let ecode=process.wait(h);
   let sout=mt process.stdout(h) {$ok:v v;$err:e ""};
   if(str.len(sout)>0){
     (log.info(sout;@()))
