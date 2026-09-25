@@ -171,7 +171,11 @@ f=storeslug(col:@$content;slug:$str):$content!$storeerr{
     let item=col.get(i);
     if(item.slug==slug){<item}el{}
   };
-  (file.listall("")!$storeerr)
+  (* Story 127.127: this used to end in (file.listall("")!$storeerr), meant to
+     force an error. file.listall("") can SUCCEED, and then the body fell off
+     its end and the caller got a null $content (rc 139 on its first read).
+     toke now rejects that tail as E4071. Not-found is an explicit error. *)
+  <$storeerr{msg:str.concat("no content with slug: ";slug)}
 };
 
 f=storefind(col:@$content;key:$str;val:$str):$content!$storeerr{
@@ -180,5 +184,6 @@ f=storefind(col:@$content;key:$str;val:$str):$content!$storeerr{
     let mv=item.meta.get(key);
     if(str.eq(mv;val)){<item}el{}
   };
-  (file.listall("")!$storeerr)
+  (* Story 127.127: explicit not-found error, as in storeslug. *)
+  <$storeerr{msg:str.join("";@("no content with ";key;" = ";val))}
 };

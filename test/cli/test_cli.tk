@@ -100,10 +100,12 @@ f=testcfgdefault():bool{
   let a7=chk.eqint(cfg.serverworkers;0;"cfgdefault server.workers");
   let a8=chk.eqstr(cfg.servercorsorigins;"";"cfgdefault server.corsorigins");
   let a10=chk.eqstr(cfg.logaccessformat;"combined";"cfgdefault log.accessformat");
-  let a11=chk.eqint(cfg.logmaxlines;10000;"cfgdefault log.maxlines");
-  let a12=chk.eqint(cfg.logmaxagedays;30;"cfgdefault log.maxagedays");
+  let a11=chk.eqstr(cfg.logaccess;"-";"cfgdefault log.access (stderr)");
+  let a12=chk.eqstr(cfg.logerror;"";"cfgdefault log.error (off)");
+  let a14=chk.eqstr(cfg.tlscert;"";"cfgdefault tls.cert");
+  let a15=chk.eqstr(cfg.tlskey;"";"cfgdefault tls.key");
   let a13=chk.eqstr(cfg.apiprefix;"";"cfgdefault paths.apiprefix");
-  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a10&&a11&&a12&&a13
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a10&&a11&&a12&&a13&&a14&&a15
 };
 
 f=testretcolon():bool{

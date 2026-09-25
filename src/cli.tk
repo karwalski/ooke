@@ -111,7 +111,7 @@ f=clinew(name:$str):i64{
   (mt file.mkdir(path.join(name;"static")) {$ok:v v;$err:e false});
   (* 134.35: the [requires] block is generated from ooke.toml (src/_floor.tk),
      not restated here. It had drifted to a floor ooke no longer builds on. *)
-  let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[paths]\napiprefix = \"\"\n\n[log]\naccessformat = \"combined\"\nmaxlines = 10000\nmaxagedays = 30\n\n";floor.floortoml()));
+  let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[paths]\napiprefix = \"\"\n\n[log]\naccess = \"-\"\naccessformat = \"combined\"\n\n";floor.floortoml()));
   (mt file.write(path.join(name;"ooke.toml");tomlcontent) {$ok:v v;$err:e false});
   let indexcontent="m=pages.index;\n";
   (mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {$ok:v v;$err:e false});
@@ -264,7 +264,8 @@ f=cfgdefault():$ookecfg{
     sitename:"my-site";siteurl:"";sitelanguage:"en";
     buildoutput:"build/";buildminify:true;buildinlinecss:true;
     serverport:3000;serverworkers:0;servercorsorigins:"";
-    logaccessformat:"combined";logmaxlines:10000;logmaxagedays:30;
+    logaccess:"-";logerror:"";logaccessformat:"combined";
+    tlscert:"";tlskey:"";
     apiprefix:""
   }
 };
@@ -312,11 +313,21 @@ f=runserve(projectdir:$str):i64{
   let sitelanguage=cfg.sitelanguage;
   let apiprefix=cfg.apiprefix;
   let corsorigins=cfg.servercorsorigins;
+  (* Story 134.40: [tls] and [log] are applied, before anything binds. Each
+     helper logs its own reason; a bad key refuses to start. *)
+  let tlsok=mt serve.servetlscheck(projectdir;cfg.tlscert;cfg.tlskey) {$ok:v true;$err:e false};
+  if(!tlsok){<clireportserveerr()}el{};
+  let unsupported=mt config.configlogunsupported(cfgpath) {$ok:v v;$err:e ""};
+  if(str.len(unsupported)>0){
+    (log.warn(str.join("";@("[log] ";unsupported;" ignored: ooke does not rotate logs (std.log rotation loses lines; see docs/logging-and-tls.md)"));@()))
+  }el{};
+  let logok=mt serve.serveopenlogs(projectdir;cfg.logaccess;cfg.logerror;cfg.logaccessformat) {$ok:v true;$err:e false};
+  if(!logok){<clireportserveerr()}el{};
   let handledpaths=handlers.registerall();
   (log.info(str.join("";@("auto-registered ";handledpaths.len as str;" handler routes"));@()));
   (* serverun now fails rather than starting with no routes (story 134.18), so
      say why. Returning a bare 1 left the operator with a silent non-zero. *)
-  let r=mt serve.serverun(projectdir;port;workers;output;"";"";sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {
+  let r=mt serve.serverun(projectdir;port;workers;output;cfg.tlscert;cfg.tlskey;sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {
     $ok:v 0;
     $err:e clireportserveerr()
   };
