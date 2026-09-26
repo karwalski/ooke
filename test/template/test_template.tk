@@ -227,6 +227,35 @@ f=testcachehit():bool{
 };
 
 
+(* 127.226: testcachehit cannot fail on a cache that never stores —
+ * tplcacheget falls back to reading the file, so "populated" held either way,
+ * and that is how ooke's template cache went its whole life without caching
+ * (toke lowered `cache.entries.set` as an ARRAY store, a silent no-op).  Here
+ * the file changes between two renders through the same cache: only a stored
+ * entry can still produce the first text.  The empty cache is the control
+ * that the file really changed. *)
+f=testcacheservesstored():bool{
+  let tktpath="/tmp/test_ooke_cache_stored.tkt";
+  let w1=file.write(tktpath;"<p>first {= msg =}</p>");
+  (mt w1 {$ok:v 0;$err:e failret("could not write temp template")});
+  let ctx=@("msg":"m");
+  let cache0=tpl.tplcachenew();
+  let r1=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";cache0);
+  let out1=mt r1 {$ok:r r.output;$err:e failret(e.msg)};
+  let a0=chk.istrue(str.contains(out1;"first");"the first render reads the file");
+  let cache1=mt r1 {$ok:r r.cache;$err:e cache0};
+  let w2=file.write(tktpath;"<p>second {= msg =}</p>");
+  (mt w2 {$ok:v 0;$err:e failret("could not rewrite temp template")});
+  let r2=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";cache1);
+  let out2=mt r2 {$ok:r r.output;$err:e failret(e.msg)};
+  let a1=chk.istrue(str.contains(out2;"first");"a render through the populated cache serves the stored tokens, not the changed file");
+  let r3=tpl.tplrenderfilecached(tktpath;ctx;"/tmp";cache0);
+  let out3=mt r3 {$ok:r r.output;$err:e failret(e.msg)};
+  let a2=chk.istrue(str.contains(out3;"second");"a render through the empty cache reads the changed file");
+  <a0&&a1&&a2
+};
+
+
 f=testpartial():bool{
   let partialsrc="<header><a href=\"/\">Home</a></header>";
   let partialpath="/tmp/header.tkt";
@@ -266,7 +295,8 @@ f=main():i64{
   let r15=testexprescapesbydefault();
   let r16=testfilterraw();
   let r17=testfilteruppertescapes();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17){
+  let r18=testcacheservesstored();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18){
     <0
   }el{
     <1
