@@ -128,9 +128,10 @@ jobs:
           STAGING="ooke-${VERSION}-${{ matrix.os }}-${{ matrix.arch }}"
           mkdir -p "${STAGING}"
 
-          # Binary (rename ooke-toke -> ooke)
-          cp ooke-toke "${STAGING}/ooke"
-          chmod +x "${STAGING}/ooke"
+          # Story 134.46: the installation tree -- binary (ooke-toke -> ooke),
+          # Makefile, the two scripts `ooke compile` runs, src/ and the
+          # compiled modules. The binary alone could not compile.
+          TOKE_ROOT="${GITHUB_WORKSPACE}/../toke" sh scripts/stage_install.sh "${STAGING}"
 
           # Story 134.10: this used to ship ooke's OWN site -- templates/,
           # content/, pages/, static/ and an ooke.toml reading name = "my-site"
