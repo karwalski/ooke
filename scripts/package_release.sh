@@ -6,7 +6,8 @@
 # ooke, and nothing that only exists in somebody's working tree:
 #
 #   ooke-<ver>-src.tar.gz              `git archive` of HEAD — TRACKED files only
-#   ooke-<ver>-<platform>.tar.gz       the built binary + the docs to use it
+#   ooke-<ver>-<platform>.tar.gz       the installation tree (binary, Makefile,
+#                                      scripts, src/ -- 134.46) + the docs
 #   ooke-<ver>.manifest.txt            what was built, from what, by what
 #   SHA256SUMS
 #
@@ -70,7 +71,9 @@ echo "$DIST/$STAMP-src.tar.gz  ($(git ls-files | wc -l | tr -d ' ') tracked file
 say "Binary tarball ($PLATFORM)"
 STAGE="$DIST/$STAMP-$PLATFORM"
 mkdir -p "$STAGE"
-cp ooke-toke "$STAGE/ooke"
+# Story 134.46: the installation tree, not the binary alone -- `ooke compile`
+# needs the Makefile, scripts/, src/ and the compiled modules beside it.
+TOKE_ROOT="$TOKE_ROOT" sh scripts/stage_install.sh "$STAGE"
 cp VERSION LICENSE README.md "$STAGE/"
 cp docs/install.md docs/versioning.md docs/public-api.md \
    docs/release-notes-3.0.0.md CHANGELOG.md "$STAGE/"
