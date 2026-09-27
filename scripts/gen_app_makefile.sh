@@ -67,8 +67,8 @@ done
 # caps a module at 32 imports by default (E9010: "compiler limit exceeded: too
 # many imports"), so an app with more than 31 pages did not compile.  Raise the
 # cap for this one module to exactly its import count, and only when the
-# default is too small.  (ooke's own Makefile needs no such flag: its registry
-# holds only ooke's built-in handlers, whose page modules it compiles itself.)
+# default is too small.  (ooke's own Makefile passes no such flag: its registry
+# holds ooke's built-in handler pages, which it compiles itself -- 134.47.)
 NIMPORTS=$(grep -c '^i=' "$PROJECT/_handlers.tk" || true)
 HANDLERS_MAXIMP=""
 if [ "${NIMPORTS:-0}" -gt 32 ]; then HANDLERS_MAXIMP="--max-imports=$NIMPORTS "; fi

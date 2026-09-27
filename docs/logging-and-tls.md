@@ -115,8 +115,8 @@ host = "127.0.0.1"   # the default: this machine only
 port = 3000
 ```
 
-ooke passes it to toke's `http.serveworkerson` (or `http.servetlson` with
-`[tls]`), toke story 138.1. toke decides what a host may be: an IPv4 literal,
+ooke passes it to toke's `http.serveworkerson` (or `http.servetlsworkerson`
+with `[tls]`), toke story 138.1. toke decides what a host may be: an IPv4 literal,
 `"localhost"` (127.0.0.1), or `""`, `"*"` or `"0.0.0.0"` for every
 interface. A name to resolve or an IPv6 address is refused, not widened to
 every interface: the server does not start, toke prints
@@ -149,15 +149,17 @@ gives `127.0.0.1:PORT`, `host = "0.0.0.0"` gives `*:PORT`, and
 
 ## TLS
 
-`[tls] cert` and `key` go to `serverun`, which calls `http.servetlson`. The test
+`[tls] cert` and `key` go to `serverun`, which calls `http.servetlsworkerson`. The test
 makes a self-signed pair locally with `openssl req -x509`, so it needs no
 network. It checks that HTTPS serves the project and that plain HTTP on the
 same port gets no answer.
 
-Known limit: `http.servetls` takes no worker count. So `[server].workers` is
-ignored under TLS, and the worker count comes from `TK_HTTP_WORKERS` or the
-CPU count. The C function `http_serve_tls_workers` exists, but std.http does
-not expose it to toke.
+`[server].workers` applies under TLS as it does for plain HTTP (story
+134.47). Until then ooke called `http.servetlson`, which takes no worker count,
+so under TLS the count came from `TK_HTTP_WORKERS` or the CPU count and the
+setting was ignored. toke's `http.servetlsworkerson` (138.1) takes it; `0`
+keeps the auto-detection. `test/serve/serve_tls_workers.sh`
+(`make test-serve-tls-workers`) counts the worker processes under HTTPS.
 
 ## Found on the way, and reported rather than worked around
 

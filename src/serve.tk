@@ -233,7 +233,10 @@ f=serverlisten(projectdir:$str;host:$str;port:i64;uport:u64;uworkers:u64;tlscert
     let cp=build.buildresolve(projectdir;tlscert);
     let kp=build.buildresolve(projectdir;tlskey);
     (log.info(str.concat("mode: HTTPS (TLS) on ";addr);@()));
-    <http.servetlson(host;uport;cp;kp)
+    (* 134.47: [server].workers under TLS too.  servetlson sized the pool
+       itself (CPU count), so the setting was ignored for HTTPS; toke's
+       servetlsworkerson takes it (0 = the same auto-detection). *)
+    <http.servetlsworkerson(host;uport;cp;kp;uworkers)
   }el{
     (log.info(str.concat("mode: HTTP on ";addr);@()));
     <http.serveworkerson(host;uport;uworkers)
