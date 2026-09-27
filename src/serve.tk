@@ -220,19 +220,27 @@ f=servetlscheck(projectdir:$str;cert:$str;key:$str):i64!$serveerr{
   <0
 };
 
-f=serverlisten(projectdir:$str;port:i64;uport:u64;uworkers:u64;tlscert:$str;tlskey:$str):i64{
+(* Story 138.7 (O-3): bind [server] host, not every interface. The `...on`
+   forms are toke's (story 138.1); host validation is theirs too -- a host
+   they refuse fails the start (returns -1) and prints a DIAGNOSTIC line with
+   stage="host". The default and why: config.tk, serverhost. *)
+f=serverlisten(projectdir:$str;host:$str;port:i64;uport:u64;uworkers:u64;tlscert:$str;tlskey:$str):i64{
+  let addr=str.join("";@(host;":";str.fromint(port)));
+  if(host=="127.0.0.1" || host=="localhost"){
+    (log.info(str.join("";@("listening on loopback only (";addr;"); set [server] host = \"0.0.0.0\" in ooke.toml to accept connections from other machines"));@()))
+  }el{};
   if(str.len(tlscert)>0){
     let cp=build.buildresolve(projectdir;tlscert);
     let kp=build.buildresolve(projectdir;tlskey);
-    (log.info(str.concat("mode: HTTPS (TLS) on port ";str.fromint(port));@()));
-    <http.servetls(uport;cp;kp)
+    (log.info(str.concat("mode: HTTPS (TLS) on ";addr);@()));
+    <http.servetlson(host;uport;cp;kp)
   }el{
-    (log.info(str.concat("mode: HTTP on port ";str.fromint(port));@()));
-    <http.serveworkers(uport;uworkers)
+    (log.info(str.concat("mode: HTTP on ";addr);@()));
+    <http.serveworkerson(host;uport;uworkers)
   }
 };
 
-f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;corsorigins:$str;handledpaths:@$str):i64!$serveerr{
+f=serverun(projectdir:$str;host:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tlskey:$str;sitename:$str;siteurl:$str;sitelanguage:$str;apiprefix:$str;corsorigins:$str;handledpaths:@$str):i64!$serveerr{
   let pagesdir=path.join(projectdir;"pages");
   let contentdir=path.join(projectdir;"content");
   let templatesdir=path.join(projectdir;"templates");
@@ -270,9 +278,9 @@ f=serverun(projectdir:$str;port:i64;workers:i64;buildoutput:$str;tlscert:$str;tl
   (* Story 134.40: the listen call's result used to be discarded in a tail
      `if`, so a certificate that failed to load (or a port that failed to
      bind) ended the process with status 0 and no message. *)
-  let rc=serverlisten(projectdir;port;uport;uworkers;tlscert;tlskey);
+  let rc=serverlisten(projectdir;host;port;uport;uworkers;tlscert;tlskey);
   if(!(rc==0)){
-    let m=str.concat("server stopped with an error on port ";str.fromint(port));
+    let m=str.join("";@("server stopped with an error on port ";str.fromint(port);" (host ";host;")"));
     (log.error(m;@()));
     <$serveerr{msg:m}
   }el{};

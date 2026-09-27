@@ -99,7 +99,7 @@ f=cliprintcmdusage(cmd:$str):i64{
 (* Story 134.43. public-api.md section 1.1: `--version` prints
    `ooke <VERSION>`. It went through log.info, i.e. a JSON record on stderr. *)
 f=cliprintversion():i64{
-  (io.println("ooke 3.0.0-rc.1"));
+  (io.println("ooke 3.0.0-rc.2"));
   <0
 };
 
@@ -111,7 +111,7 @@ f=clinew(name:$str):i64{
   (mt file.mkdir(path.join(name;"static")) {$ok:v v;$err:e false});
   (* 134.35: the [requires] block is generated from ooke.toml (src/_floor.tk),
      not restated here. It had drifted to a floor ooke no longer builds on. *)
-  let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nport = 3000\nworkers = 0\n\n[paths]\napiprefix = \"\"\n\n[log]\naccess = \"-\"\naccessformat = \"combined\"\n\n";floor.floortoml()));
+  let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nhost = \"127.0.0.1\"\nport = 3000\nworkers = 0\n\n[paths]\napiprefix = \"\"\n\n[log]\naccess = \"-\"\naccessformat = \"combined\"\n\n";floor.floortoml()));
   (mt file.write(path.join(name;"ooke.toml");tomlcontent) {$ok:v v;$err:e false});
   let indexcontent="m=pages.index;\n";
   (mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {$ok:v v;$err:e false});
@@ -263,7 +263,7 @@ f=cfgdefault():$ookecfg{
   <$ookecfg{
     sitename:"my-site";siteurl:"";sitelanguage:"en";
     buildoutput:"build/";buildminify:true;buildinlinecss:true;
-    serverport:3000;serverworkers:0;servercorsorigins:"";
+    serverport:3000;serverhost:"127.0.0.1";serverworkers:0;servercorsorigins:"";
     logaccess:"-";logerror:"";logaccessformat:"combined";
     tlscert:"";tlskey:"";
     apiprefix:""
@@ -306,6 +306,7 @@ f=runserve(projectdir:$str):i64{
   }el{};
   let cfg=mt config.configload(cfgpath) {$ok:v v;$err:e cfgdefault()};
   let port=cfg.serverport;
+  let host=cfg.serverhost;
   let workers=cfg.serverworkers;
   let output=cfg.buildoutput;
   let sitename=cfg.sitename;
@@ -327,7 +328,7 @@ f=runserve(projectdir:$str):i64{
   (log.info(str.join("";@("auto-registered ";handledpaths.len as str;" handler routes"));@()));
   (* serverun now fails rather than starting with no routes (story 134.18), so
      say why. Returning a bare 1 left the operator with a silent non-zero. *)
-  let r=mt serve.serverun(projectdir;port;workers;output;cfg.tlscert;cfg.tlskey;sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {
+  let r=mt serve.serverun(projectdir;host;port;workers;output;cfg.tlscert;cfg.tlskey;sitename;siteurl;sitelanguage;apiprefix;corsorigins;handledpaths) {
     $ok:v 0;
     $err:e clireportserveerr()
   };

@@ -9,8 +9,14 @@ were invisible in a working tree and fatal in a clone.
 
 | | |
 |---|---|
-| ooke | **3.0.0-rc.1** — release candidate, see `docs/release-notes-3.0.0.md` |
-| toke | **`6cc9061` (2026-09-19) or later**, declared in `ooke.toml [requires]` |
+| ooke | **3.0.0-rc.2** — release candidate, see `docs/release-notes-3.0.0.md` |
+| toke | **`3.0.0` and `668caa6` (2026-09-28) or later**, declared in `ooke.toml [requires]` |
+
+**rc.2 (story 138.7):** toke has cut `3.0.0`, but the tagged `v3.0.0` fails
+ooke's suite (the template cache never stores, toke 127.226) and lacks the
+host-binding serve functions `[server] host` uses (toke 138.1), so the floor
+is still a commit — `668caa6` — until a toke release contains it. Build toke from
+`main`. The paragraph below is the rc.1 record.
 
 toke has **no released version that works**, and the pin is a commit you can
 clone, not merely one whose compiler is correct — see step 2. `toke/VERSION`
@@ -31,7 +37,7 @@ highest is the one declared.
 
     git clone https://github.com/karwalski/toke.git
     cd toke
-    git checkout 6cc9061          # or later; see ooke.toml [requires]
+    git checkout 668caa6          # or later (main); see ooke.toml [requires]
     make
 
 **A plain clone is sufficient at `6cc9061` or later, and only there.** toke's
@@ -73,7 +79,7 @@ The product is `./ooke-toke`. Rename it to `ooke` on your PATH.
 ## 4. Check the install
 
     make test                     # 12/12, 187 live assertions
-    ./ooke-toke --version         # ooke 3.0.0-rc.1
+    ./ooke-toke --version         # ooke 3.0.0-rc.2
     ./ooke-toke new demosite      # scaffolds ooke.toml, pages/index.tk, templates/base.tkt
 
 `make test` is not decoration: until story 134.5 (2026-09-19) the suite had
@@ -89,8 +95,8 @@ end-to-end proof that your install works.
 
 ## 5. From a release tarball instead
 
-    tar xzf ooke-3.0.0-rc.1-darwin-arm64.tar.gz
-    cd ooke-3.0.0-rc.1-darwin-arm64
+    tar xzf ooke-3.0.0-rc.2-darwin-arm64.tar.gz
+    cd ooke-3.0.0-rc.2-darwin-arm64
     ./ooke --version
 
 The binary is self-contained: no runtime, and it does not read anything out of

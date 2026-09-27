@@ -1,7 +1,68 @@
-# ooke 3.0.0-rc.1 — release notes
+# ooke 3.0.0-rc.2 — release notes
 
-**Status: release candidate. Not published, not tagged.** Prepared by story
-134.10 on 2026-09-19.
+**Status: release candidate. Not published, not tagged.** rc.2 prepared by
+story 138.7 on 2026-09-28; rc.1 by story 134.10 on 2026-09-19. The rc.2
+section comes first; everything after it is the rc.1 notes, kept because
+rc.2 changes them only where the rc.2 section says so.
+
+## rc.2 — what changed, and why it is still a candidate
+
+**Why rc.2 exists.** rc.1 does not build on current toke. Its `src/store.tk`
+ends `storeslug` and `storefind` in an error propagation with no `<`; toke
+made that a hard error (E4071, "function body ends in an error propagation
+with no '<'") after rc.1 was cut, at `store.tk:174:3` and `:183:3`. ooke main
+had already fixed it (127.127). rc.2 is cut from main. (loke handoff
+2026-09-27, O-1.)
+
+**What was measured** (2026-09-28, each toke built in a fresh worktree, ooke's
+full `make test`):
+
+| toke | result |
+|---|---|
+| main `18b9f73` (2026-09-28; `668caa6` + tracker docs) | rc.2 as shipped: `make test` exits 0 — check, test-check and suite 12/12, and every script suite, including `[server] host` |
+| main `512f904`, and `cee7cc0` | rc.2 before `[server] host`: `make test` exits 0 |
+| `v3.0.0` = `0b0bc4e` (2026-09-23) | **fails** (measured on ooke main `b5b198f`): suite 11/12 — `test_template`, "a render through the populated cache serves the stored tokens, not the changed file" |
+
+**134.15 is resolved and a new blocker replaced it.** toke has cut a version
+(`3.0.0`), so `mintoke` means something again, and `ooke.toml [requires]` now
+says `mintoke = "3.0.0"`. But toke 3.0.0 is not enough, twice over:
+
+- it lowers `.set` on a map-typed struct field as an array `.set`, so ooke's
+  template cache has never stored anything (toke 127.226, fixed in `cee7cc0`).
+  The page still renders — the cache falls back to reading the file — but
+  every request re-reads and re-parses its template, and the suite says so;
+- it has no host-binding serve functions, which `[server] host` (below) calls
+  (toke 138.1, merged as `668caa6`).
+
+So the floor is still a commit, `668caa6`, and `make check-versions` refuses
+toke 3.0.0 by name:
+
+    ERROR: toke 0b0bc4e (2026-09-23) does not contain 668caa6 — ooke's floor.
+
+**What turns this into 3.0.0:** a toke release that contains `668caa6`
+(toke story 138.17). Then `mintoke` alone is the floor, the commit/date pair
+can be dropped, and `docs/RELEASING.md` says what else changes.
+
+**New in rc.2 — breaking: `ooke serve` binds `[server] host`, and the default
+is 127.0.0.1.** rc.1 listened on every interface and had no setting for it.
+A deployment that must be reachable from other machines now needs
+`host = "0.0.0.0"` in `[server]`; without it the server answers only on its
+own machine, and its start log says so and names the setting. The reasoning
+for loopback as ooke's default, when toke's port-only functions keep every
+interface, is in `docs/logging-and-tls.md`, "Bind address". (loke handoff O-3.)
+
+**New in rc.2:** an app with more than 31 handler pages compiles. The handler
+registry `ooke compile` generates imports every page plus `std.http`, and toke
+caps a module at 32 imports by default (E9010). The generated `Makefile.serve`
+now passes `--max-imports=<count>` for that module when it is needed
+(`docs/public-api.md`; `make test-many-pages` builds and serves 40 pages).
+(loke handoff O-2.)
+
+Everything else that changed since rc.1 is in `CHANGELOG.md`.
+
+---
+
+# rc.1 notes (2026-09-19)
 
 ## Why this is a candidate and not 3.0.0
 

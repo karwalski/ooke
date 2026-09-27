@@ -270,8 +270,9 @@ See [docs/extension-api.md](docs/extension-api.md) for the full API reference.
 ### Prerequisites
 
 - [toke compiler](https://github.com/karwalski/toke) (`tkc`), built from `main` —
-  the newest tagged toke (2.8.0) **cannot** build ooke. The floor is commit
-  `6cc9061` (2026-09-19); it is declared in `ooke.toml [requires]` and enforced by
+  the newest tagged toke (3.0.0) is below ooke's floor (its template cache
+  never stores, and it lacks the host-binding serve functions). The floor is
+  3.0.0 plus commit `668caa6` (2026-09-28); it is declared in `ooke.toml [requires]` and enforced by
   `make check-versions`, which `make` runs first. See
   [`docs/versioning.md`](docs/versioning.md) for the evidence and for what a
   downstream project should wait for.

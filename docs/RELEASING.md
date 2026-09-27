@@ -25,21 +25,24 @@ The GitHub Actions workflow `.github/workflows/release.yml` triggers on any tag
 matching `v*`. It builds on four platforms, runs the floor gate and the suite,
 and creates the GitHub release with checksums. So the single authorised step is:
 
-    git push origin <branch> && git push origin v3.0.0-rc.1
+    git push origin <branch> && git push origin v3.0.0-rc.2
 
 after creating the tag:
 
-    git tag -a v3.0.0-rc.1 -m "ooke 3.0.0-rc.1"
+    git tag -a v3.0.0-rc.2 -m "ooke 3.0.0-rc.2"
 
 Pushing the tag **is** the publish. There is no separate upload.
 
 ## Before tagging 3.0.0 rather than a candidate
 
-- **134.15 is the remaining blocker, and it is an owner decision in toke.**
-  ooke can only pin its dependency as a commit until toke cuts a version for
-  the v0.4 break. Decide that, then this is 3.0.0. (134.24, the P0 that
-  previously blocked it, was fixed and verified on 2026-09-19.)
-- Drop the `-rc.1` suffix in exactly two places — `VERSION` and the string
+- **The remaining blocker is a toke release that contains `668caa6`** (toke
+  story 138.17). 134.15 is resolved — toke tagged `v3.0.0` — but ooke's suite
+  fails on that tag (127.226) and ooke now calls serve functions added after it
+  (138.1), so rc.2's floor is still a commit. (134.24, the
+  P0 that blocked rc.1, was fixed and verified on 2026-09-19.)
+- Tag rc.2 only after the toke release it is verified against (138.17), and
+  re-run `scripts/package_release.sh` against that toke so the manifest names it.
+- Drop the `-rc.N` suffix in exactly two places — `VERSION` and the string
   `src/cli.tk` prints. `make check-ooke-version` fails if they disagree, so the
   build will catch a half-done bump.
 - Re-check `ooke.toml [requires]`. It is a commit today; if story 134.15 has

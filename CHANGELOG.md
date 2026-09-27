@@ -3,6 +3,55 @@
 Dates are the dates the work was done, not publication dates. Nothing below has
 been published; see `docs/RELEASING.md`.
 
+## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
+
+Second release candidate. **Why a new candidate:** rc.1's `src/store.tk` no
+longer compiles on current toke — two functions end in an error propagation
+with no `<`, which toke made a hard error (E4071) after rc.1 was cut. main
+already carried the fix (127.127); rc.1 did not (loke handoff 2026-09-27, O-1).
+Read `docs/release-notes-3.0.0.md` before adopting.
+
+### Breaking, relative to rc.1
+
+- **The toke floor moved to `3.0.0` + `668caa6` (2026-09-28).** toke has now
+  cut `3.0.0`, but ooke's suite fails on it (11 of 12): toke 3.0.0 lowers
+  `.set` on a map-typed struct field as an array `.set`, so ooke's template
+  cache never stores (toke 127.226, fixed in `cee7cc0`). And `[server] host`
+  (below) calls toke's host-binding serve functions (toke 138.1, `668caa6`).
+  `mintoke = "3.0.0"` is necessary, not sufficient, so the commit/date pair
+  stays until a toke release contains `668caa6`. (138.7)
+- **`ooke serve` listens on 127.0.0.1 unless `[server] host` says otherwise.**
+  It used to listen on every interface, with no setting to change it. A
+  deployment that must be reachable from other machines sets
+  `host = "0.0.0.0"`. The start log says when a server is loopback-only and
+  names the setting. Why loopback is ooke's default although toke's port-only
+  functions keep every interface: `docs/logging-and-tls.md`, "Bind address".
+  `ooke new` writes `host = "127.0.0.1"` explicitly. (138.7, loke O-3)
+
+### Fixed since rc.1
+
+- **`src/store.tk` compiles on current toke**: `storeslug`/`storefind` return
+  an explicit not-found error instead of ending in a bare propagation. (127.127)
+- **An app with more than 31 handler pages compiles.** The generated handler
+  registry imports every page plus `std.http`, which hit toke's default cap of
+  32 imports per module (E9010). `ooke compile` now passes
+  `--max-imports=<count>` for that one module when it is needed; a 40-page app
+  is in the suite. (138.7, loke O-2)
+- `ooke compile` builds a per-app binary that runs the same `cli.runserve` as
+  `ooke serve` (134.44), finds its script beside the binary rather than in the
+  cwd (134.45), and works from an installation, not only a checkout (134.46).
+- `ooke serve` applies `[log]` and `[tls]` (134.40); `ooke build <path>` and
+  `ooke serve <path>` work from any working directory (134.25, 134.37).
+- A malformed `ooke.toml` fails `build` and `serve` instead of silently using
+  defaults (134.42); `--version` prints `ooke <VERSION>` on stdout (134.43).
+- `ooke run` and `build --cli` compare `process.wait`'s exit status (134.45).
+- Every page at any depth under `pages/` is a prerequisite of the handler
+  registry (134.37); `src/_handlers.tk` is untracked build output (134.22);
+  `ooke new`'s `[requires]` is generated from `ooke.toml` (134.35).
+- `logaccessformat` is documented under its real name (134.23).
+- The template cache test proves a stored entry is served, not re-read
+  (127.226) — the test that fails on toke 3.0.0.
+
 ## 3.0.0-rc.1 — unreleased (prepared 2026-09-19, story 134.10)
 
 Release **candidate**, not a release — because toke has never cut a version for

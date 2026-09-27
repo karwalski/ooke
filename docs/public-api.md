@@ -63,6 +63,15 @@ output changes meaning — silently producing escaped text rather than failing.
 - **`src/_handlers.tk`** — generated from `pages/` by `scripts/gen_handlers.sh`
   on every build. Build output: not tracked, ignored, and removed by
   `make clean` (story 134.22).
+- **The handler registry and toke's import cap** (story 138.7). The registry
+  an app gets from `ooke compile` (`<project>/_handlers.tk`) is one module that
+  imports every handler page plus `std.http`. toke caps a module at 32 imports
+  unless told otherwise (`E9010`, "compiler limit exceeded: too many imports"),
+  so an app with more than 31 handler pages used to stop compiling. The
+  generated `Makefile.serve` now compiles that one module with
+  `--max-imports=<its import count>` whenever the count is above 32, and
+  leaves the compile line alone otherwise. You do not need a `tkc.toml`
+  setting for it. `test/serve/many_pages.sh` builds and serves a 40-page app.
 - **`test/support/ookeassert.tk`** — ooke's own test helper. Tracked so a clone
   can run the suite (story 134.21), not published for reuse.
 - **Everything in `bench/`, `scripts/`, `testproj/`.**
@@ -74,8 +83,8 @@ output changes meaning — silently producing escaped text rather than failing.
 
 ## 3. What a consumer should actually pin
 
-    ooke   3.0.0-rc.1   (a git tag, or the release tarball + its SHA256)
-    toke   6cc9061      (a commit, until story 134.15 cuts a version)
+    ooke   3.0.0-rc.2   (a git tag, or the release tarball + its SHA256)
+    toke   668caa6      (a commit: toke 3.0.0 is below ooke's floor; story 138.7)
 
 Both, together. Pinning ooke without pinning toke pins nothing: ooke is
 source-compiled against whatever toke you have, and the floors — compile,

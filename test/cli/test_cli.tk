@@ -105,7 +105,8 @@ f=testcfgdefault():bool{
   let a14=chk.eqstr(cfg.tlscert;"";"cfgdefault tls.cert");
   let a15=chk.eqstr(cfg.tlskey;"";"cfgdefault tls.key");
   let a13=chk.eqstr(cfg.apiprefix;"";"cfgdefault paths.apiprefix");
-  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a10&&a11&&a12&&a13&&a14&&a15
+  let a9=chk.eqstr(cfg.serverhost;"127.0.0.1";"cfgdefault server.host (138.7)");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a9&&a10&&a11&&a12&&a13&&a14&&a15
 };
 
 f=testretcolon():bool{
