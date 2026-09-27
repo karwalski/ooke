@@ -19,9 +19,9 @@ full `make test`):
 
 | toke | result |
 |---|---|
-| main `512f904` (2026-09-27) | every target passes: check 32/32, suite 12/12, and all ten script suites |
+| main `512f904` (2026-09-27) | rc.2's `make test` exits 0: check 32/32, test-check 12/12, suite 12/12, and all nine script suites (8+13+23+14+8+4+6+3+8 assertions) |
 | `cee7cc0` (2026-09-27, Batch DA merge) | the same — this is the declared floor |
-| `v3.0.0` = `0b0bc4e` (2026-09-23) | **fails**: suite 11/12 — `test_template`, "a render through the populated cache serves the stored tokens, not the changed file" |
+| `v3.0.0` = `0b0bc4e` (2026-09-23) | **fails** (measured on ooke main `b5b198f`, before the floor was raised): suite 11/12 — `test_template`, "a render through the populated cache serves the stored tokens, not the changed file". rc.2's `make check-versions` now refuses it before building |
 
 **134.15 is resolved and a new blocker replaced it.** toke has cut a version
 (`3.0.0`), so `mintoke` means something again, and `ooke.toml [requires]` now

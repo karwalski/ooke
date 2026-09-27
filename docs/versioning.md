@@ -138,9 +138,9 @@ test`:
 
 | toke | result |
 |---|---|
-| `0b0bc4e` = v3.0.0 | suite **11/12** — `test_template`: the template cache never stores |
-| `cee7cc0` (2026-09-27) | every target passes |
-| `512f904` (main, 2026-09-27) | every target passes |
+| `0b0bc4e` = v3.0.0 | suite **11/12** — `test_template`: the template cache never stores (ooke main `b5b198f`) |
+| `cee7cc0` (2026-09-27) | every `make test` target passes (ooke `b5b198f`, and again on rc.2) |
+| `512f904` (main, 2026-09-27) | every `make test` target passes (ooke `b5b198f`, and again on rc.2) |
 
 The binding defect is toke's 127.226: `.set` on a map-typed struct field
 lowered as an array `.set`, a silent no-op, so `tplrenderfilecached` never stored and
