@@ -11,10 +11,13 @@ not one:
 
 ```toml
 [requires]
-mintoke       = "2.8.0"
-mintokedate   = "2026-09-19"
-mintokecommit = "6cc9061"
+mintoke       = "3.0.0"
+mintokedate   = "2026-09-27"
+mintokecommit = "cee7cc0"
 ```
+
+(Raised for rc.2 by story 138.7 — see "A fourth floor" below. The history
+that follows is the rc.1 record and is kept as evidence.)
 
 **A semver floor alone is meaningless for toke today.** `toke/VERSION` has read
 `2.8.0` since commit `f1e30b3` (2026-06-21). Everything since — the whole v0.4
@@ -126,6 +129,42 @@ mintokecommit = "6cc9061"
 *runs* it correctly. `[requires]` carries the higher one, because a build that
 produces a binary which misreads its own configuration is not support.
 
+### A fourth floor: toke 3.0.0 is not enough (story 138.7)
+
+toke cut `3.0.0` (tag `v3.0.0` = `0b0bc4e`, 2026-09-23), resolving 134.15. It
+does not run ooke. Measured on 2026-09-28 with each toke built in a fresh
+worktree (tracked files only, as a clone gets) and ooke main's full `make
+test`:
+
+| toke | result |
+|---|---|
+| `0b0bc4e` = v3.0.0 | suite **11/12** — `test_template`: the template cache never stores |
+| `cee7cc0` (2026-09-27) | every target passes |
+| `512f904` (main, 2026-09-27) | every target passes |
+
+The binding defect is toke's 127.226: `.set` on a map-typed struct field
+lowered as an array `.set`, a silent no-op, so `tplrenderfilecached` never stored and
+every render re-read its template. Fixed by Batch DA, merged as `cee7cc0`.
+So:
+
+| Floor | Commit | Date | Means |
+|---|---|---|---|
+| compile | `b66bd8e` | 2026-07-06 | ooke's sources compile (134.7) |
+| behaviour | `c2aa278` | 2026-09-19 | rc.1's suite passes (134.16) |
+| installable | `6cc9061` | 2026-09-19 | a clone of toke builds at all (127.85) |
+| **rc.2** | **`cee7cc0`** | **2026-09-27** | **the suite rc.2 ships passes (127.226)** |
+
+`mintoke = "3.0.0"` is now meaningful — it refuses every 2.8.0-labelled toke —
+but it is not sufficient, because `v3.0.0` itself is below the floor. The
+commit/date pair stays until a toke release contains `cee7cc0` (toke story
+138.17); then `mintoke` alone is the floor.
+
+Not measured: whether any commit between `v3.0.0` and `cee7cc0` also passes.
+127.226's fix commits reach toke's main only through the `cee7cc0` merge,
+and toke's 127.226 row records ooke's `test_template` failing on main from
+`25e55f5` until that merge, so no earlier main commit is a floor ooke should
+declare.
+
 ## 2. How the floor is enforced
 
 It used to be decorative: `Makefile: check-toke-version` existed but was not a
@@ -158,7 +197,7 @@ ERROR: toke 8c073a6 (2026-07-06) does not contain b66bd8e — ooke's floor.
 
 ## 3. ooke's own version
 
-`VERSION` is **3.0.0-rc.1**. The last release was **2.0.0** (2026-06-21, the
+`VERSION` is **3.0.0-rc.2** (rc.1 was prepared 2026-09-19, rc.2 on 2026-09-28). The last release was **2.0.0** (2026-06-21, the
 pure-toke rebuild). Since then ooke has taken changes that break consumers:
 
 - migration to v0.4 syntax (`==`, expression-`if`) — **a project's own `pages/`
@@ -183,7 +222,8 @@ Gate status as of 2026-09-19:
 | 134.7 / 134.16 floor | done — floor measured for build *and* behaviour |
 | 134.13 RSS leak | superseded → 127.65; diagnosed as **not ooke's** |
 | 134.24 `ooke build` aborts on API routes | fixed 2026-09-19, verified end to end |
-| **134.15 toke has never cut a v0.4 version** | **OPEN, P1 — owner decision** |
+| 134.15 toke has never cut a v0.4 version | resolved — toke tagged `v3.0.0` (2026-09-23) |
+| **138.7 toke 3.0.0 fails ooke's suite (127.226)** | **floor is `cee7cc0` until a toke release contains it (toke 138.17)** |
 
 **134.15 is why the artefact prepared by 134.10 is a release *candidate* and not
 a release**: ooke cannot express its one hard dependency as a version, only as a
@@ -209,8 +249,9 @@ For 3.0.0 onwards:
 
 ## 5. For downstream projects (loke, moke, toke-website)
 
-**Wait for toke `6cc9061` (2026-09-19) or later — in practice, toke HEAD — and for
-ooke 3.0.0.**
+**Wait for toke `cee7cc0` (2026-09-27) or later — in practice, toke HEAD, or
+the toke release after 3.0.0 — and for ooke 3.0.0.** (Updated for rc.2, story
+138.7; the rest of this section is the rc.1 record.)
 
 The floor is `6cc9061`, not `b66bd8e`: 134.16 raised it to `c2aa278` once ooke's
 suite could be run against an older compiler, and 134.10 raised it again to

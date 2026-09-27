@@ -21,12 +21,24 @@ accessformat = "combined"
 apiprefix = ""
 
 [requires]
-# The minimum toke ooke actually works on.  THREE floors were measured, and
+# The minimum toke ooke actually works on.  FOUR floors were measured, and
 # this block carries the HIGHEST, because it is the one a user feels.
 #
 #   compile floor     b66bd8e  2026-07-06  (134.7)   — ooke BUILDS
 #   behaviour floor   c2aa278  2026-09-19  (134.16)  — ooke's suite PASSES
 #   installable floor 6cc9061  2026-09-19  (127.85)  — a CLONE of toke builds
+#   rc.2 floor        cee7cc0  2026-09-27  (138.7)   — the suite passes on the
+#                                                      sources this rc ships
+#
+# The fourth (story 138.7, 2026-09-28): toke has since cut 3.0.0 (tag v3.0.0
+# = 0b0bc4e, 2026-09-23), but ooke's suite FAILS on it, 11 of 12:
+# test_template's "a render through the populated cache serves the stored
+# tokens" (127.226).  toke 3.0.0 lowers `.set` on a map-typed struct field as
+# an array `.set`, so ooke's template cache never stores anything.  toke's fix
+# is Batch DA, merged as cee7cc0; the full suite passes there (measured from a
+# fresh worktree, 2026-09-28).  So `mintoke = "3.0.0"` is necessary but not
+# sufficient, and the commit/date pair stays until toke releases a version
+# that contains cee7cc0 (story 138.17); then mintoke alone is the floor.
 #
 # The third was found by story 134.10 doing what it said and verifying the
 # package from fresh clones rather than the working tree: a clone of toke at
@@ -52,6 +64,6 @@ apiprefix = ""
 # (story 134.15), mintoke becomes sufficient on its own and the commit/date
 # pair can be dropped.  Makefile: check-toke-version reads these three keys;
 # they are the single source of truth.  Evidence: docs/versioning.md.
-mintoke = "2.8.0"
-mintokedate = "2026-09-19"
-mintokecommit = "6cc9061"
+mintoke = "3.0.0"
+mintokedate = "2026-09-27"
+mintokecommit = "cee7cc0"

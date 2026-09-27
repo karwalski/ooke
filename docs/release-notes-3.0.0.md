@@ -1,7 +1,58 @@
-# ooke 3.0.0-rc.1 — release notes
+# ooke 3.0.0-rc.2 — release notes
 
-**Status: release candidate. Not published, not tagged.** Prepared by story
-134.10 on 2026-09-19.
+**Status: release candidate. Not published, not tagged.** rc.2 prepared by
+story 138.7 on 2026-09-28; rc.1 by story 134.10 on 2026-09-19. The rc.2
+section comes first; everything after it is the rc.1 notes, kept because
+rc.2 changes them only where the rc.2 section says so.
+
+## rc.2 — what changed, and why it is still a candidate
+
+**Why rc.2 exists.** rc.1 does not build on current toke. Its `src/store.tk`
+ends `storeslug` and `storefind` in an error propagation with no `<`; toke
+made that a hard error (E4071, "function body ends in an error propagation
+with no '<'") after rc.1 was cut, at `store.tk:174:3` and `:183:3`. ooke main
+had already fixed it (127.127). rc.2 is cut from main. (loke handoff
+2026-09-27, O-1.)
+
+**What was measured** (2026-09-28, each toke built in a fresh worktree, ooke's
+full `make test`):
+
+| toke | result |
+|---|---|
+| main `512f904` (2026-09-27) | every target passes: check 32/32, suite 12/12, and all ten script suites |
+| `cee7cc0` (2026-09-27, Batch DA merge) | the same — this is the declared floor |
+| `v3.0.0` = `0b0bc4e` (2026-09-23) | **fails**: suite 11/12 — `test_template`, "a render through the populated cache serves the stored tokens, not the changed file" |
+
+**134.15 is resolved and a new blocker replaced it.** toke has cut a version
+(`3.0.0`), so `mintoke` means something again, and `ooke.toml [requires]` now
+says `mintoke = "3.0.0"`. But toke 3.0.0 is not enough: it lowers `.set` on a
+map-typed struct field as an array `.set`, so ooke's template cache has never
+stored anything (toke 127.226, fixed in `cee7cc0`). The page still renders —
+the cache falls back to reading the file — but every request re-reads and
+re-parses its template, and the suite says so. So the floor is still a commit,
+`cee7cc0`, and `make check-versions` refuses toke 3.0.0 by name:
+
+    ERROR: toke 0b0bc4e (2026-09-23) does not contain cee7cc0 — ooke's floor.
+
+**What turns this into 3.0.0:** a toke release that contains `cee7cc0`
+(toke story 138.17). Then `mintoke` alone is the floor, the commit/date pair
+can be dropped, and `docs/RELEASING.md` says what else changes.
+
+**New in rc.2:** an app with more than 31 handler pages compiles. The handler
+registry `ooke compile` generates imports every page plus `std.http`, and toke
+caps a module at 32 imports by default (E9010). The generated `Makefile.serve`
+now passes `--max-imports=<count>` for that module when it is needed
+(`docs/public-api.md`; `make test-many-pages` builds and serves 40 pages).
+(loke handoff O-2.)
+
+**Not in rc.2:** a bind address in `[server]` (loke handoff O-3). It needs a
+host parameter in toke's serve functions first (toke story 138.1).
+
+Everything else that changed since rc.1 is in `CHANGELOG.md`.
+
+---
+
+# rc.1 notes (2026-09-19)
 
 ## Why this is a candidate and not 3.0.0
 

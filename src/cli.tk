@@ -99,7 +99,7 @@ f=cliprintcmdusage(cmd:$str):i64{
 (* Story 134.43. public-api.md section 1.1: `--version` prints
    `ooke <VERSION>`. It went through log.info, i.e. a JSON record on stderr. *)
 f=cliprintversion():i64{
-  (io.println("ooke 3.0.0-rc.1"));
+  (io.println("ooke 3.0.0-rc.2"));
   <0
 };
 
