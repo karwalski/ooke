@@ -54,7 +54,25 @@ echo "ooke $VERSION @ $OOKE_SHORT"
 # The floor gate, the type check, and the suite.  A package built from a tree
 # whose tests were not run is the thing 134.5 and 134.17 were about.
 make --no-print-directory check-versions
-make --no-print-directory test 2>&1 | grep -E '^(  (PASS|FAIL)|[0-9]+ passed|  [0-9]+ passed)' | tail -20
+# 134.47: this printed `... | tail -20`, the last 20 result lines of a suite
+# that prints hundreds, so most suites' results never reached the release log.
+# The whole log is kept; every suite's header and summary line and every FAIL
+# line are shown, then the totals, which also go into the manifest.
+TESTLOG=$(mktemp "${TMPDIR:-/tmp}/ooke-release-test.XXXXXX")
+say "Test suite (make test; full log $TESTLOG)"
+set +e
+make --no-print-directory test >"$TESTLOG" 2>&1
+TEST_RC=$?
+set -e
+grep -E '^=== |[0-9]+ passed|^ *FAIL' "$TESTLOG" || true
+TEST_TOTALS=$(grep -Eo '[0-9]+ passed, [0-9]+ failed' "$TESTLOG" |
+  awk '{p+=$1; f+=$3; n++} END {printf "%d passed, %d failed, over %d suite summaries", p, f, n}')
+echo "totals: $TEST_TOTALS (make test exit $TEST_RC)"
+if [ "$TEST_RC" -ne 0 ]; then
+  echo "ERROR: make test failed; nothing was packaged.  Last 40 lines of $TESTLOG:" >&2
+  tail -40 "$TESTLOG" >&2
+  exit 1
+fi
 TOKE_COMMIT=$(git -C "$TOKE_ROOT" rev-parse HEAD 2>/dev/null || echo "unknown")
 TOKE_SHORT=$(git -C "$TOKE_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
 TOKE_DATE=$(git -C "$TOKE_ROOT" log -1 --format=%cs 2>/dev/null || echo "unknown")
@@ -89,6 +107,7 @@ say "Manifest"
   echo "ooke version     $VERSION"
   echo "ooke commit      $OOKE_COMMIT"
   echo "platform         $PLATFORM"
+  echo "make test        $TEST_TOTALS"
   echo
   echo "toke commit      $TOKE_COMMIT ($TOKE_DATE)"
   echo "toke compiler    $TKC"
