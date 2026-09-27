@@ -49,6 +49,12 @@ Read `docs/release-notes-3.0.0.md` before adopting.
   registry (134.37); `src/_handlers.tk` is untracked build output (134.22);
   `ooke new`'s `[requires]` is generated from `ooke.toml` (134.35).
 - `logaccessformat` is documented under its real name (134.23).
+- `[server].workers` is honoured under TLS: `ooke serve` starts that many TLS
+  workers instead of one per CPU (134.47).
+- ooke's own handler pages under `pages/` are compiled and linked by its
+  Makefile, at any depth (134.47).
+- `package_release.sh` prints every suite summary and FAIL line, records the
+  totals in the manifest, and stops on a failing suite (134.47).
 - The template cache test proves a stored entry is served, not re-read
   (127.226) — the test that fails on toke 3.0.0.
 
