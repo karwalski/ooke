@@ -63,6 +63,16 @@ done
 # Step 1: Generate _handlers.tk
 "$OOKE_DIR/scripts/gen_handlers.sh" "$PROJECT/pages" "$PROJECT/_handlers.tk"
 
+# Story 138.7 (O-2): the registry imports every page plus std.http, and toke
+# caps a module at 32 imports by default (E9010: "compiler limit exceeded: too
+# many imports"), so an app with more than 31 pages did not compile.  Raise the
+# cap for this one module to exactly its import count, and only when the
+# default is too small.  (ooke's own Makefile needs no such flag: its registry
+# holds only ooke's built-in handlers, whose page modules it compiles itself.)
+NIMPORTS=$(grep -c '^i=' "$PROJECT/_handlers.tk" || true)
+HANDLERS_MAXIMP=""
+if [ "${NIMPORTS:-0}" -gt 32 ]; then HANDLERS_MAXIMP="--max-imports=$NIMPORTS "; fi
+
 # Step 2: Collect page handler .tk files
 PAGE_HANDLERS=""
 for tkfile in $(find "$PROJECT/pages" -name '*.tk' -type f 2>/dev/null | sort); do
@@ -157,7 +167,7 @@ build/ooke:
 $PAGE_TKI_RULES
 # Generated handlers module
 build/ooke/handlers: _handlers.tk \$(PAGE_LL) | build/ooke
-	\$(TKC) --emit-interface --emit-llvm \$(PAGE_INC) -I \$(OOKE_DIR)/src --out build/ooke/handlers _handlers.tk
+	\$(TKC) ${HANDLERS_MAXIMP}--emit-interface --emit-llvm \$(PAGE_INC) -I \$(OOKE_DIR)/src --out build/ooke/handlers _handlers.tk
 
 # Main entry point: cli.runserve, with the serve binary's capability grant
 build/main.ll: _serve_main.tk _serve.tkc.toml build/ooke/handlers \$(OOKE_LL) | build/ooke
