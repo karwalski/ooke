@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-install-compile test-run-cli test-deps test-cli-contract test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -236,8 +236,44 @@ PAGES_TK := $(shell find pages -name '*.tk' -type f 2>/dev/null)
 $(SRC)/_handlers.tk: scripts/gen_handlers.sh $(PAGES_TK) | $(IFACE_DIR)
 	./scripts/gen_handlers.sh pages $(SRC)/_handlers.tk
 
-$(IFACE_DIR)/handlers.tki $(IFACE_DIR)/handlers: $(SRC)/_handlers.tk $(IFACE_DIR)/apihealth.tki | $(IFACE_DIR)
-	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/handlers _handlers.tk
+# ── Handler pages the registry imports (story 134.47) ────────────────────
+# gen_handlers.sh imports EVERY page with f=get( / f=post( into _handlers.tk,
+# but this Makefile compiled none of them: the one handler page ooke ships,
+# pages/api/health.tk, is `m=ooke.apihealth`, which API_MODS already builds
+# from src/apihealth.tk.  Any other handler page added here failed the
+# registry with E2030 (unresolved import).  Each such page is now compiled to
+# $(PAGE_OUT)/<name> (name as gen_handlers.sh forms it), its .tki lands beside
+# it (tkc writes a .tki beside its source), the registry and `check` search
+# its directory, and the binary links it.  A page whose module is one of
+# ooke's own (m=ooke.<one of ALL_MODS>) is skipped: that module is built from
+# src/ already, and compiling it twice would define its symbols twice.  This
+# is what scripts/gen_app_makefile.sh does for an application's pages.
+PAGE_OUT := build/pages
+OWN_PAGE_MODS := $(addprefix ooke.,$(ALL_MODS))
+# One word per handler page: file|name|module (scripts/handler_pages.sh)
+# (An installed tree -- scripts/stage_install.sh -- has neither pages/ nor the
+# script, and needs neither: an app's build replaces the registry.)
+PAGE_ROWS := $(shell [ -d pages ] && [ -f scripts/handler_pages.sh ] && sh scripts/handler_pages.sh pages)
+page_field = $(word $(2),$(subst |, ,$(1)))
+EXTRA_PAGE_ROWS := $(foreach r,$(PAGE_ROWS),$(if $(filter $(OWN_PAGE_MODS),$(call page_field,$(r),3)),,$(r)))
+PAGE_LL  := $(foreach r,$(EXTRA_PAGE_ROWS),$(PAGE_OUT)/$(call page_field,$(r),2))
+# -I for each page's directory, relative to $(SRC) (the rules below cd there)
+PAGE_DIRS := $(sort $(foreach r,$(EXTRA_PAGE_ROWS),$(patsubst %/,%,$(dir $(call page_field,$(r),1)))))
+PAGE_INC := $(foreach d,$(PAGE_DIRS),-I ../$(d))
+PAGE_TKI := $(foreach r,$(EXTRA_PAGE_ROWS),$(patsubst %.tk,%.tki,$(call page_field,$(r),1)))
+# What a page may import from ooke: every module except the registry and the
+# CLI, which import the pages themselves.
+PAGE_DEPS := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(BASE_MODS) $(DERIVED_MODS) $(API_MODS)))
+
+define page_rule
+$(PAGE_OUT)/$(2): $(1) $(PAGE_DEPS)
+	@mkdir -p $(PAGE_OUT)
+	cd $(SRC) && $$(TKC) --emit-interface --emit-llvm --out ../$(PAGE_OUT)/$(2) ../$(1)
+endef
+$(foreach r,$(EXTRA_PAGE_ROWS),$(eval $(call page_rule,$(call page_field,$(r),1),$(call page_field,$(r),2))))
+
+$(IFACE_DIR)/handlers.tki $(IFACE_DIR)/handlers: $(SRC)/_handlers.tk $(IFACE_DIR)/apihealth.tki $(PAGE_LL) | $(IFACE_DIR)
+	cd $(SRC) && $(TKC) --emit-interface --emit-llvm $(PAGE_INC) --out ooke/handlers _handlers.tk
 
 # ── CLI logic module (no f=main; the testable command library) ───────────
 $(IFACE_DIR)/cli.tki $(IFACE_DIR)/cli: \
@@ -252,8 +288,8 @@ $(MAIN_LL): $(SRC)/main.tk $(OOKE_TKI) | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-llvm --out main.ll main.tk
 
 # ── Final binary ─────────────────────────────────────────────────────────
-$(BIN): $(MAIN_LL) $(OOKE_LL)
-	clang $(CFLAGS) $(LDFLAGS) -x ir $(MAIN_LL) $(OOKE_LL) \
+$(BIN): $(MAIN_LL) $(OOKE_LL) $(PAGE_LL)
+	clang $(CFLAGS) $(LDFLAGS) -x ir $(MAIN_LL) $(OOKE_LL) $(PAGE_LL) \
 	  -x c $(STDLIB_SRCS) $(VENDOR_SRCS) \
 	  -o $@ $(LIBS)
 
@@ -328,11 +364,11 @@ $(ASSERT_TKI) $(ASSERT_LL): test-support-check $(ASSERT_SRC)
 # generate it, so it is type-checked whether or not `make` ran first.
 TK_SOURCES := $(sort $(shell find . -name '*.tk' -not -path './.git/*') ./$(SRC)/_handlers.tk ./$(SRC)/_floor.tk)
 
-check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk
+check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk $(PAGE_LL)
 	@echo "=== tkc --check -I $(SRC) over $(words $(TK_SOURCES)) file(s) ==="
 	@pass=0; fail=0; \
 	for f in $(TK_SOURCES); do \
-	  if out=$$($(TKC) --check --diag-text -I $(SRC) -I $(ASSERT_INC) "$$f" 2>&1); then \
+	  if out=$$($(TKC) --check --diag-text -I $(SRC) $(addprefix -I ,$(PAGE_DIRS)) -I $(ASSERT_INC) "$$f" 2>&1); then \
 	    pass=$$((pass+1)); \
 	  else \
 	    fail=$$((fail+1)); echo "  FAIL $$f"; echo "$$out" | sed 's/^/        /'; \
@@ -342,7 +378,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-install-compile test-run-cli test-deps test-cli-contract
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -374,6 +410,16 @@ test-compile-app: $(BIN)
 # compiles with `ooke compile` and serves its first, middle and last page.
 test-many-pages: $(BIN)
 	@TOKE_ROOT=$(TOKE_ROOT) TKC=$(TKC) test/serve/many_pages.sh ./$(BIN) 40
+
+# test-own-pages — story 134.47: a handler page added to ooke's own pages/
+# builds (the Makefile compiles the pages the registry imports) and serves.
+test-own-pages: $(BIN)
+	@TOKE_ROOT=$(TOKE_ROOT) TKC=$(TKC) sh test/build/own_pages.sh
+
+# test-serve-tls-workers — story 134.47: [server].workers is honoured under
+# [tls] (http.servetlsworkerson), counted as worker processes.
+test-serve-tls-workers: $(BIN)
+	@sh test/serve/serve_tls_workers.sh ./$(BIN)
 
 # test-serve-host — story 138.7 (O-3): `ooke serve` binds [server] host;
 # absent, 127.0.0.1. Reads the listening socket with lsof.
@@ -445,7 +491,7 @@ print-build-vars:
 # 134.22, see .gitignore), so removing it here is correct: `make` regenerates it.
 clean:
 	rm -f $(BIN) $(MAIN_LL) $(OOKE_LL) $(OOKE_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk \
-	      $(ASSERT_TKI) $(ASSERT_LL)
+	      $(ASSERT_TKI) $(ASSERT_LL) $(PAGE_LL) $(PAGE_TKI)
 	rmdir $(IFACE_DIR) 2>/dev/null || true
 
 # ── Version and dependency gate (story 134.7) ────────────────────────────
