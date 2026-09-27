@@ -155,11 +155,17 @@ else bad "locate: missing script gave rc=$rc"; tail -3 "$tmp/loc.out" | sed 's/^
 # ── bind ────────────────────────────────────────────────────────────────────
 # Another process holds the port (without SO_REUSEPORT, so the server cannot
 # share it). The server must stop, non-zero, naming the port.
+#
+# Story 138.7: the holder binds 127.0.0.1, the address ooke now binds by
+# default ([server] host). It used to bind 0.0.0.0, which stopped holding the
+# port once ooke moved to loopback: on macOS a socket bound to 127.0.0.1:P is
+# allowed beside a wildcard listener on *:P (both set SO_REUSEADDR), so the
+# server started and the three bind cases failed as "kept running".
 bport=$((port + 1))
 python3 -c "
 import socket, time
 s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-s.bind(('0.0.0.0', $bport)); s.listen(); print('held', flush=True); time.sleep(120)
+s.bind(('127.0.0.1', $bport)); s.listen(); print('held', flush=True); time.sleep(120)
 " >"$tmp/holder.out" 2>&1 &
 holder=$!
 i=0; while [ $i -lt 50 ] && ! grep -q held "$tmp/holder.out" 2>/dev/null; do sleep 0.1; i=$((i+1)); done
