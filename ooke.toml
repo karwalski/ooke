@@ -21,14 +21,15 @@ accessformat = "combined"
 apiprefix = ""
 
 [requires]
-# The minimum toke ooke actually works on.  FOUR floors were measured, and
+# The minimum toke ooke actually works on.  FIVE floors were measured, and
 # this block carries the HIGHEST, because it is the one a user feels.
 #
 #   compile floor     b66bd8e  2026-07-06  (134.7)   — ooke BUILDS
 #   behaviour floor   c2aa278  2026-09-19  (134.16)  — ooke's suite PASSES
 #   installable floor 6cc9061  2026-09-19  (127.85)  — a CLONE of toke builds
-#   rc.2 floor        cee7cc0  2026-09-27  (138.7)   — the suite passes on the
-#                                                      sources this rc ships
+#   cache floor       cee7cc0  2026-09-27  (127.226) — the template cache stores
+#   host floor        668caa6  2026-09-28  (138.1)   — [server] host compiles:
+#                                                      ooke calls http.serveworkerson
 #
 # The fourth (story 138.7, 2026-09-28): toke has since cut 3.0.0 (tag v3.0.0
 # = 0b0bc4e, 2026-09-23), but ooke's suite FAILS on it, 11 of 12:
@@ -38,7 +39,14 @@ apiprefix = ""
 # is Batch DA, merged as cee7cc0; the full suite passes there (measured from a
 # fresh worktree, 2026-09-28).  So `mintoke = "3.0.0"` is necessary but not
 # sufficient, and the commit/date pair stays until toke releases a version
-# that contains cee7cc0 (story 138.17); then mintoke alone is the floor.
+# that contains the declared commit (story 138.17); then mintoke alone is the
+# floor.
+#
+# The fifth (story 138.7, O-3): `[server] host` binds through toke's
+# http.serveworkerson / http.servetlson (toke story 138.1, merged as
+# 668caa6).  No earlier toke has them, so ooke does not compile before it.
+# The suite passes on 18b9f73, which differs from 668caa6 only in
+# docs/progress.md and docs/metrics-baseline.md.
 #
 # The third was found by story 134.10 doing what it said and verifying the
 # package from fresh clones rather than the working tree: a clone of toke at
@@ -65,5 +73,5 @@ apiprefix = ""
 # pair can be dropped.  Makefile: check-toke-version reads these three keys;
 # they are the single source of truth.  Evidence: docs/versioning.md.
 mintoke = "3.0.0"
-mintokedate = "2026-09-27"
-mintokecommit = "cee7cc0"
+mintokedate = "2026-09-28"
+mintokecommit = "668caa6"

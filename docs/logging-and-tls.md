@@ -103,9 +103,53 @@ When std.log's rotation is safe across processes and within one second,
 wiring it back means passing two integers to `log.openaccess` in
 `serve.serveopenlogs`.
 
+## Bind address
+
+Story 138.7 (loke handoff O-3). `[server] host` is the address `ooke serve`
+listens on, and so is the per-app binary `ooke compile` builds, which runs the
+same `cli.runserve`:
+
+```toml
+[server]
+host = "127.0.0.1"   # the default: this machine only
+port = 3000
+```
+
+ooke passes it to toke's `http.serveworkerson` (or `http.servetlson` with
+`[tls]`), toke story 138.1. toke decides what a host may be: an IPv4 literal,
+`"localhost"` (127.0.0.1), or `""`, `"*"` or `"0.0.0.0"` for every
+interface. A name to resolve or an IPv6 address is refused, not widened to
+every interface: the server does not start, toke prints
+`DIAGNOSTIC: kind=server_start_failed ... stage="host"`, ooke logs
+`server stopped with an error on port N (host H)`, and the process exits 1.
+
+**The default is 127.0.0.1, loopback only.** Before 138.7 ooke listened on
+every interface and had no setting for it. toke kept every interface as the
+default of its port-only functions, so that toke servers already deployed do
+not drop off the network with no compile error. ooke chose the other default,
+for three reasons:
+
+- `ooke serve` is first a development and local-first server. loke runs it
+  on the user's own machine, where "every interface" includes whatever
+  network that machine has joined.
+- The two mistakes are not equally visible. A loopback server that should
+  have been public fails the first request from another machine, and its
+  start log says what to change:
+  `listening on loopback only (127.0.0.1:3000); set [server] host = "0.0.0.0" in ooke.toml to accept connections from other machines`.
+  A public server that should have been private tells nobody.
+- 3.0.0 is already a breaking release (see `CHANGELOG.md`), and it says so.
+
+A deployment sets `host = "0.0.0.0"`. `ooke new` writes `host = "127.0.0.1"`
+into the scaffold, so the setting is visible in every new project.
+
+`test/serve/serve_host.sh` (`make test-serve-host`) checks the listening socket
+with `lsof`, so it tests what the kernel reports, not what ooke logs: no key
+gives `127.0.0.1:PORT`, `host = "0.0.0.0"` gives `*:PORT`, and
+`host = "example.com"` is refused with a non-zero exit that names the host.
+
 ## TLS
 
-`[tls] cert` and `key` go to `serverun`, which calls `http.servetls`. The test
+`[tls] cert` and `key` go to `serverun`, which calls `http.servetlson`. The test
 makes a self-signed pair locally with `openssl req -x509`, so it needs no
 network. It checks that HTTPS serves the project and that plain HTTP on the
 same port gets no answer.

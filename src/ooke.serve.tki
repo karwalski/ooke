@@ -10,7 +10,7 @@
     {"kind": "func", "name": "servelogtarget", "params": ["str", "str"], "return": "str"},
     {"kind": "func", "name": "serveopenlogs", "params": ["str", "str", "str", "str"], "return": "i64", "error": "serveerr"},
     {"kind": "func", "name": "servetlscheck", "params": ["str", "str", "str"], "return": "i64", "error": "serveerr"},
-    {"kind": "func", "name": "serverlisten", "params": ["str", "i64", "u64", "u64", "str", "str"], "return": "i64"},
-    {"kind": "func", "name": "serverun", "params": ["str", "i64", "i64", "str", "str", "str", "str", "str", "str", "str", "str", "[str]"], "return": "i64", "error": "serveerr"}
+    {"kind": "func", "name": "serverlisten", "params": ["str", "str", "i64", "u64", "u64", "str", "str"], "return": "i64"},
+    {"kind": "func", "name": "serverun", "params": ["str", "str", "i64", "i64", "str", "str", "str", "str", "str", "str", "str", "str", "[str]"], "return": "i64", "error": "serveerr"}
   ]
 }

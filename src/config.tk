@@ -10,6 +10,7 @@ t=$ookecfg{
   buildminify:bool;
   buildinlinecss:bool;
   serverport:i64;
+  serverhost:$str;
   serverworkers:i64;
   servercorsorigins:$str;
   logaccess:$str;
@@ -19,7 +20,7 @@ t=$ookecfg{
   tlskey:$str;
   apiprefix:$str
 };
-(* 15 fields. Keep it at 16 or fewer: toke's code generator drops every struct
+(* 16 fields (serverhost made it 16, story 138.7). Keep it at 16 or fewer: toke's code generator drops every struct
    field past the 16th (TKC_MAX_PARAMS in toke's src/llvm.c StructInfo) --
    `tkc --check` passes and the build fails with E4025 "no field". Measured with
    a 17-field struct during story 134.40. *)
@@ -46,6 +47,19 @@ f=configload(path:$str):$ookecfg!$configerr{
   let buildinlinecss=mt toml.bool(build;"inlinecss") {$ok:v v;$err:e true};
 
   let serverport=mt toml.i64(server;"port") {$ok:v v;$err:e 3000};
+  (* Story 138.7 (loke handoff O-3): the address `ooke serve` binds. Absent,
+     it is 127.0.0.1 -- loopback only. That is ooke's decision, and it differs
+     from toke's port-only serve functions, which keep every interface so that
+     deployed toke servers do not drop off the network. `ooke serve` is first
+     a development and local-first server (loke runs it on the user's own
+     machine), and the two failures are not symmetric: a loopback server that
+     should have been public is noticed on the first request from elsewhere,
+     and its start line says how to open it; a public server that should have
+     been private is noticed by nobody. A deployment sets `host = "0.0.0.0"`.
+     toke validates the value when it binds: an IPv4 literal, "localhost",
+     or "", "*" or "0.0.0.0" for all interfaces; anything else fails the
+     start, naming the host. docs/logging-and-tls.md, "Bind address". *)
+  let serverhost=mt toml.str(server;"host") {$ok:v v;$err:e "127.0.0.1"};
   let serverworkers=mt toml.i64(server;"workers") {$ok:v v;$err:e 0};
   let servercorsorigins=mt toml.str(server;"corsorigins") {$ok:v v;$err:e ""};
 
@@ -81,6 +95,7 @@ f=configload(path:$str):$ookecfg!$configerr{
     buildminify:buildminify;
     buildinlinecss:buildinlinecss;
     serverport:serverport;
+    serverhost:serverhost;
     serverworkers:serverworkers;
     servercorsorigins:servercorsorigins;
     logaccess:logaccess;

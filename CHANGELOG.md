@@ -13,12 +13,20 @@ Read `docs/release-notes-3.0.0.md` before adopting.
 
 ### Breaking, relative to rc.1
 
-- **The toke floor moved to `3.0.0` + `cee7cc0` (2026-09-27).** toke has now
+- **The toke floor moved to `3.0.0` + `668caa6` (2026-09-28).** toke has now
   cut `3.0.0`, but ooke's suite fails on it (11 of 12): toke 3.0.0 lowers
   `.set` on a map-typed struct field as an array `.set`, so ooke's template
-  cache never stores (toke 127.226, fixed in `cee7cc0`). `mintoke = "3.0.0"`
-  is necessary, not sufficient, so the commit/date pair stays until a toke
-  release contains `cee7cc0`. (138.7)
+  cache never stores (toke 127.226, fixed in `cee7cc0`). And `[server] host`
+  (below) calls toke's host-binding serve functions (toke 138.1, `668caa6`).
+  `mintoke = "3.0.0"` is necessary, not sufficient, so the commit/date pair
+  stays until a toke release contains `668caa6`. (138.7)
+- **`ooke serve` listens on 127.0.0.1 unless `[server] host` says otherwise.**
+  It used to listen on every interface, with no setting to change it. A
+  deployment that must be reachable from other machines sets
+  `host = "0.0.0.0"`. The start log says when a server is loopback-only and
+  names the setting. Why loopback is ooke's default although toke's port-only
+  functions keep every interface: `docs/logging-and-tls.md`, "Bind address".
+  `ooke new` writes `host = "127.0.0.1"` explicitly. (138.7, loke O-3)
 
 ### Fixed since rc.1
 

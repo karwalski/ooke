@@ -10,11 +10,12 @@ were invisible in a working tree and fatal in a clone.
 | | |
 |---|---|
 | ooke | **3.0.0-rc.2** — release candidate, see `docs/release-notes-3.0.0.md` |
-| toke | **`3.0.0` and `cee7cc0` (2026-09-27) or later**, declared in `ooke.toml [requires]` |
+| toke | **`3.0.0` and `668caa6` (2026-09-28) or later**, declared in `ooke.toml [requires]` |
 
 **rc.2 (story 138.7):** toke has cut `3.0.0`, but the tagged `v3.0.0` fails
-ooke's suite (the template cache never stores, toke 127.226), so the floor is
-still a commit — `cee7cc0` — until a toke release contains it. Build toke from
+ooke's suite (the template cache never stores, toke 127.226) and lacks the
+host-binding serve functions `[server] host` uses (toke 138.1), so the floor
+is still a commit — `668caa6` — until a toke release contains it. Build toke from
 `main`. The paragraph below is the rc.1 record.
 
 toke has **no released version that works**, and the pin is a commit you can
@@ -36,7 +37,7 @@ highest is the one declared.
 
     git clone https://github.com/karwalski/toke.git
     cd toke
-    git checkout cee7cc0          # or later (main); see ooke.toml [requires]
+    git checkout 668caa6          # or later (main); see ooke.toml [requires]
     make
 
 **A plain clone is sufficient at `6cc9061` or later, and only there.** toke's

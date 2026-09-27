@@ -35,9 +35,10 @@ Pushing the tag **is** the publish. There is no separate upload.
 
 ## Before tagging 3.0.0 rather than a candidate
 
-- **The remaining blocker is a toke release that contains `cee7cc0`** (toke
+- **The remaining blocker is a toke release that contains `668caa6`** (toke
   story 138.17). 134.15 is resolved — toke tagged `v3.0.0` — but ooke's suite
-  fails on that tag (127.226), so rc.2's floor is still a commit. (134.24, the
+  fails on that tag (127.226) and ooke now calls serve functions added after it
+  (138.1), so rc.2's floor is still a commit. (134.24, the
   P0 that blocked rc.1, was fixed and verified on 2026-09-19.)
 - Tag rc.2 only after the toke release it is verified against (138.17), and
   re-run `scripts/package_release.sh` against that toke so the manifest names it.

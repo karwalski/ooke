@@ -19,24 +19,37 @@ full `make test`):
 
 | toke | result |
 |---|---|
-| main `512f904` (2026-09-27) | rc.2's `make test` exits 0: check 32/32, test-check 12/12, suite 12/12, and all nine script suites (8+13+23+14+8+4+6+3+8 assertions) |
-| `cee7cc0` (2026-09-27, Batch DA merge) | the same — this is the declared floor |
-| `v3.0.0` = `0b0bc4e` (2026-09-23) | **fails** (measured on ooke main `b5b198f`, before the floor was raised): suite 11/12 — `test_template`, "a render through the populated cache serves the stored tokens, not the changed file". rc.2's `make check-versions` now refuses it before building |
+| main `18b9f73` (2026-09-28; `668caa6` + tracker docs) | rc.2 as shipped: `make test` exits 0 — check, test-check and suite 12/12, and every script suite, including `[server] host` |
+| main `512f904`, and `cee7cc0` | rc.2 before `[server] host`: `make test` exits 0 |
+| `v3.0.0` = `0b0bc4e` (2026-09-23) | **fails** (measured on ooke main `b5b198f`): suite 11/12 — `test_template`, "a render through the populated cache serves the stored tokens, not the changed file" |
 
 **134.15 is resolved and a new blocker replaced it.** toke has cut a version
 (`3.0.0`), so `mintoke` means something again, and `ooke.toml [requires]` now
-says `mintoke = "3.0.0"`. But toke 3.0.0 is not enough: it lowers `.set` on a
-map-typed struct field as an array `.set`, so ooke's template cache has never
-stored anything (toke 127.226, fixed in `cee7cc0`). The page still renders —
-the cache falls back to reading the file — but every request re-reads and
-re-parses its template, and the suite says so. So the floor is still a commit,
-`cee7cc0`, and `make check-versions` refuses toke 3.0.0 by name:
+says `mintoke = "3.0.0"`. But toke 3.0.0 is not enough, twice over:
 
-    ERROR: toke 0b0bc4e (2026-09-23) does not contain cee7cc0 — ooke's floor.
+- it lowers `.set` on a map-typed struct field as an array `.set`, so ooke's
+  template cache has never stored anything (toke 127.226, fixed in `cee7cc0`).
+  The page still renders — the cache falls back to reading the file — but
+  every request re-reads and re-parses its template, and the suite says so;
+- it has no host-binding serve functions, which `[server] host` (below) calls
+  (toke 138.1, merged as `668caa6`).
 
-**What turns this into 3.0.0:** a toke release that contains `cee7cc0`
+So the floor is still a commit, `668caa6`, and `make check-versions` refuses
+toke 3.0.0 by name:
+
+    ERROR: toke 0b0bc4e (2026-09-23) does not contain 668caa6 — ooke's floor.
+
+**What turns this into 3.0.0:** a toke release that contains `668caa6`
 (toke story 138.17). Then `mintoke` alone is the floor, the commit/date pair
 can be dropped, and `docs/RELEASING.md` says what else changes.
+
+**New in rc.2 — breaking: `ooke serve` binds `[server] host`, and the default
+is 127.0.0.1.** rc.1 listened on every interface and had no setting for it.
+A deployment that must be reachable from other machines now needs
+`host = "0.0.0.0"` in `[server]`; without it the server answers only on its
+own machine, and its start log says so and names the setting. The reasoning
+for loopback as ooke's default, when toke's port-only functions keep every
+interface, is in `docs/logging-and-tls.md`, "Bind address". (loke handoff O-3.)
 
 **New in rc.2:** an app with more than 31 handler pages compiles. The handler
 registry `ooke compile` generates imports every page plus `std.http`, and toke
@@ -44,9 +57,6 @@ caps a module at 32 imports by default (E9010). The generated `Makefile.serve`
 now passes `--max-imports=<count>` for that module when it is needed
 (`docs/public-api.md`; `make test-many-pages` builds and serves 40 pages).
 (loke handoff O-2.)
-
-**Not in rc.2:** a bind address in `[server]` (loke handoff O-3). It needs a
-host parameter in toke's serve functions first (toke story 138.1).
 
 Everything else that changed since rc.1 is in `CHANGELOG.md`.
 
