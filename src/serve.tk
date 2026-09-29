@@ -220,6 +220,38 @@ f=servetlscheck(projectdir:$str;cert:$str;key:$str):i64!$serveerr{
   <0
 };
 
+(* Story 121.25 (audit OOK-05). [server] corsorigins went to http.setcors
+   as written. toke matches a request's Origin against the list exactly
+   (comma-separated, spaces trimmed) and treats "*" as a wildcard only when
+   it is the whole value, so a malformed entry fails silently: "example.com"
+   (no scheme) and "https://example.com/" (a path) never match any browser's
+   Origin, and "*" inside a list is a literal that matches nothing. Each
+   entry must be scheme://host[:port] with an http or https scheme, or the
+   value must be exactly "*". A bad value refuses to start, naming the entry;
+   "*" starts, with a warning, since it lets every site read every response. *)
+f=servecorscheck(origins:$str):i64!$serveerr{
+  if(str.len(origins)==0){<0}el{};
+  if(str.trim(origins)=="*"){
+    (log.warn("[server] corsorigins = \"*\": any web page may read every response this server sends";@()));
+    <0
+  }el{};
+  let parts=str.split(origins;",");
+  lp(let i=0;i<parts.len;i=i+1){
+    let e=str.trim(parts.get(i));
+    let rest=mut."";
+    if(str.startswith(e;"https://")){rest=str.trimprefix(e;"https://")}el{
+      if(str.startswith(e;"http://")){rest=str.trimprefix(e;"http://")}el{}
+    };
+    let bad=str.len(rest)==0||str.contains(rest;"/")||str.contains(rest;" ")||str.contains(rest;"*");
+    if(bad){
+      let m=str.join("";@("[server] corsorigins: \"";e;"\" is not an origin -- each entry is scheme://host[:port] (http or https, no path), or the whole value is \"*\""));
+      (log.error(m;@()));
+      <$serveerr{msg:m}
+    }el{}
+  };
+  <0
+};
+
 (* Story 138.7 (O-3): bind [server] host, not every interface. The `...on`
    forms are toke's (story 138.1); host validation is theirs too -- a host
    they refuse fails the start (returns -1) and prints a DIAGNOSTIC line with
@@ -250,6 +282,7 @@ f=serverun(projectdir:$str;host:$str;port:i64;workers:i64;buildoutput:$str;tlsce
   (* A route scan that fails must stop the server, not be served as a 404
      for everything (story 134.18). Nothing is bound before this point. *)
   (serveregisterstatic(projectdir;pagesdir;contentdir;templatesdir;sitename;siteurl;sitelanguage;apiprefix;handledpaths)!$serveerr);
+  (servecorscheck(corsorigins)!$serveerr);
   if(str.len(corsorigins)>0){
     (http.setcors(corsorigins));
     (log.info(str.concat("CORS enabled: ";corsorigins);@()))
@@ -274,6 +307,12 @@ f=serverun(projectdir:$str;host:$str;port:i64;workers:i64;buildoutput:$str;tlsce
     (log.info("no templates/errors/404.tkt found, using default 404";@()))
   };
   (log.info("starting servedir";@()));
+  (* Story 121.25 (audit OOK-01). This mounts projectdir, not
+     projectdir/static, and that is right: toke's servedir keeps the URL
+     prefix when it maps a request to a file (root + path), so /static/x is
+     projectdir/static/x and /static/ooke.toml is a 404. Mounting
+     path.join(projectdir;"static") -- the audit's proposed fix -- would serve
+     projectdir/static/static/x. test/serve/static_mount.sh pins both. *)
   (http.servedir("/static";projectdir));
   (log.info("servedir done, starting listen";@()));
   let uport=port as u64;

@@ -86,13 +86,33 @@ f=testregisterfailsonmissingpages():bool{
   <chk.istrue(iserr;"a missing pages dir must fail registration, not register zero routes")
 };
 
+(* Story 121.25 (audit OOK-05): [server] corsorigins is checked before it
+   reaches http.setcors. Before, every value below was applied as written;
+   the malformed ones then matched no browser Origin, silently. *)
+f=corsok(v:$str):bool{<mt serve.servecorscheck(v) {$ok:x true;$err:e false}};
+
+f=testcorscheck():bool{
+  let a0=chk.istrue(corsok("");"empty (CORS off) is accepted");
+  let a1=chk.istrue(corsok("*");"a bare * is accepted");
+  let a2=chk.istrue(corsok("http://localhost:11432");"one http origin is accepted");
+  let a3=chk.istrue(corsok("https://a.example, http://b.example:8080");"a list with a port is accepted");
+  let a4=chk.isfalse(corsok("example.com");"an origin with no scheme is refused");
+  let a5=chk.isfalse(corsok("https://example.com/");"an origin with a path is refused");
+  let a6=chk.isfalse(corsok("*, https://a.example");"* inside a list is refused");
+  let a7=chk.isfalse(corsok("ftp://a.example");"a non-http scheme is refused");
+  let a8=chk.isfalse(corsok("https://");"a scheme with no host is refused");
+  let a9=chk.isfalse(corsok("https://a.example,");"an empty entry is refused");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a9
+};
+
 f=main():i64{
   let r0=testregisternoprefix();
   let r1=testregisterwithprefix();
   let r2=testregisterdedup();
   let r3=testservejson();
   let r4=testregisterfailsonmissingpages();
-  if(r0&&r1&&r2&&r3&&r4){
+  let r5=testcorscheck();
+  if(r0&&r1&&r2&&r3&&r4&&r5){
     <0
   }el{
     <1

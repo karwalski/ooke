@@ -75,9 +75,33 @@ f=storetryparsejson(src:$str):$content{
   <mt storeparsejson(src) {$ok:c c;$err:e storedefault()}
 };
 
-f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str{
+(* Story 121.25 (audit OOK-04). SQLite cannot bind an identifier, so a table
+   or column name is spliced into the SQL text -- and nothing checked it:
+   storesqlcreate("posts(id);DROP TABLE users;--";...) returned exactly that
+   text inside a CREATE. The names come from models/*.toml and the content
+   directory today, not from a request, so this is defence in depth; the
+   check makes it structural rather than a property of today's callers.
+   An identifier is [A-Za-z_][A-Za-z0-9_]* -- the rule ADR-0011 gives the
+   planned std db.ident, which does not exist yet (toke 124.5). *)
+f=storeident(name:$str):$str!$storeerr{
+  let n=str.len(name);
+  if(n==0){<$storeerr{msg:"empty SQL identifier"}}el{};
+  let alpha="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+  let digits="0123456789";
+  lp(let i=0;i<n;i=i+1){
+    let c=mt str.slice(name;i;i+1) {$ok:v v;$err:e ""};
+    let isalpha=str.len(c)==1&&str.contains(alpha;c);
+    let isdigit=str.len(c)==1&&str.contains(digits;c);
+    if(!(isalpha||(i>0&&isdigit))){
+      <$storeerr{msg:str.join("";@("not a SQL identifier (want [A-Za-z_][A-Za-z0-9_]*): \"";name;"\""))}
+    }el{}
+  };
+  <name
+};
+
+f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str!$storeerr{
   let sql=mut."CREATE TABLE IF NOT EXISTS ";
-  sql=str.concat(sql;modelname);
+  sql=str.concat(sql;storeident(modelname)!$storeerr);
   sql=str.concat(sql;"(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,body TEXT");
   let ks=fields.keys();
   lp(let i=0;i<ks.len;i=i+1){
@@ -86,14 +110,15 @@ f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str{
     let coltype=mut."TEXT";
     if(str.eq(ft;"bool")){coltype="INTEGER"}el{};
     if(str.eq(ft;"int")){coltype="INTEGER"}el{};
-    sql=str.join("";@(sql;",";k;" ";coltype))
+    let col=storeident(k)!$storeerr;
+    sql=str.join("";@(sql;",";col;" ";coltype))
   };
   sql=str.concat(sql;")");
   <sql
 };
 
 f=storeallsql(contenttype:$str):@$content!$storeerr{
-  let sql=str.concat("SELECT id,slug,title,type,body FROM ";contenttype);
+  let sql=str.concat("SELECT id,slug,title,type,body FROM ";storeident(contenttype)!$storeerr);
   let rows=db.many(sql;@())!$storeerr;
   let results=mut.@($content);
   lp(let i=0;i<rows.len;i=i+1){
@@ -113,18 +138,19 @@ f=storeallsql(contenttype:$str):@$content!$storeerr{
 };
 
 f=storewrite(contenttype:$str;content:$content):bool!$storeerr{
-  let check=str.concat("SELECT id FROM ";contenttype);
+  let table=storeident(contenttype)!$storeerr;
+  let check=str.concat("SELECT id FROM ";table);
   let check=str.concat(check;" WHERE slug=?");
   let found=mt db.one(check;@(content.slug)) {$ok:r true;$err:e false};
   if(found){
     let sql=mut."UPDATE ";
-    sql=str.concat(sql;contenttype);
+    sql=str.concat(sql;table);
     sql=str.concat(sql;" SET title=?,type=?,body=? WHERE slug=?");
     db.exec(sql;@(content.title;content.type;content.body;content.slug))!$storeerr;
     <true
   }el{
     let sql=mut."INSERT INTO ";
-    sql=str.concat(sql;contenttype);
+    sql=str.concat(sql;table);
     sql=str.concat(sql;"(slug,title,type,body) VALUES(?,?,?,?)");
     db.exec(sql;@(content.slug;content.title;content.type;content.body))!$storeerr;
     <true

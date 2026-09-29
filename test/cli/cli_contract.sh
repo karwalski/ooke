@@ -76,5 +76,36 @@ grep -q "ooke.toml could not be read or is not valid TOML" "$tmp/s.log" \
   && ok "serve: the error names ooke.toml" \
   || bad "serve: no error naming ooke.toml: $(head -c 300 "$tmp/s.log")"
 
+# ── 121.25 (audit OOK-03): [server] admin = true refuses to start ──────────
+# ooke has no admin interface; a config asking for one must not start without
+# it and say nothing.
+A=$tmp/adminproj
+cp -R "$ROOT/testproj" "$A" && rm -rf "$A/build" || exit 2
+aport=$(( 20000 + (($$ + 6151) % 20000) ))
+awk -v port="$aport" '
+  /^\[server\]/ { print; print "admin = true"; next }
+  /^port = /    { print "port = " port; next }
+  /^workers = / { print "workers = 1"; next }
+  { print }' "$ROOT/testproj/ooke.toml" >"$A/ooke.toml"
+grep -q '^admin = true' "$A/ooke.toml" || { echo "error: admin = true not injected" >&2; exit 2; }
+"$BIN" serve "$A" >"$tmp/a.log" 2>&1 &
+pid=$!
+i=0; alive=1
+while [ $i -lt 50 ]; do
+  kill -0 "$pid" 2>/dev/null || { alive=0; break; }
+  sleep 0.1; i=$((i+1))
+done
+if [ $alive -eq 1 ]; then
+  bad "serve: still running 5s after start with [server] admin = true"
+  kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null; pid=""
+else
+  wait "$pid"; rc=$?; pid=""
+  [ $rc -ne 0 ] && ok "serve: [server] admin = true exits non-zero ($rc)" \
+                || bad "serve: [server] admin = true exits 0"
+fi
+grep -q "\[server\] admin: ooke has no admin interface" "$tmp/a.log" \
+  && ok "serve: the error names [server] admin" \
+  || bad "serve: no error naming [server] admin: $(head -c 300 "$tmp/a.log")"
+
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
