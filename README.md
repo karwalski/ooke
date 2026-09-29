@@ -233,7 +233,7 @@ accessformat = "combined"   # or "json"
 |-----------|---------|-------------|
 | `port`    | `3000`  | HTTP listen port. |
 | `workers` | `0`     | Worker thread count. `0` auto-detects CPU count. Override at runtime with `TK_HTTP_WORKERS` env var. |
-| `corsorigins` | `""` | CORS allow-origin sent by `ooke serve`. Empty disables CORS. |
+| `corsorigins` | `""` | CORS allow-origin sent by `ooke serve`. Empty disables CORS. Either exactly `"*"` (any site may read every response; serve warns) or a comma-separated list of origins, each `http://` or `https://` host with an optional port and no path. Anything else refuses to start. |
 
 ### Content store
 
