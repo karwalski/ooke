@@ -318,6 +318,17 @@ f=runserve(projectdir:$str):i64{
      helper logs its own reason; a bad key refuses to start. *)
   let tlsok=mt serve.servetlscheck(projectdir;cfg.tlscert;cfg.tlskey) {$ok:v true;$err:e false};
   if(!tlsok){<clireportserveerr()}el{};
+  (* Story 121.25 (audit OOK-03): ooke has no admin interface, and nothing
+     to protect one with. `admin = true` refuses to start rather than start
+     without what was asked for; `admin = false` is named as ignored. *)
+  let admin=mt config.configadmin(cfgpath) {$ok:v v;$err:e ""};
+  if(admin=="true"){
+    (log.error("[server] admin: ooke has no admin interface -- no authentication, sessions, CSRF protection or rate limiting -- so it will not start one. Remove the key; see README.md, Security.";@()));
+    <1
+  }el{};
+  if(admin=="false"){
+    (log.warn("[server] admin = false ignored: ooke has no admin interface";@()))
+  }el{};
   let unsupported=mt config.configlogunsupported(cfgpath) {$ok:v v;$err:e ""};
   if(str.len(unsupported)>0){
     (log.warn(str.join("";@("[log] ";unsupported;" ignored: ooke does not rotate logs (std.log rotation loses lines; see docs/logging-and-tls.md)"));@()))

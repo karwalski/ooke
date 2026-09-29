@@ -190,6 +190,19 @@ http.post("/api/items"; fn(req; res) {
 
 Supported verbs: `http.get`, `http.post`, `http.put`, `http.delete`, `http.patch`.
 
+### Security: what ooke does not do for you
+
+A handler runs for every request that reaches its route. ooke has **no
+authentication, sessions, CSRF protection or rate limiting**, and **no admin
+interface**: a `POST`, `PUT`, `PATCH` or `DELETE` handler you register is open
+to anyone who can reach the server, and it is your code that must check who is
+calling and whether to act. Treat route parameters and request bodies as
+untrusted. Template output is HTML-escaped by default (`{=x=}`); `|raw` opts
+out, so use it only for HTML you produced yourself.
+
+`[server] admin = true` refuses to start, because there is no admin interface
+to enable; an old `admin = false` is ignored with a warning.
+
 ## Configuration
 
 Site settings live in `ooke.toml`:

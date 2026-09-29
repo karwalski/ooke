@@ -84,13 +84,30 @@ f=testlogunsupported():bool{
   <a0&&a1
 };
 
+(* Story 121.25 (audit OOK-03): [server] admin is read so serve can refuse it. *)
+f=admin(src:$str):$str{
+  let w=mt file.write("/tmp/test_ooke_admin.toml";src) {$ok:v true;$err:e false};
+  if(!w){<"WRITEFAIL"}el{};
+  <mt config.configadmin("/tmp/test_ooke_admin.toml") {$ok:v v;$err:e "ERR"}
+};
+
+f=testadmin():bool{
+  let a0=chk.eqstr(admin("[server]\nport = 1\n");"";"no admin key is \"\"");
+  let a1=chk.eqstr(admin("[server]\nadmin = false\n");"false";"admin = false");
+  let a2=chk.eqstr(admin("[server]\nadmin = true\n");"true";"admin = true");
+  let a3=chk.eqstr(admin("[server]\nadmin = \"false\"\n");"true";"a string admin is refused, not read as false");
+  let a4=chk.eqstr(admin("admin = true\n[site]\nname = \"x\"\n");"";"a top-level admin is not [server] admin");
+  <a0&&a1&&a2&&a3&&a4
+};
+
 f=main():i64{
   let r0=testloadvalid();
   let r1=testmissingfile();
   let r2=testdefaults();
   let r3=testlogtls();
   let r4=testlogunsupported();
-  if(r0&&r1&&r2&&r3&&r4){
+  let r5=testadmin();
+  if(r0&&r1&&r2&&r3&&r4&&r5){
     <0
   }el{
     <1

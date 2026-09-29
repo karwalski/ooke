@@ -126,3 +126,26 @@ f=configlogunsupported(path:$str):$str!$configerr{
   if(hasma){<"maxagedays"}el{};
   <""
 };
+
+(* Story 121.25 (audit OOK-03). README and the example ooke.toml carried
+   `[server] admin` -- "enable admin routes" -- and nothing read it: ooke has
+   no admin interface, and no authentication, sessions, CSRF protection or
+   rate limiting to put one behind. An operator who set it got nothing and
+   was told nothing. It is now read, so that serve can refuse `admin = true`
+   and name `admin = false` as ignored. Returns "" when the key is absent,
+   "false" for false, and "true" for true or any other value (a string
+   "false" is not false: the refusal is the safe reading of what was
+   meant). *)
+f=configadmin(path:$str):$str!$configerr{
+  let src=file.read(path)!$configerr;
+  let tab=toml.load(src)!$configerr;
+  let server=mt toml.section(tab;"server") {$ok:v v;$err:e tab};
+  let hasserver=mt toml.section(tab;"server") {$ok:v true;$err:e false};
+  if(!hasserver){<""}el{};
+  let b=mt toml.bool(server;"admin") {$ok:v (if(v){"true"}el{"false"});$err:e ""};
+  if(!(b=="")){<b}el{};
+  let isstr=mt toml.str(server;"admin") {$ok:v true;$err:e false};
+  let isint=mt toml.i64(server;"admin") {$ok:v true;$err:e false};
+  if(isstr||isint){<"true"}el{};
+  <""
+};

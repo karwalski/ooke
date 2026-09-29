@@ -11,7 +11,6 @@ inlinecss = true
 [server]
 port = 3000
 workers = 0
-admin = false
 # corsorigins = "http://localhost:11432"
 
 [log]
