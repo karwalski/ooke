@@ -274,6 +274,12 @@ f=serverun(projectdir:$str;host:$str;port:i64;workers:i64;buildoutput:$str;tlsce
     (log.info("no templates/errors/404.tkt found, using default 404";@()))
   };
   (log.info("starting servedir";@()));
+  (* Story 121.25 (audit OOK-01). This mounts projectdir, not
+     projectdir/static, and that is right: toke's servedir keeps the URL
+     prefix when it maps a request to a file (root + path), so /static/x is
+     projectdir/static/x and /static/ooke.toml is a 404. Mounting
+     path.join(projectdir;"static") -- the audit's proposed fix -- would serve
+     projectdir/static/static/x. test/serve/static_mount.sh pins both. *)
   (http.servedir("/static";projectdir));
   (log.info("servedir done, starting listen";@()));
   let uport=port as u64;
