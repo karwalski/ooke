@@ -72,13 +72,46 @@ f=testtryparsejson():bool{
 
 f=testsqlcreate():bool{
   let fields=@("author":"str");
-  let sql=store.storesqlcreate("posts";fields);
+  let sql=mt store.storesqlcreate("posts";fields) {$ok:v v;$err:e ""};
   let a0=chk.istrue(str.startswith(sql;"CREATE TABLE IF NOT EXISTS posts");"sqlcreate prologue");
   let a1=chk.istrue(str.contains(sql;"id INTEGER PRIMARY KEY");"sqlcreate id column");
   let a2=chk.istrue(str.contains(sql;"slug TEXT UNIQUE");"sqlcreate slug column");
   let a3=chk.istrue(str.contains(sql;"body TEXT");"sqlcreate body column");
   let a4=chk.istrue(str.endswith(sql;")");"sqlcreate is closed");
   <a0&&a1&&a2&&a3&&a4
+};
+
+(* Story 121.25 (audit OOK-04): table and column names are spliced into SQL
+   text, so each must be an identifier. On the old code the injected name
+   below came back inside the CREATE statement verbatim. *)
+f=testident():bool{
+  let good=mt store.storeident("posts_2") {$ok:v v;$err:e "ERR"};
+  let under=mt store.storeident("_x") {$ok:v v;$err:e "ERR"};
+  let a0=chk.eqstr(good;"posts_2";"storeident accepts posts_2");
+  let a1=chk.eqstr(under;"_x";"storeident accepts _x");
+  let b0=mt store.storeident("") {$ok:v false;$err:e true};
+  let b1=mt store.storeident("2posts") {$ok:v false;$err:e true};
+  let b2=mt store.storeident("posts;DROP TABLE users") {$ok:v false;$err:e true};
+  let b3=mt store.storeident("posts(id)") {$ok:v false;$err:e true};
+  let b4=mt store.storeident("po sts") {$ok:v false;$err:e true};
+  let b5=mt store.storeident("pösts") {$ok:v false;$err:e true};
+  let a2=chk.istrue(b0;"storeident refuses the empty name");
+  let a3=chk.istrue(b1;"storeident refuses a leading digit");
+  let a4=chk.istrue(b2;"storeident refuses ; and spaces");
+  let a5=chk.istrue(b3;"storeident refuses parentheses");
+  let a6=chk.istrue(b4;"storeident refuses an inner space");
+  let a7=chk.istrue(b5;"storeident refuses a non-ASCII letter");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7
+};
+
+f=testsqlcreateinjection():bool{
+  let badtable=mt store.storesqlcreate("posts(id);DROP TABLE users;--";@("author":"str")) {$ok:v v;$err:e "REFUSED"};
+  let badcol=mt store.storesqlcreate("posts";@("x TEXT);DROP TABLE users;--":"str")) {$ok:v v;$err:e "REFUSED"};
+  let a0=chk.eqstr(badtable;"REFUSED";"storesqlcreate refuses an injected table name");
+  let a1=chk.eqstr(badcol;"REFUSED";"storesqlcreate refuses an injected column name");
+  let badall=mt store.storeallsql("posts;DROP TABLE users") {$ok:v false;$err:e true};
+  let a2=chk.istrue(badall;"storeallsql refuses an injected table name");
+  <a0&&a1&&a2
 };
 
 f=teststoreallempty():bool{
@@ -147,5 +180,7 @@ f=main():i64{
   let r10=teststoreslug();
   let r11=teststoreslugmissing();
   let r12=teststorefindmissing();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12){<0}el{<1}
+  let r13=testident();
+  let r14=testsqlcreateinjection();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14){<0}el{<1}
 };
