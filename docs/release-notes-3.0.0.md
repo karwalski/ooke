@@ -39,9 +39,12 @@ toke 3.0.0 by name:
 
     ERROR: toke 0b0bc4e (2026-09-23) does not contain 668caa6 — ooke's floor.
 
-**What turns this into 3.0.0:** a toke release that contains `668caa6`
-(toke story 138.17). Then `mintoke` alone is the floor, the commit/date pair
-can be dropped, and `docs/RELEASING.md` says what else changes.
+**Resolved by toke 3.1.0 (toke story 138.17, 2026-09-30).** toke 3.1.0 is
+the first toke release that contains `668caa6`, and rc.2's full `make test`
+passes on it (every target, suite 12/12). The floor is now
+`mintoke = "3.1.0"`; the commit/date pair names toke's 3.1.0 version commit
+(`216965f`) and can be dropped once the `v3.1.0` tag is published.
+`docs/RELEASING.md` says what else changes before 3.0.0.
 
 **New in rc.2 — breaking: `ooke serve` binds `[server] host`, and the default
 is 127.0.0.1.** rc.1 listened on every interface and had no setting for it.
