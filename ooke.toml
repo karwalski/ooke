@@ -29,6 +29,16 @@ apiprefix = ""
 #   cache floor       cee7cc0  2026-09-27  (127.226) — the template cache stores
 #   host floor        668caa6  2026-09-28  (138.1)   — [server] host compiles:
 #                                                      ooke calls http.serveworkerson
+#   release floor     3.1.0    2026-09-30  (138.17)  — the first toke RELEASE that
+#                     216965f                          contains every floor above
+#
+# The sixth (toke story 138.17, 2026-09-30): toke 3.1.0 is the first toke
+# version that contains 668caa6, so mintoke = "3.1.0" is now sufficient on its
+# own: every toke labelled 3.1.0 or later has the host-binding serve functions
+# and the 127.226 cache fix, and ooke's full `make test` passes on it (toke
+# release/3.1.0).  The commit/date pair now names the commit that set toke's
+# VERSION to 3.1.0 (216965f); it is kept only because CI clones toke at
+# mintokecommit, and can be dropped once the v3.1.0 tag is published.
 #
 # The fourth (story 138.7, 2026-09-28): toke has since cut 3.0.0 (tag v3.0.0
 # = 0b0bc4e, 2026-09-23), but ooke's suite FAILS on it, 11 of 12:
@@ -71,6 +81,6 @@ apiprefix = ""
 # (story 134.15), mintoke becomes sufficient on its own and the commit/date
 # pair can be dropped.  Makefile: check-toke-version reads these three keys;
 # they are the single source of truth.  Evidence: docs/versioning.md.
-mintoke = "3.0.0"
-mintokedate = "2026-09-28"
-mintokecommit = "668caa6"
+mintoke = "3.1.0"
+mintokedate = "2026-09-30"
+mintokecommit = "216965f"
