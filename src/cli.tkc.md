@@ -1,6 +1,6 @@
 ---
 source_file: "cli.tk"
-source_hash: "e65374ab764f0f6323228b140e33cdcea0829ed70e6750e53151a2a0c2611f48"
+source_hash: "d855dce3e51ac9cf23ac6a1f6ededc18de27b18c6b3ddb9cad97a13496e75574"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -35,7 +35,8 @@ another — E3011), so the logic lives here and the entry is `ooke.main`.
   `configlogunsupported`, and the `$ookecfg` type.
 - `ooke.serve` (`serve`) — `servetlscheck`, `serveopenlogs`, `serverun`.
 - `ooke.floor` (`floor`) — `floortoml()`, the `[requires]` block for a new
-  project, generated from ooke's own `ooke.toml` (`src/_floor.tk`, 134.35).
+  project, generated from ooke's own `ooke.toml` (`src/_floor.tk`, 134.35);
+  and `ookeversion()`, generated from `VERSION` (121.66).
 - `ooke.build` (`build`) — `buildrun` and the `$buildreport` type.
 - `ooke.handlers` (`handlers`) — `registerall`, the dynamic-handler registry.
 
@@ -70,18 +71,28 @@ against the project, not the working directory.
 
 #### `cliprintversion(): i64`
 
-`io.println("ooke 3.0.0-rc.2")` — on stdout, exactly `ooke <VERSION>` (story
-134.43, public-api.md §1.1; it was a JSON log record on stderr). Returns 0.
-The string is a literal and must be kept in step with `VERSION`.
+`io.println(str.concat("ooke ";floor.ookeversion()))` — on stdout, exactly
+`ooke <VERSION>` (story 134.43, public-api.md §1.1; it was a JSON log record
+on stderr). Returns 0. `floor.ookeversion()` is generated from `VERSION` by
+the Makefile into `src/_floor.tk` (story 121.66; it was a literal here that
+had to be bumped beside `VERSION`). `make check-ooke-version` fails if this
+file hard-codes a version again.
 
 ### Scaffolding
+
+#### `climkdir(p: $str): bool` and `cliwrite(p: $str; content: $str): bool`
+
+`file.mkdir(p)` (which is `mkdir -p`) or `file.write(p;content)`, as `true`
+on success. On failure each logs, at error, `could not create directory <p>`
+or `could not write <p>` and returns `false`. Every scaffolding step below
+goes through one of them and stops with 1 on `false` (story 121.66: every
+result was discarded and "Created" was logged regardless).
 
 #### `clinew(name: $str): i64`
 
 Scaffold a new project at `name`:
 
-1. `file.mkdir` `name` and its `pages/`, `templates/`, `content/`, `static/`
-   (failures are ignored).
+1. `climkdir` `name` and its `pages/`, `templates/`, `content/`, `static/`.
 2. Write `ooke.toml`: `[site]` (name, empty url, `en`), `[build]`
    (`build/`, minify and inlinecss on), `[server]` (`host = "127.0.0.1"`,
    port 3000, workers 0), `[paths]` (empty apiprefix), `[log]`
@@ -96,7 +107,8 @@ Scaffold a new project at `name`:
    built).
 5. Log `Created project: <name>` and return 0.
 
-Every write result is discarded; the function always returns 0.
+Each directory and file goes through `climkdir`/`cliwrite`; the first failure
+returns 1 (logged, naming the path) with no "Created" line.
 
 #### `cligen(gentype: $str; genname: $str): i64`
 
@@ -109,8 +121,10 @@ Scaffold one component, relative to the working directory:
 | `api` | `pages/api/<name>.tk` = `m=pages.api.<name>;` (mkdir `pages/api/`), then logs a hint on wiring a handler |
 | `island` | `islands/<name>.tk` = `m=islands.<name>;` (mkdir `islands/`) |
 
-Each logs `Created <kind>: <path>` and returns 0; an unknown type logs
-`unknown gen type: <type>` and returns 1. Write failures are discarded.
+Each logs `Created <kind>: <path>` and returns 0 once its `climkdir` and
+`cliwrite` succeed; a failed one returns 1 (logged, naming the path) with no
+"Created" line -- e.g. `ooke gen page x` with no `pages/`. An unknown type
+logs `unknown gen type: <type>` and returns 1.
 
 ### Type-specialised containers (`ooke gen spec`)
 
@@ -138,7 +152,8 @@ As `specstack` over `std.set` (`st`): `new`, `add(s;val):t`,
 #### `cligenspec(container: $str; typename: $str): i64`
 
 `name = container + typename`; write `<name>.tk` in the working directory from
-`specstack` / `specqueue` / `specset` for `stack` / `queue` / `set`, log
+`specstack` / `specqueue` / `specset` for `stack` / `queue` / `set` with
+`cliwrite` (a failed write returns 1, no "Created"), log
 `Created specialised: <file>`, return 0. Any other container logs
 `unknown container: <c>, expected: stack, queue, set` and returns 1.
 
@@ -225,5 +240,5 @@ each return 1 on refusal. No loops, no recursion.
 - **Errors are logged where they happen.** The payloads of `$configerr`,
   `$serveerr` and `$builderr` cannot be read from here (RT005, toke 127.78), so
   the callee logs the reason and this module logs the consequence.
-- **`cliprintusage` and `cliprintcmdusage("gen")` list gen types `page, type`**;
-  `cligen` also accepts `api` and `island`.
+- **`cliprintcmdusage("gen")` lists every gen type `cligen` accepts**: `page,
+  type, api, island` (story 121.66; it listed `page, type`).

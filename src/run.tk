@@ -20,10 +20,14 @@ f=loadclicfg(projectdir:$str):$clicfg!$runerr{
   <$clicfg{name:name;entry:entry}
 };
 
+(* Story 121.66 (h): every failure below is logged at error. They were all
+   log.info, so a failed compile read as an info record, the level a log
+   filter keeps least. Progress lines ("compiling", "running", "built")
+   stay info. *)
 f=runcompile(projectdir:$str;cfg:$clicfg):$str!$runerr{
   let entrypath=path.join(projectdir;cfg.entry);
   if(!file.exists(entrypath)){
-    (log.info(str.concat("entry point not found: ";entrypath);@()));
+    (log.error(str.concat("entry point not found: ";entrypath);@()));
     <""
   }el{};
   let outbin=path.join(projectdir;str.concat("build/";cfg.name));
@@ -32,7 +36,7 @@ f=runcompile(projectdir:$str;cfg:$clicfg):$str!$runerr{
   (log.info(str.join("";@("compiling ";entrypath;" -> ";outbin));@()));
   let h=mt process.spawn(@("tkc";entrypath;"--out";outbin)) {$ok:v v;$err:e 0};
   if(h==0){
-    (log.info("failed to spawn tkc";@()));
+    (log.error("failed to spawn tkc";@()));
     <""
   }el{};
   (* Story 134.45. process.wait returns a plain i32 exit status, not a
@@ -42,14 +46,14 @@ f=runcompile(projectdir:$str;cfg:$clicfg):$str!$runerr{
   let ecode=process.wait(h);
   let errout=mt process.stderr(h) {$ok:v v;$err:e ""};
   if(!(ecode==0)){
-    (log.info(str.concat("tkc error: ";errout);@()));
+    (log.error(str.concat("tkc error: ";errout);@()));
     <""
   }el{};
   if(str.len(errout)>0){
     (log.info(str.concat("tkc: ";errout);@()))
   }el{};
   if(!file.exists(outbin)){
-    (log.info("compilation produced no output binary";@()));
+    (log.error("compilation produced no output binary";@()));
     <""
   }el{};
   <outbin
@@ -63,7 +67,7 @@ f=runexec(binpath:$str;passargs:@$str):i64{
   (log.info(str.concat("running ";binpath);@()));
   let h=mt process.spawn(cmdparts) {$ok:v v;$err:e 0};
   if(h==0){
-    (log.info("failed to spawn binary";@()));
+    (log.error("failed to spawn binary";@()));
     <1
   }el{};
   (* Story 134.45: a plain i32, as in runcompile. It used to read -1 for
@@ -84,7 +88,7 @@ f=run(projectdir:$str;passargs:@$str):i64{
   let cfg=mt loadclicfg(projectdir) {$ok:v v;$err:e $clicfg{name:"app";entry:"src/main.tk"}};
   let binpath=mt runcompile(projectdir;cfg) {$ok:v v;$err:e ""};
   if(str.len(binpath)==0){
-    (log.info("compilation failed, aborting run";@()));
+    (log.error("compilation failed, aborting run";@()));
     <1
   }el{};
   <runexec(binpath;passargs)
@@ -94,7 +98,7 @@ f=build(projectdir:$str):i64{
   let cfg=mt loadclicfg(projectdir) {$ok:v v;$err:e $clicfg{name:"app";entry:"src/main.tk"}};
   let binpath=mt runcompile(projectdir;cfg) {$ok:v v;$err:e ""};
   if(str.len(binpath)==0){
-    (log.info("compilation failed";@()));
+    (log.error("compilation failed";@()));
     <1
   }el{};
   (log.info(str.concat("built: ";binpath);@()));

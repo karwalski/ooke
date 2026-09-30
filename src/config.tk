@@ -119,8 +119,18 @@ f=configlogunsupported(path:$str):$str!$configerr{
   let src=file.read(path)!$configerr;
   let tab=toml.load(src)!$configerr;
   let log=mt toml.section(tab;"log") {$ok:v v;$err:e tab};
-  let hasml=mt toml.i64(log;"maxlines") {$ok:v true;$err:e false};
-  let hasma=mt toml.i64(log;"maxagedays") {$ok:v true;$err:e false};
+  (* Story 121.66 (m): a key is "set" whatever its type. Only an integer was
+     looked for, so `maxlines = "5"` -- rotation still asked for -- was
+     ignored without the warning. std.toml has no key-presence test and no
+     float accessor, so a float or array value is still not seen. *)
+  let mli=mt toml.i64(log;"maxlines") {$ok:v true;$err:e false};
+  let mls=mt toml.str(log;"maxlines") {$ok:v true;$err:e false};
+  let mlb=mt toml.bool(log;"maxlines") {$ok:v true;$err:e false};
+  let mai=mt toml.i64(log;"maxagedays") {$ok:v true;$err:e false};
+  let mas=mt toml.str(log;"maxagedays") {$ok:v true;$err:e false};
+  let mab=mt toml.bool(log;"maxagedays") {$ok:v true;$err:e false};
+  let hasml=mli||mls||mlb;
+  let hasma=mai||mas||mab;
   if(hasml&&hasma){<"maxlines, maxagedays"}el{};
   if(hasml){<"maxlines"}el{};
   if(hasma){<"maxagedays"}el{};

@@ -3,6 +3,7 @@ i=store:ooke.store;
 i=chk:ookeassert;
 i=file:std.file;
 i=str:std.str;
+i=db:std.db;
 
 f=testdefault():bool{
   let c=store.storedefault();
@@ -166,6 +167,74 @@ f=teststorefindmissing():bool{
   <iserr
 };
 
+(* Story 121.66 (c): a value holding ":" keeps all of it, not the piece
+   before its first ":". *)
+f=testparsefrontcolons():bool{
+  let c=store.storetryparse("---\nslug: s\nurl: https://x.io/a?b=c\ntime: 12:30:45\ntitle: Part 1: Intro\nnote: a::b\n---\nbody\n");
+  let a0=chk.eqstr(c.meta.get("url");"https://x.io/a?b=c";"front matter URL value keeps its colon");
+  let a1=chk.eqstr(c.meta.get("time");"12:30:45";"front matter time value keeps its colons");
+  let a2=chk.eqstr(c.title;"Part 1: Intro";"front matter title keeps its colon");
+  let a3=chk.eqstr(c.meta.get("note");"a::b";"front matter value keeps an empty piece between colons");
+  (* control: a plain value is unchanged *)
+  let a4=chk.eqstr(c.slug;"s";"plain slug value unchanged");
+  <a0&&a1&&a2&&a3&&a4
+};
+
+(* Story 121.66 (d): a front-matter line with no ":" -- a blank line, or a
+   stray word -- is skipped. It read past the end of the split (RT003) and
+   killed the process. *)
+f=testparsefrontnocolon():bool{
+  let c=store.storetryparse("---\nslug: s\n\nstray\ntitle: T\n---\nbody\n");
+  let a0=chk.eqstr(c.slug;"s";"slug before a blank front-matter line");
+  let a1=chk.eqstr(c.title;"T";"title after a blank front-matter line");
+  let a2=chk.equint(c.meta.len;2;"a line with no colon adds no meta key");
+  <a0&&a1&&a2
+};
+
+(* Story 121.66 (e): storewrite's existence check. A failed check (here "no
+   such column: id", on a table without one) was read as "not found", so a
+   second write of the same slug inserted a duplicate row. *)
+f=countslug(table:$str;slug:$str):$str{
+  let r=mt db.one(str.join("";@("SELECT COUNT(*) AS n FROM ";table;" WHERE slug=?"));@(slug)) {$ok:v v;$err:e 0};
+  if(r==0){<"ERR"}el{};
+  <mt row.str(r;"n") {$ok:s s;$err:e "ERR"}
+};
+
+f=titleof(table:$str;slug:$str):$str{
+  let r=mt db.one(str.join("";@("SELECT title FROM ";table;" WHERE slug=?"));@(slug)) {$ok:v v;$err:e 0};
+  if(r==0){<"ERR"}el{};
+  <mt row.str(r;"title") {$ok:s s;$err:e "ERR"}
+};
+
+f=teststorewrite():bool{
+  let opened=mt db.open(":memory:") {$ok:v true;$err:e false};
+  if(!chk.istrue(opened;"db.open :memory:")){<false};
+  let c1=$content{slug:"a";type:"post";title:"First";meta:@($str:$str);body:"b1"};
+  let c2=$content{slug:"a";type:"post";title:"Second";meta:@($str:$str);body:"b2"};
+  (* a table with no id column: the old check failed on it *)
+  let mk=mt db.exec("CREATE TABLE noid(slug TEXT,title TEXT,type TEXT,body TEXT)";@()) {$ok:v true;$err:e false};
+  if(!chk.istrue(mk;"create table noid")){<false};
+  let w1=mt store.storewrite("noid";c1) {$ok:v v;$err:e false};
+  let w2=mt store.storewrite("noid";c2) {$ok:v v;$err:e false};
+  let a0=chk.istrue(w1&&w2;"storewrite to a table with no id column succeeds");
+  let a1=chk.eqstr(countslug("noid";"a");"1";"a second write of a slug updates it, not a duplicate row");
+  let a2=chk.eqstr(titleof("noid";"a");"Second";"the second write's title is stored");
+  (* control: a table storesqlcreate makes (with the title and type columns
+     storewrite writes) -- insert, then update *)
+  let ddl=mt store.storesqlcreate("posts";@("title":"str";"type":"str")) {$ok:v v;$err:e ""};
+  let mk2=mt db.exec(ddl;@()) {$ok:v true;$err:e false};
+  let w3=mt store.storewrite("posts";c1) {$ok:v v;$err:e false};
+  let w4=mt store.storewrite("posts";c2) {$ok:v v;$err:e false};
+  let a3=chk.istrue(mk2&&w3&&w4;"storewrite insert then update on a storesqlcreate table");
+  let a4=chk.eqstr(countslug("posts";"a");"1";"storesqlcreate table holds one row for the slug");
+  let a5=chk.eqstr(titleof("posts";"a");"Second";"storesqlcreate table has the updated title");
+  (* a table that does not exist is an error *)
+  let w5=mt store.storewrite("nosuchtable";c1) {$ok:v false;$err:e true};
+  let a6=chk.istrue(w5;"storewrite to a missing table is an error");
+  (db.close());
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6
+};
+
 f=main():i64{
   let r0=testdefault();
   let r1=testparsefront();
@@ -182,5 +251,8 @@ f=main():i64{
   let r12=teststorefindmissing();
   let r13=testident();
   let r14=testsqlcreateinjection();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14){<0}el{<1}
+  let r15=testparsefrontcolons();
+  let r16=testparsefrontnocolon();
+  let r17=teststorewrite();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17){<0}el{<1}
 };

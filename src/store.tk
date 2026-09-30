@@ -38,12 +38,22 @@ f=storeparsefront(src:$str):$content!$storeerr{
       let slug=mut."";
       let ctype=mut."page";
       let ctitle=mut."";
+      (* Story 121.66 (c, d). A line was split on every ":" and only the
+         second piece kept, so `url: https://x.io` read "https" and
+         `time: 12:30` read "12". The guard `!kv.len<2` parsed as
+         `(!kv.len)<2`, which is always true, so a line with no ":" -- a
+         blank line in the front matter -- read kv.get(1) past the end and
+         the process died with RT003. A key is now everything before the
+         FIRST ":" and the value everything after it; a line with no ":" is
+         skipped. *)
       lp(let i=0;i<lines.len;i=i+1){
         let line=str.trim(lines.get(i));
         let kv=str.split(line;":");
-        if(!kv.len<2){
+        if(kv.len>1){
           let k=str.trim(kv.get(0));
-          let v=str.trim(kv.get(1));
+          let rest=mut.@($str);
+          lp(let j=1;j<kv.len;j=j+1){rest=rest.append(kv.get(j))};
+          let v=str.trim(str.join(":";rest));
           if(k=="slug"){slug=v}el{};
           if(k=="type"){ctype=v}el{};
           if(k=="title"){ctitle=v}el{};
@@ -139,9 +149,19 @@ f=storeallsql(contenttype:$str):@$content!$storeerr{
 
 f=storewrite(contenttype:$str;content:$content):bool!$storeerr{
   let table=storeident(contenttype)!$storeerr;
-  let check=str.concat("SELECT id FROM ";table);
-  let check=str.concat(check;" WHERE slug=?");
-  let found=mt db.one(check;@(content.slug)) {$ok:r true;$err:e false};
+  (* Story 121.66 (e). This was `SELECT id ... WHERE slug=?` matched
+     {$ok:r true;$err:e false}, so ANY failure of the check -- not only "no
+     rows" -- read as "not found" and the write became an INSERT: on a table
+     without an `id` column the check failed with "no such column" and every
+     write of an existing slug inserted a duplicate row. A COUNT query
+     always returns one row, so a failed check is now an error, propagated. *)
+  let check=str.join("";@("SELECT COUNT(*) AS n FROM ";table;" WHERE slug=?"));
+  let crow=db.one(check;@(content.slug))!$storeerr;
+  let n=mt row.str(crow;"n") {$ok:s s;$err:e ""};
+  if(str.len(n)==0){
+    <$storeerr{msg:str.concat("storewrite: could not read the existence check for table ";table)}
+  }el{};
+  let found=!(n=="0");
   if(found){
     let sql=mut."UPDATE ";
     sql=str.concat(sql;table);

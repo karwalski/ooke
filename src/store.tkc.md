@@ -1,6 +1,6 @@
 ---
 source_file: "store.tk"
-source_hash: "bcc8c9f68012f92bbf8af50654edff90bfe4994a6d61c989476d9a9004299db7"
+source_hash: "6a79c45f1d25a30dd7659f20817cba9f54b145310c613e57a5c538911aeb7ae3"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -96,11 +96,15 @@ function never raises `$storeerr`; `str.slice` failures fall back to `""`.
    the body. Each slice is matched `{$ok:v v;$err:e ""}`.
 5. Split `fmraw` on `"\n"`. Initialise a mutable `meta` map, mutable
    `slug=""`, `ctype="page"`, `ctitle=""`.
-6. For each line (index `0` to `lines.len-1`): trim it, split on `":"`. The
-   guard is the original reference predicate `if(!kv.len<2)`. When it holds,
-   trim `kv.get(0)` as `k` and `kv.get(1)` as `v`; if `k` equals `"slug"` /
-   `"type"` / `"title"` assign the corresponding mutable; in all cases
-   `meta=meta.set(k;v)`.
+6. For each line (index `0` to `lines.len-1`): trim it and split it on
+   `":"`. A line with fewer than two pieces (no `":"` at all -- e.g. a blank
+   line) is skipped. Otherwise `k` is the trimmed first piece and `v` the
+   trimmed remainder: the other pieces re-joined with `":"`, so a value may
+   itself hold colons (`url: https://x.io`, `time: 12:30`). If `k` equals
+   `"slug"` / `"type"` / `"title"` assign the corresponding mutable; in all
+   cases `meta=meta.set(k;v)`. (Story 121.66: the guard was `!kv.len<2`,
+   i.e. `(!kv.len)<2`, always true, so a blank line read past the split and
+   died with RT003; and only the second piece was kept, truncating values.)
 7. Return `$content{slug;type:ctype;title:ctitle;meta;body:bodyraw}`.
 
 **Error handling:** Slice failures are absorbed to `""`. The `!$storeerr`
@@ -251,17 +255,20 @@ name or a DB error.
 **Logic:**
 
 1. `table = storeident(contenttype)!$storeerr`.
-2. Build `"SELECT id FROM " + table + " WHERE slug=?"` (two `str.concat`
-   steps; the second rebinds `check`).
-3. Run `db.one(check;@(content.slug))`, matched `{$ok:r true;$err:e false}`
-   into `found` — a returned row means the slug exists.
+2. Build `"SELECT COUNT(*) AS n FROM " + table + " WHERE slug=?"`.
+3. Run `db.one(check;@(content.slug))!$storeerr` -- a COUNT always returns
+   one row, so any failure here is a real error and is propagated. Read
+   column `n` with `row.str`; an unreadable `n` is a `$storeerr`. `found` is
+   `n != "0"`. (Story 121.66: this was `SELECT id` matched
+   `{$ok:r true;$err:e false}`, so every failure read as not-found and the
+   write became an INSERT -- a duplicate row on a table without `id`.)
 4. If `found`: `db.exec("UPDATE <table> SET title=?,type=?,body=? WHERE slug=?";
    @(title;type;body;slug))!$storeerr`, return `true`.
 5. Else: `db.exec("INSERT INTO <table>(slug,title,type,body) VALUES(?,?,?,?)";
    @(slug;title;type;body))!$storeerr`, return `true`.
 
-**Error handling:** `storeident` and `db.exec` raise `$storeerr`. The
-existence probe absorbs every error (not only not-found) into `found=false`.
+**Error handling:** `storeident`, the existence check and `db.exec` raise
+`$storeerr`. "No row with this slug" is a count of 0, not an error.
 Values are bound as parameters; only the table name is spliced.
 
 ### `storeallflat(contentdir: $str; contenttype: $str): @$content!$storeerr`

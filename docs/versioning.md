@@ -186,8 +186,11 @@ Now:
   and fails on any of: toke `VERSION` below `mintoke`; `capabilities.c` absent;
   the toke checkout not containing `mintokecommit`; or (for a shallow clone with
   no such object) a HEAD commit dated before `mintokedate`.
-- `check-ooke-version` fails if `VERSION` and the version `src/cli.tk` prints
-  disagree. That check exists because they disagreed for three months.
+- `check-ooke-version` fails if `src/cli.tk` hard-codes a version rather than
+  printing `floor.ookeversion()`, which the Makefile generates from `VERSION`
+  (story 121.66), or if `VERSION` is not a plain version string. It began as a
+  check that `VERSION` and a literal in `src/cli.tk` agreed, because they
+  disagreed for three months; the literal is gone, so they cannot.
 - CI runs `check-versions` before building, on push, on PR, **and on a daily
   schedule** so drift in toke HEAD is caught the day it happens. The release
   workflow runs it before packaging any tarball.

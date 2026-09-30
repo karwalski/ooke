@@ -7,6 +7,8 @@
     {"kind": "func", "name": "cliishelp", "params": ["str"], "return": "bool"},
     {"kind": "func", "name": "cliprintcmdusage", "params": ["str"], "return": "i64"},
     {"kind": "func", "name": "cliprintversion", "params": [], "return": "i64"},
+    {"kind": "func", "name": "climkdir", "params": ["str"], "return": "bool"},
+    {"kind": "func", "name": "cliwrite", "params": ["str", "str"], "return": "bool"},
     {"kind": "func", "name": "clinew", "params": ["str"], "return": "i64"},
     {"kind": "func", "name": "cligen", "params": ["str", "str"], "return": "i64"},
     {"kind": "func", "name": "retcolon", "params": ["str"], "return": "str"},

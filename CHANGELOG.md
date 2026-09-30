@@ -85,6 +85,55 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   `src/*.tkc.md` `source_hash` does not match its source, or names a source
   that does not exist. Companions of generated sources (`src/_*.tk`) are
   skipped. (121.63)
+- **A content file's front matter keeps values that contain `:`, and a blank
+  line in it no longer kills the build.** Each line was split on every `:`
+  and only the second piece kept, so `url: https://x.io` read `https`,
+  `time: 12:30` read `12` and `title: Part 1: Intro` read `Part 1`. A line
+  with no `:` -- a blank line, or a stray word -- read past the end of the
+  split and the process died with RT003 (`ooke build` and `ooke serve` both
+  parse content through it). The key is now what precedes the first `:` and
+  the value everything after it; a line with no `:` is skipped. (121.66)
+- `store.storewrite` no longer turns a failed existence check into an
+  INSERT. Its `SELECT id … WHERE slug=?` was read as "not found" on any
+  error, so on a table without an `id` column every write of an existing slug
+  added a duplicate row. The check is a `COUNT`, and its failure is returned
+  as an error. Nothing in `ooke build` or `ooke serve` calls it. (121.66)
+- **`ooke repair <file>` exits by tkc's verdict.** It counted lines on
+  `tkc --check`'s stderr, ignored tkc's exit status, and returned the count as
+  its own exit status: 256 diagnostics exited 0, a tkc that failed without
+  printing read as clean (0), and a warning alone read as broken. It now
+  exits 0 when tkc accepts the file (warnings are reported, not counted) and
+  1 when it does not; a silent tkc failure is logged as an error. (121.66)
+- `ooke run` and `ooke build --cli` log their failures -- a missing entry
+  point, a tkc that fails or cannot be spawned, no output binary, "compilation
+  failed" -- at error level. They were info records. (121.66)
+- **`VERSION` is the one place ooke's version is written.** `ooke --version`
+  printed a literal in `src/cli.tk` that every release bumped by hand beside
+  `VERSION`. The Makefile now generates `floor.ookeversion()` from `VERSION`
+  into `src/_floor.tk`, and `make check-ooke-version` fails if `src/cli.tk`
+  hard-codes a version again or if `VERSION` is not a plain version string.
+  The printed text is unchanged. (121.66)
+- `ooke gen --help` lists all four types `ooke gen` makes -- `page`, `type`,
+  `api`, `island`; it listed two. (121.66)
+- **`ooke new` and `ooke gen` fail when they cannot write.** They discarded
+  every mkdir and write result, then logged `Created …` and exited 0:
+  `ooke gen page x` outside a project, or either command in a directory it
+  cannot write, reported success and wrote nothing. The first failure now
+  logs `could not write <path>` (or `could not create directory <path>`) at
+  error and exits 1. (121.66)
+- `ooke build` names the output directory it could not create for a
+  content-backed page (`pages/blog/[slug].tk`), as it already did for a
+  static page. The result of that mkdir was ignored, so the failure was
+  reported as `write failed for …/index.html`. The build fails either way.
+  (121.66)
+- `ooke serve` warns about `[log] maxlines` / `maxagedays` set to a string
+  or a boolean (`maxlines = "5"`), not only to an integer; they are ignored
+  either way. A float or array value is still not noticed -- std.toml cannot
+  test for a key or read a float. (121.66)
+- **A page under a nested `api/` directory is a page.** A route was an API
+  route if its path held `/api/` anywhere, so `pages/docs/api/intro.tk` was
+  neither built nor served as a page, and the build said it was a handler
+  "under pages/api/". Only `pages/api/` makes API routes now. (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

@@ -1,6 +1,6 @@
 ---
 source_file: "config.tk"
-source_hash: "763decfeb2f9959771cbebef2c9c92a6ff6d8dc8d12911ec6e77a7e3621d9d0f"
+source_hash: "991939f0a00c3ca9b58c1a855687eb56977d05ce41d53f0c3e20e959a3a30a51"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -105,11 +105,13 @@ ignores them, as an old `[store]` table is ignored (134.34).
 
 **Logic:** Read (`!$configerr`) and parse (`!$configerr`) the file; take the
 `log` section (falling back to the root table). A key counts as present when
-`toml.i64` on it succeeds. Return `"maxlines, maxagedays"`, `"maxlines"`,
-`"maxagedays"` or `""`.
+`toml.i64`, `toml.str` or `toml.bool` on it succeeds (story 121.66: only
+`toml.i64` was tried, so `maxlines = "5"` went unreported). Return
+`"maxlines, maxagedays"`, `"maxlines"`, `"maxagedays"` or `""`.
 
-**Error handling:** Only the read and the parse fail. A key holding a
-non-integer value is not reported.
+**Error handling:** Only the read and the parse fail. A key holding a float or
+an array is still not reported: std.toml has no key-presence test and no
+float accessor.
 
 ### `configadmin(path: $str): $str!$configerr`
 

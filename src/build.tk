@@ -337,11 +337,19 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
           let slugpattern=str.replace(routes.get(j).pattern;":slug";slug);
           let outpath=buildoutputpath(slugpattern;outdir);
           let parentdir=path.dir(outpath);
-          let mkr3=mt file.mkdir(parentdir) {$ok:v true;$err:e false};
-          let writeok=mt file.write(outpath;html) {$ok:v true;$err:e false};
-          if(writeok){pagescount=pagescount+1}el{
-            (log.error(str.concat("build: write failed for ";outpath);@()));
+          (* 121.66 (l): the mkdir result was ignored, so a directory that
+             could not be made surfaced as "write failed" for the file in it.
+             Say which directory, as the static pass (buildpage) does. *)
+          let mkok3=mt file.mkdir(parentdir) {$ok:v true;$err:e false};
+          if(!mkok3){
+            (log.error(str.join("";@("build: route ";routes.get(j).pattern;" slug=";slug;" — could not create the output directory ";parentdir));@()));
             skippedcount=skippedcount+1
+          }el{
+            let writeok=mt file.write(outpath;html) {$ok:v true;$err:e false};
+            if(writeok){pagescount=pagescount+1}el{
+              (log.error(str.concat("build: write failed for ";outpath);@()));
+              skippedcount=skippedcount+1
+            }
           }
         }el{}
       }

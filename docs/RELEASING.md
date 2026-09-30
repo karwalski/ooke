@@ -42,9 +42,11 @@ Pushing the tag **is** the publish. There is no separate upload.
   P0 that blocked rc.1, was fixed and verified on 2026-09-19.)
 - Tag rc.2 only after the toke release it is verified against (138.17), and
   re-run `scripts/package_release.sh` against that toke so the manifest names it.
-- Drop the `-rc.N` suffix in exactly two places — `VERSION` and the string
-  `src/cli.tk` prints. `make check-ooke-version` fails if they disagree, so the
-  build will catch a half-done bump.
+- Drop the `-rc.N` suffix in `VERSION` — the one place ooke's version is
+  written. `ooke --version` prints `floor.ookeversion()`, which the Makefile
+  generates from `VERSION` into `src/_floor.tk` (story 121.66); it used to be a
+  second literal in `src/cli.tk`, and `make check-ooke-version` now fails if
+  one comes back.
 - Re-check `ooke.toml [requires]`. It is a commit today; if story 134.15 has
   cut toke's version by then, replace `mintokecommit`/`mintokedate` with a real
   `mintoke` semver and simplify the Makefile gate accordingly.

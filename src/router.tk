@@ -77,6 +77,11 @@ f=routerscan(pagesdir:$str):@$route!$routeerr{
     <$routeerr{msg:str.concat("no pages dir: ";pagesdir)}
   }el{};
   let allfiles=file.listall(pagesdir)!$routeerr;
+  (* Story 121.66 (b). file.listall's paths are relative to pagesdir, so an
+     API route is one whose path starts with "api/" -- pages/api/. isapi also
+     matched "/api/" anywhere in the path, so pages/docs/api/intro.tk was
+     taken for a request handler: never built, never served as a page, and
+     the build said it was "under pages/api/". *)
   let routes=mut.@($route);
   lp(let i=0;i<allfiles.len;i=i+1){
     let p=allfiles.get(i);
@@ -88,7 +93,7 @@ f=routerscan(pagesdir:$str):@$route!$routeerr{
         templatepath:routederivetemplate(p;pagesdir);
         contenttype:routederivedtype(p;pagesdir);
         isdynamic:str.contains(pattern;":");
-        isapi:str.contains(p;"/api/")||str.startswith(p;"api/");
+        isapi:str.startswith(p;"api/");
         params:@()
       };
       routes=routes.append(r)

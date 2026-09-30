@@ -14,6 +14,8 @@
 #   tkc       a program that does not compile makes ooke run exit non-zero
 #             with "tkc error" and never runs it
 #   build     `ooke build --cli` exits 0 and writes build/<name>
+#   tkc-level, noentry   (121.66 h) a compile failure and a missing entry
+#             point are logged at error, not info
 #
 # testproj is a site (no [package], no src/main.tk), so the CLI projects are
 # made here, in a temporary directory, and run from its parent.
@@ -85,6 +87,17 @@ else bad "fails: rc=$rc"; fi
 if [ "$rc" -ne 0 ] && grep -q 'tkc error: .*E3011' "$tmp/out" && ! grep -q 'running' "$tmp/out"
 then ok "tkc: a compile error makes ooke run exit non-zero ($rc) with tkc's diagnostic"
 else bad "tkc: rc=$rc"; fi
+# 121.66 (h): the failure is an error record, not info.
+if grep '"level":"error"' "$tmp/out" | grep -q 'tkc error: .*E3011' && grep '"level":"error"' "$tmp/out" | grep -q 'compilation failed, aborting run'
+then ok "tkc-level: the compile failure is logged at error"
+else bad "tkc-level: the compile failure is not logged at error"; fi
+
+mkdir -p "$tmp/noentry"
+printf '[package]\nname = "noentry"\nentry = "src/main.tk"\n' >"$tmp/noentry/ooke.toml"
+(cd "$tmp" && "$BIN" run noentry) >"$tmp/out" 2>&1; rc=$?
+if [ "$rc" -ne 0 ] && grep '"level":"error"' "$tmp/out" | grep -q 'entry point not found'
+then ok "noentry: a missing entry point exits non-zero ($rc), logged at error"
+else bad "noentry: rc=$rc or not logged at error"; fi
 
 rm -rf "$tmp/good/build"
 (cd "$tmp" && "$BIN" build --cli good) >"$tmp/out" 2>&1; rc=$?

@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -185,6 +185,9 @@ $(IFACE_DIR)/run.tki $(IFACE_DIR)/run: $(SRC)/run.tk | $(IFACE_DIR)
 # generated from ooke.toml [requires] -- the same three keys check-toke-version
 # and the release workflow read -- so there is one source.  Build OUTPUT, like
 # _handlers.tk: not tracked, regenerated whenever ooke.toml changes.
+# Story 121.66 (i): it also carries ooke's own version, ookeversion(), read
+# from VERSION, which `ooke --version` prints -- so VERSION is the one place a
+# version is written.
 # Regenerated on every make (FORCE) but only rewritten when its content changes,
 # so a same-second edit of ooke.toml cannot leave a stale floor behind and an
 # unchanged floor does not trigger a relink.
@@ -193,11 +196,15 @@ FORCE:
 $(SRC)/_floor.tk: FORCE
 	@test -n "$(MIN_TOKE_VERSION)" -a -n "$(MIN_TOKE_DATE)" -a -n "$(MIN_TOKE_COMMIT)" || \
 	  { echo "ERROR: ooke.toml [requires] must set mintoke, mintokedate and mintokecommit" >&2; exit 1; }
+	@$(MAKE) --no-print-directory check-ooke-version-format
 	@printf '%s\n' \
-	  '(* GENERATED from ooke.toml [requires] by the Makefile (story 134.35). Do not edit. *)' \
+	  '(* GENERATED from ooke.toml [requires] and VERSION by the Makefile (stories 134.35, 121.66). Do not edit. *)' \
 	  'm=ooke.floor;' \
 	  'f=floortoml():$$str{' \
 	  '  <"[requires]\nmintoke = \"$(MIN_TOKE_VERSION)\"\nmintokedate = \"$(MIN_TOKE_DATE)\"\nmintokecommit = \"$(MIN_TOKE_COMMIT)\"\n"' \
+	  '};' \
+	  'f=ookeversion():$$str{' \
+	  '  <"$(OOKE_VERSION)"' \
 	  '};' > $@.tmp
 	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; \
 	  echo "Generated: $@ (toke floor $(MIN_TOKE_VERSION) / $(MIN_TOKE_COMMIT) / $(MIN_TOKE_DATE))"; fi
@@ -378,7 +385,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk $(P
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -444,6 +451,30 @@ test-api-json: $(BIN)
 # its stderr.
 test-tplcache-log: test-support-check
 	@test/template/cached_log.sh
+
+# test-repair-exit — story 121.66 (g): `ooke repair` exits by tkc's verdict,
+# not by a count of stderr lines (256 diagnostics exited 0). Spawns tkc, so
+# TOKE_ROOT is passed through.
+test-repair-exit: $(BIN)
+	@TOKE_ROOT=$(TOKE_ROOT) test/repair/repair_exit.sh ./$(BIN)
+
+# test-version-source — story 121.66 (i): VERSION is the one place ooke's
+# version is written. A copy of the tree with VERSION alone bumped builds a
+# binary whose --version prints it, and passes check-ooke-version.
+test-version-source: $(BIN)
+	@TOKE_ROOT=$(TOKE_ROOT) TKC=$(TKC) sh test/cli/version_source.sh
+
+# test-gen-scaffold — story 121.66 (j, k): `ooke gen --help` lists every
+# type gen makes, and gen/new do not report "Created" for what they could not
+# write.
+test-gen-scaffold: $(BIN)
+	@sh test/cli/gen_scaffold.sh ./$(BIN)
+
+# test-dynamic-outdir — story 121.66 (l): the content-backed pass of `ooke
+# build` names the output directory it could not create, as the static pass
+# does, instead of reporting a failed write.
+test-dynamic-outdir: $(BIN)
+	@sh test/build/dynamic_outdir.sh ./$(BIN)
 
 # test-companions — story 121.63: every src/*.tkc.md's source_hash matches the
 # source it documents (companions of generated src/_*.tk are skipped). Fails
@@ -571,10 +602,22 @@ check-toke-version:
 
 # The version ooke prints must match the version it declares; src/cli.tk said
 # "ooke 2.0.0" for three months while VERSION moved, so this is a real gate.
-check-ooke-version:
+# Story 121.66 (i): VERSION is now the only place the version is written. The
+# Makefile generates it into src/_floor.tk (ookeversion()) and cli.tk prints
+# that, so this checks that cli.tk prints floor.ookeversion() and hard-codes
+# no version of its own, and that VERSION can be spliced into a toke string.
+check-ooke-version: check-ooke-version-format
 	@set -e; \
-	if ! grep -q '"ooke $(OOKE_VERSION)"' src/cli.tk; then \
-		echo "ERROR: VERSION is $(OOKE_VERSION) but src/cli.tk does not print it:"; \
-		grep -n 'ooke [0-9]' src/cli.tk || true; exit 1; \
+	if grep -n '"ooke [0-9]' src/cli.tk; then \
+		echo "ERROR: src/cli.tk hard-codes a version (above); print floor.ookeversion(), which is generated from VERSION"; exit 1; \
 	fi; \
-	echo "ooke $(OOKE_VERSION) declared consistently (VERSION, src/cli.tk) OK"
+	if ! grep -q 'floor.ookeversion()' src/cli.tk; then \
+		echo "ERROR: src/cli.tk does not print floor.ookeversion() (generated from VERSION $(OOKE_VERSION))"; exit 1; \
+	fi; \
+	echo "ooke $(OOKE_VERSION) declared once (VERSION -> src/_floor.tk ookeversion() -> ooke --version) OK"
+
+.PHONY: check-ooke-version-format
+check-ooke-version-format:
+	@if ! printf '%s' "$(OOKE_VERSION)" | grep -Eq '^[0-9][0-9A-Za-z.+-]*$$'; then \
+		echo "ERROR: VERSION is '$(OOKE_VERSION)': want one line of [0-9][0-9A-Za-z.+-]* (it is spliced into a toke string in src/_floor.tk)" >&2; exit 1; \
+	fi
