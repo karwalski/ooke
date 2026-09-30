@@ -71,7 +71,8 @@ f=cliprintcmdusage(cmd:$str):i64{
     (log.info("";@()));
     (log.info("Usage: ooke gen <type> <name>";@()));
     (log.info("       ooke gen spec <container> <type>";@()));
-    (log.info("  types:      page, type";@()));
+    (* 121.66 (j): cligen also makes api and island; the help omitted them. *)
+    (log.info("  types:      page, type, api, island";@()));
     (log.info("  containers: stack, queue, set";@()));
     <0
   }el{};

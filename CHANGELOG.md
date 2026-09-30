@@ -113,6 +113,8 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   into `src/_floor.tk`, and `make check-ooke-version` fails if `src/cli.tk`
   hard-codes a version again or if `VERSION` is not a plain version string.
   The printed text is unchanged. (121.66)
+- `ooke gen --help` lists all four types `ooke gen` makes -- `page`, `type`,
+  `api`, `island`; it listed two. (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

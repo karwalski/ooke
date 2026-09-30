@@ -1,6 +1,6 @@
 ---
 source_file: "cli.tk"
-source_hash: "46f6ace132b55c4847da96e1f33e8abf660686ce99e0e031777f6cf78ab8ccd0"
+source_hash: "6b4a5fddd1f09acafe31e7dfd95fdbc613e414f1d53662edbd870ca6b1519fca"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -229,5 +229,5 @@ each return 1 on refusal. No loops, no recursion.
 - **Errors are logged where they happen.** The payloads of `$configerr`,
   `$serveerr` and `$builderr` cannot be read from here (RT005, toke 127.78), so
   the callee logs the reason and this module logs the consequence.
-- **`cliprintusage` and `cliprintcmdusage("gen")` list gen types `page, type`**;
-  `cligen` also accepts `api` and `island`.
+- **`cliprintcmdusage("gen")` lists every gen type `cligen` accepts**: `page,
+  type, api, island` (story 121.66; it listed `page, type`).

@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -385,7 +385,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk $(P
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -463,6 +463,12 @@ test-repair-exit: $(BIN)
 # binary whose --version prints it, and passes check-ooke-version.
 test-version-source: $(BIN)
 	@TOKE_ROOT=$(TOKE_ROOT) TKC=$(TKC) sh test/cli/version_source.sh
+
+# test-gen-scaffold — story 121.66 (j, k): `ooke gen --help` lists every
+# type gen makes, and gen/new do not report "Created" for what they could not
+# write.
+test-gen-scaffold: $(BIN)
+	@sh test/cli/gen_scaffold.sh ./$(BIN)
 
 # test-companions — story 121.63: every src/*.tkc.md's source_hash matches the
 # source it documents (companions of generated src/_*.tk are skipped). Fails
