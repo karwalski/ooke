@@ -72,6 +72,24 @@ f=testbuildmissingentry():bool{
   <chk.eqint(rc;1;"build exit code for a missing entry")
 };
 
+(* Story 121.69 (1): without [package], a top-level name/entry is not the
+   package's. loadclicfg fell back to the ROOT table, so this project's
+   `name = "rootname"` became the binary name and `entry` the entry point.
+   A missing [package] is an empty table (config.configsection, 121.67 (4)).
+   testloadclicfg is the control: the same keys under [package] are read. *)
+f=testloadclicfgrootnotpackage():bool{
+  let dir="/tmp/ooke_run_test_rootkeys";
+  (mt file.mkdir(dir) {$ok:v v;$err:e false});
+  let tomlsrc="name = \"rootname\"\nentry = \"src/root.tk\"\n[site]\nname = \"s\"\n";
+  let wrok=mt file.write(path.join(dir;"ooke.toml");tomlsrc) {$ok:v true;$err:e false};
+  if(wrok==false){<false};
+  let result=run.loadclicfg(dir);
+  let cfg=mt result {$ok:v v;$err:e 0};
+  let a0=chk.eqstr(cfg.name;"app";"root name is not [package] name");
+  let a1=chk.eqstr(cfg.entry;"src/main.tk";"root entry is not [package] entry");
+  <a0&&a1
+};
+
 f=main():i64{
   let r0=testloadclicfg();
   let r1=testloadclicfgdefaults();
@@ -79,7 +97,8 @@ f=main():i64{
   let r3=testruncompilemissingentry();
   let r4=testrunmissingentry();
   let r5=testbuildmissingentry();
-  if(r0&&r1&&r2&&r3&&r4&&r5){
+  let r6=testloadclicfgrootnotpackage();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6){
     <0
   }el{
     <1

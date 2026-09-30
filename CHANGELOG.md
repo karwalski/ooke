@@ -169,6 +169,24 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   program exits (std.process captures it; it is not streamed). The program's
   stderr is still logged as an info record. **Behaviour change** for anything
   that read a program's output from `ooke run`'s stderr. (121.67)
+- **`ooke run` / `ooke build --cli` read `name` and `entry` only from
+  `[package]`.** Without a `[package]` table the root table was read, so a
+  top-level `name` named the binary and a top-level `entry` the entry point.
+  A missing `[package]` is now empty, as every other table is (121.67), and
+  the defaults `app` and `src/main.tk` apply. **Behaviour change** for an
+  `ooke.toml` that set them at the top level: put them under `[package]`.
+  (121.69)
+- **`ooke run` passes the program's stderr through.** It was logged as one
+  JSON info record, so a program's own JSON log lines arrived escaped inside
+  ooke's `msg` -- `{"level":"info","msg":"{\"level\":\"info\",…}\n",…}`.
+  The program's stderr is now written to ooke's stderr byte for byte, with
+  nothing added (a last line with no newline gets none), after its stdout
+  and once the program exits. **Behaviour change** for anything that parsed
+  the wrapped record. (121.69)
+- `ooke build` prints both `pages skipped: <n>` and `assets not copied: <n>`
+  when a build lost both. It returned after the first, so the asset summary
+  was missing (the assets were still named in their own errors, and the build
+  still failed). (121.69)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

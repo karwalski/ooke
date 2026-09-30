@@ -393,14 +393,18 @@ f=runbuild(projectdir:$str):i64{
   if(report.valwarnings>0){
     (log.info(str.concat("validation warnings: ";str.fromint(report.valwarnings));@()))
   }el{};
-  if(report.pagesskipped>0){
-    (log.error(str.join("";@("pages skipped: ";report.pagesskipped as str;" — build failed"));@()));
-    <1
-  }el{};
   (* 121.67 (1): an asset that was not copied fails the build, as a page
-     that was not written does. Each one is named in an error above. *)
+     that was not written does. Each one is named in an error above.
+     121.69 (3): both summaries are printed. The skipped-pages branch
+     returned first, so a build that lost pages and assets never said
+     "assets not copied". *)
+  if(report.pagesskipped>0){
+    (log.error(str.join("";@("pages skipped: ";report.pagesskipped as str;" — build failed"));@()))
+  }el{};
   if(report.assetsfailed>0){
-    (log.error(str.join("";@("assets not copied: ";report.assetsfailed as str;" — build failed"));@()));
+    (log.error(str.join("";@("assets not copied: ";report.assetsfailed as str;" — build failed"));@()))
+  }el{};
+  if(report.pagesskipped>0||report.assetsfailed>0){
     <1
   }el{};
   <0

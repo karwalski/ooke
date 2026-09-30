@@ -6,6 +6,8 @@ i=path:std.path;
 i=toml:std.toml;
 i=process:std.process;
 i=io:std.io;
+i=os:std.os;
+i=config:ooke.config;
 
 t=$runerr{msg:$str};
 
@@ -15,7 +17,11 @@ f=loadclicfg(projectdir:$str):$clicfg!$runerr{
   let tomlpath=path.join(projectdir;"ooke.toml");
   let src=file.read(tomlpath)!$runerr;
   let tab=toml.load(src)!$runerr;
-  let pkg=mt toml.section(tab;"package") {$ok:v v;$err:e tab};
+  (* Story 121.69 (1): a missing [package] is an empty table, as every
+     section configload reads is (121.67 (4)). It fell back to the ROOT
+     table, so without [package] a top-level `name` or `entry` named the
+     binary and the entry point. *)
+  let pkg=config.configsection(tab;"package");
   let name=mt toml.str(pkg;"name") {$ok:v v;$err:e "app"};
   let entry=mt toml.str(pkg;"entry") {$ok:v v;$err:e "src/main.tk"};
   <$clicfg{name:name;entry:entry}
@@ -84,11 +90,29 @@ f=runexec(binpath:$str;passargs:@$str):i64{
   if(str.len(sout)>0){
     (io.print(sout))
   }el{};
+  (* Story 121.69 (2): the program's stderr is ooke run's stderr, byte for
+     byte. It was logged as one JSON info record, so a program's own JSON
+     log lines came back escaped inside ooke's "msg". It is written raw with
+     os.write on the stderr descriptor -- std.io has no stderr write without
+     an added newline (io.eprintln appends one) -- so a final line with no
+     newline gets none. Like stdout, it is written after the program exits,
+     and after its stdout. *)
   let serr=mt process.stderr(h) {$ok:v v;$err:e ""};
-  if(str.len(serr)>0){
-    (log.info(serr;@()))
-  }el{};
+  (runwriteraw(os.stderrfd();serr));
   <ecode as i64
+};
+
+(* Write all of s to fd. os.write is one write(2) and returns the bytes it
+   wrote (0 on error), so a short write is continued from where it stopped
+   and an error stops it. *)
+f=runwriteraw(fd:i64;s:$str):bool{
+  let rest=mut.s;
+  lp(let k=0;str.len(rest)>0;k=k+1){
+    let n=os.write(fd;rest);
+    if(n<=0){<false}el{};
+    rest=mt str.slice(rest;n as u64;str.len(rest)) {$ok:v v;$err:e ""}
+  };
+  <true
 };
 
 f=run(projectdir:$str;passargs:@$str):i64{

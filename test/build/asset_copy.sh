@@ -12,6 +12,10 @@
 #                build exits non-zero and names the asset; the other asset is
 #                still copied (one bad file does not stop the rest)
 #   control      nothing in the way: build exits 0 and copies both
+#   both         (121.69 3) a page is skipped (build/404.html is a directory)
+#                AND an asset is not copied: both summaries are printed. The
+#                "assets not copied" line was never reached, because the
+#                "pages skipped" branch returned first
 #
 # Usage: test/build/asset_copy.sh [path/to/ooke-toke]   (run by `make test`)
 set -u
@@ -57,6 +61,15 @@ rm -rf "$P/build"
 if [ $rc -eq 0 ] && [ -s "$P/build/static/app.css" ] && [ -s "$P/build/static/img/logo.txt" ] && grep -q 'assets copied: 2' "$tmp/out"
 then ok "control: with nothing in the way, build exits 0 and copies both assets"
 else bad "control: rc=$rc"; grep -i asset "$tmp/out" | head -3; fi
+
+rm -rf "$P/build"; mkdir -p "$P/templates/errors" "$P/build/404.html" "$P/build/static/app.css"
+printf '<h1>not found</h1>\n' >"$P/templates/errors/404.tkt"
+"$BIN" build "$P" >"$tmp/out" 2>&1; rc=$?
+errs=$(grep '"level":"error"' "$tmp/out")
+if [ $rc -ne 0 ] && printf '%s\n' "$errs" | grep -q 'pages skipped: 1 ' && printf '%s\n' "$errs" | grep -q 'assets not copied: 1 '
+then ok "both: a skipped page and an uncopied asset each get their summary (rc=$rc)"
+else bad "both: rc=$rc, summaries: $(grep -o '"msg":"\(pages skipped\|assets not copied\)[^"]*' "$tmp/out" | tr '\n' ' ')"; fi
+rm -rf "$P/templates"
 
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

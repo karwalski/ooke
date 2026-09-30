@@ -18,6 +18,10 @@
 #             byte for byte, not re-emitted as a JSON info record on stderr
 #   tkc-level, noentry   (121.66 h) a compile failure and a missing entry
 #             point are logged at error, not info
+#   stderr    (121.69 2) the program's stderr reaches ooke run's stderr byte
+#             for byte -- its own JSON log lines stay JSON lines, and a final
+#             line with no newline gets none added -- not nested inside the
+#             "msg" of an ooke info record
 #
 # testproj is a site (no [package], no src/main.tk), so the CLI projects are
 # made here, in a temporary directory, and run from its parent.
@@ -63,6 +67,15 @@ mkproj pout outer 'm=main;
 i=io:std.io;
 f=main():i64{
   (io.print("line-one 121.67\nline-two {\"k\":1}\n"));
+  <0
+};'
+mkproj perr perr 'm=main;
+i=io:std.io;
+i=os:std.os;
+f=main():i64{
+  (io.eprintln("perr-121.69 plain"));
+  (io.eprintln("{\"level\":\"info\",\"msg\":\"plog-121.69\"}"));
+  (os.write(os.stderrfd();"tail-no-newline"));
   <0
 };'
 mkproj cerr cerr 'm=main;
@@ -123,6 +136,20 @@ else bad "stdout: rc=$rc, stdout was: $(head -c 120 "$tmp/stdout")"; fi
 if ! grep -q 'line-one' "$tmp/out"
 then ok "stdout: the program's stdout is not re-logged on stderr"
 else bad "stdout: the program's stdout was re-logged on stderr"; fi
+
+# 121.69 (2): stderr is passed through. It was logged as one
+# {"level":"info","msg":"perr-121.69 plain\n{\"level\":...}"} record, so a
+# program's own JSON log lines arrived escaped inside ooke's.
+(cd "$tmp" && "$BIN" run perr) >"$tmp/stdout" 2>"$tmp/out"; rc=$?
+# Everything up to and including ooke's own "running" record is ooke's.
+perl -0777 -ne 's/\A.*?"msg":"running [^\n]*\n//s; print' "$tmp/out" >"$tmp/perrgot"
+printf 'perr-121.69 plain\n{"level":"info","msg":"plog-121.69"}\ntail-no-newline' >"$tmp/want"
+if [ "$rc" -eq 0 ] && cmp -s "$tmp/perrgot" "$tmp/want"
+then ok "stderr: the program's stderr is ooke run's stderr, unchanged"
+else bad "stderr: rc=$rc, program stderr was: $(head -c 160 "$tmp/perrgot")"; fi
+if [ ! -s "$tmp/stdout" ]
+then ok "stderr: none of the program's stderr reaches stdout"
+else bad "stderr: stdout was: $(head -c 120 "$tmp/stdout")"; fi
 
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
