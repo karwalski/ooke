@@ -30,6 +30,11 @@ Read `docs/release-notes-3.0.0.md` before adopting.
 
 ### Fixed since rc.1
 
+- **`{! partial("…") !}` and `{! layout("…") !}` cannot leave `templates/`.**
+  A name was joined straight into the path, so `partial("../secret")` rendered
+  `templates/../secret.tkt` into the page. A name with a `..`, `.` or empty
+  segment, a leading `/`, or a backslash is now refused with a logged template
+  error; `partials/header` still works. (121.57)
 - **`src/store.tk` compiles on current toke**: `storeslug`/`storefind` return
   an explicit not-found error instead of ending in a bare propagation. (127.127)
 - **An app with more than 31 handler pages compiles.** The generated handler
