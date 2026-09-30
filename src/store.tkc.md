@@ -1,6 +1,6 @@
 ---
 source_file: "store.tk"
-source_hash: "67e504cde17e6f5b7dcbd5fd7687fdb99db6a12b32c9712bb1f8daeb8c35a612"
+source_hash: "6a79c45f1d25a30dd7659f20817cba9f54b145310c613e57a5c538911aeb7ae3"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -255,17 +255,20 @@ name or a DB error.
 **Logic:**
 
 1. `table = storeident(contenttype)!$storeerr`.
-2. Build `"SELECT id FROM " + table + " WHERE slug=?"` (two `str.concat`
-   steps; the second rebinds `check`).
-3. Run `db.one(check;@(content.slug))`, matched `{$ok:r true;$err:e false}`
-   into `found` — a returned row means the slug exists.
+2. Build `"SELECT COUNT(*) AS n FROM " + table + " WHERE slug=?"`.
+3. Run `db.one(check;@(content.slug))!$storeerr` -- a COUNT always returns
+   one row, so any failure here is a real error and is propagated. Read
+   column `n` with `row.str`; an unreadable `n` is a `$storeerr`. `found` is
+   `n != "0"`. (Story 121.66: this was `SELECT id` matched
+   `{$ok:r true;$err:e false}`, so every failure read as not-found and the
+   write became an INSERT -- a duplicate row on a table without `id`.)
 4. If `found`: `db.exec("UPDATE <table> SET title=?,type=?,body=? WHERE slug=?";
    @(title;type;body;slug))!$storeerr`, return `true`.
 5. Else: `db.exec("INSERT INTO <table>(slug,title,type,body) VALUES(?,?,?,?)";
    @(slug;title;type;body))!$storeerr`, return `true`.
 
-**Error handling:** `storeident` and `db.exec` raise `$storeerr`. The
-existence probe absorbs every error (not only not-found) into `found=false`.
+**Error handling:** `storeident`, the existence check and `db.exec` raise
+`$storeerr`. "No row with this slug" is a count of 0, not an error.
 Values are bound as parameters; only the table name is spliced.
 
 ### `storeallflat(contentdir: $str; contenttype: $str): @$content!$storeerr`

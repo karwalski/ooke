@@ -3,6 +3,7 @@ i=store:ooke.store;
 i=chk:ookeassert;
 i=file:std.file;
 i=str:std.str;
+i=db:std.db;
 
 f=testdefault():bool{
   let c=store.storedefault();
@@ -190,6 +191,50 @@ f=testparsefrontnocolon():bool{
   <a0&&a1&&a2
 };
 
+(* Story 121.66 (e): storewrite's existence check. A failed check (here "no
+   such column: id", on a table without one) was read as "not found", so a
+   second write of the same slug inserted a duplicate row. *)
+f=countslug(table:$str;slug:$str):$str{
+  let r=mt db.one(str.join("";@("SELECT COUNT(*) AS n FROM ";table;" WHERE slug=?"));@(slug)) {$ok:v v;$err:e 0};
+  if(r==0){<"ERR"}el{};
+  <mt row.str(r;"n") {$ok:s s;$err:e "ERR"}
+};
+
+f=titleof(table:$str;slug:$str):$str{
+  let r=mt db.one(str.join("";@("SELECT title FROM ";table;" WHERE slug=?"));@(slug)) {$ok:v v;$err:e 0};
+  if(r==0){<"ERR"}el{};
+  <mt row.str(r;"title") {$ok:s s;$err:e "ERR"}
+};
+
+f=teststorewrite():bool{
+  let opened=mt db.open(":memory:") {$ok:v true;$err:e false};
+  if(!chk.istrue(opened;"db.open :memory:")){<false};
+  let c1=$content{slug:"a";type:"post";title:"First";meta:@($str:$str);body:"b1"};
+  let c2=$content{slug:"a";type:"post";title:"Second";meta:@($str:$str);body:"b2"};
+  (* a table with no id column: the old check failed on it *)
+  let mk=mt db.exec("CREATE TABLE noid(slug TEXT,title TEXT,type TEXT,body TEXT)";@()) {$ok:v true;$err:e false};
+  if(!chk.istrue(mk;"create table noid")){<false};
+  let w1=mt store.storewrite("noid";c1) {$ok:v v;$err:e false};
+  let w2=mt store.storewrite("noid";c2) {$ok:v v;$err:e false};
+  let a0=chk.istrue(w1&&w2;"storewrite to a table with no id column succeeds");
+  let a1=chk.eqstr(countslug("noid";"a");"1";"a second write of a slug updates it, not a duplicate row");
+  let a2=chk.eqstr(titleof("noid";"a");"Second";"the second write's title is stored");
+  (* control: a table storesqlcreate makes (with the title and type columns
+     storewrite writes) -- insert, then update *)
+  let ddl=mt store.storesqlcreate("posts";@("title":"str";"type":"str")) {$ok:v v;$err:e ""};
+  let mk2=mt db.exec(ddl;@()) {$ok:v true;$err:e false};
+  let w3=mt store.storewrite("posts";c1) {$ok:v v;$err:e false};
+  let w4=mt store.storewrite("posts";c2) {$ok:v v;$err:e false};
+  let a3=chk.istrue(mk2&&w3&&w4;"storewrite insert then update on a storesqlcreate table");
+  let a4=chk.eqstr(countslug("posts";"a");"1";"storesqlcreate table holds one row for the slug");
+  let a5=chk.eqstr(titleof("posts";"a");"Second";"storesqlcreate table has the updated title");
+  (* a table that does not exist is an error *)
+  let w5=mt store.storewrite("nosuchtable";c1) {$ok:v false;$err:e true};
+  let a6=chk.istrue(w5;"storewrite to a missing table is an error");
+  (db.close());
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6
+};
+
 f=main():i64{
   let r0=testdefault();
   let r1=testparsefront();
@@ -208,5 +253,6 @@ f=main():i64{
   let r14=testsqlcreateinjection();
   let r15=testparsefrontcolons();
   let r16=testparsefrontnocolon();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16){<0}el{<1}
+  let r17=teststorewrite();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17){<0}el{<1}
 };

@@ -93,6 +93,11 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   split and the process died with RT003 (`ooke build` and `ooke serve` both
   parse content through it). The key is now what precedes the first `:` and
   the value everything after it; a line with no `:` is skipped. (121.66)
+- `store.storewrite` no longer turns a failed existence check into an
+  INSERT. Its `SELECT id … WHERE slug=?` was read as "not found" on any
+  error, so on a table without an `id` column every write of an existing slug
+  added a duplicate row. The check is a `COUNT`, and its failure is returned
+  as an error. Nothing in `ooke build` or `ooke serve` calls it. (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

@@ -149,9 +149,19 @@ f=storeallsql(contenttype:$str):@$content!$storeerr{
 
 f=storewrite(contenttype:$str;content:$content):bool!$storeerr{
   let table=storeident(contenttype)!$storeerr;
-  let check=str.concat("SELECT id FROM ";table);
-  let check=str.concat(check;" WHERE slug=?");
-  let found=mt db.one(check;@(content.slug)) {$ok:r true;$err:e false};
+  (* Story 121.66 (e). This was `SELECT id ... WHERE slug=?` matched
+     {$ok:r true;$err:e false}, so ANY failure of the check -- not only "no
+     rows" -- read as "not found" and the write became an INSERT: on a table
+     without an `id` column the check failed with "no such column" and every
+     write of an existing slug inserted a duplicate row. A COUNT query
+     always returns one row, so a failed check is now an error, propagated. *)
+  let check=str.join("";@("SELECT COUNT(*) AS n FROM ";table;" WHERE slug=?"));
+  let crow=db.one(check;@(content.slug))!$storeerr;
+  let n=mt row.str(crow;"n") {$ok:s s;$err:e ""};
+  if(str.len(n)==0){
+    <$storeerr{msg:str.concat("storewrite: could not read the existence check for table ";table)}
+  }el{};
+  let found=!(n=="0");
   if(found){
     let sql=mut."UPDATE ";
     sql=str.concat(sql;table);
