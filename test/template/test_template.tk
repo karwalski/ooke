@@ -4,6 +4,7 @@ i=test:std.test;
 i=chk:ookeassert;
 i=str:std.str;
 i=file:std.file;
+i=io:std.io;
 
 
 f=failret(msg:str):bool{
@@ -437,6 +438,51 @@ f=testpartialmissing():bool{
 };
 
 
+(* 121.63: the cached render path fails -- and logs -- exactly as
+ * tplrenderfile does since 121.59, for a missing file and for one that exists
+ * but cannot be read. The log lines are checked from this binary's stderr by
+ * test/template/cached_log.sh, which also makes the unreadable fixtures:
+ * linkrender.tkt and linkget.tkt, symlinks (std.file does not follow a final
+ * symlink, AMB-07). toke has no symlink call, so without them (a plain
+ * test/run_tests.sh run) those two cases are skipped, and say so. A directory
+ * is not used: std.file reads one as an empty string. Each case has its own
+ * path, so a log line names the function that wrote it. Negative control: a
+ * readable template renders through both, and a cache hit serves the cached
+ * tokens without the file. *)
+f=testcachedmissing():bool{
+  let root="/tmp/test_ooke_12163";
+  (mt file.mkdir(root) {$ok:v 0;$err:e 0});
+  let w0=file.write("/tmp/test_ooke_12163/good.tkt";"<p>CACHEDGOOD</p>");
+  let a0=mt w0 {$ok:v true;$err:e failret("could not write good.tkt")};
+  let c0=tpl.tplcachenew();
+  let e1=tpl.tplrenderfilecached("/tmp/test_ooke_12163/nosuchrender.tkt";@($str:$str);root;c0);
+  let a1=chk.istrue(mt e1 {$ok:v false;$err:e true};"tplrenderfilecached: a missing file is an error");
+  let e3=tpl.tplcacheget(c0;"/tmp/test_ooke_12163/nosuchget.tkt");
+  let a3=chk.istrue(mt e3 {$ok:t false;$err:e true};"tplcacheget: a missing file is an error");
+  let haslinks=file.exists("/tmp/test_ooke_12163/linkrender.tkt")&&file.exists("/tmp/test_ooke_12163/linkget.tkt");
+  let a2=mut.true;
+  let a4=mut.true;
+  if(haslinks){
+    let e2=tpl.tplrenderfilecached("/tmp/test_ooke_12163/linkrender.tkt";@($str:$str);root;c0);
+    a2=chk.istrue(mt e2 {$ok:v false;$err:e true};"tplrenderfilecached: an unreadable file is an error");
+    let e4=tpl.tplcacheget(c0;"/tmp/test_ooke_12163/linkget.tkt");
+    a4=chk.istrue(mt e4 {$ok:t false;$err:e true};"tplcacheget: an unreadable file is an error")
+  }el{
+    (io.println("SKIP 121.63 unreadable-file cases: no symlink fixtures (test/template/cached_log.sh makes them)"))
+  };
+  let r1=tpl.tplrenderfilecached("/tmp/test_ooke_12163/good.tkt";@($str:$str);root;c0);
+  let a5=chk.eqstr(mt r1 {$ok:v v.output;$err:e "<<ERR>>"};"<p>CACHEDGOOD</p>";"control: a readable template renders through the cache");
+  let c1=mt r1 {$ok:v v.cache;$err:e c0};
+  (* delete the file: a hit must come from the cache, not the disk *)
+  (mt file.delete("/tmp/test_ooke_12163/good.tkt") {$ok:v 0;$err:e 0});
+  let r2=tpl.tplrenderfilecached("/tmp/test_ooke_12163/good.tkt";@($str:$str);root;c1);
+  let a6=chk.eqstr(mt r2 {$ok:v v.output;$err:e "<<ERR>>"};"<p>CACHEDGOOD</p>";"control: a cache hit renders without the file");
+  let r3=tpl.tplcacheget(c1;"/tmp/test_ooke_12163/good.tkt");
+  let a7=chk.istrue(mt r3 {$ok:t true;$err:e false};"control: tplcacheget serves a cached entry");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7
+};
+
+
 f=main():i64{
   let r0=testrawpassthrough();
   let r1=testexprsimple();
@@ -467,7 +513,8 @@ f=main():i64{
   let r26=testctxcomposed();
   let r27=testpartialselfinclude();
   let r28=testpartialmissing();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21&&r22&&r23&&r24&&r25&&r26&&r27&&r28){
+  let r29=testcachedmissing();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21&&r22&&r23&&r24&&r25&&r26&&r27&&r28&&r29){
     <0
   }el{
     <1

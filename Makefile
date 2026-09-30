@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -378,7 +378,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk $(P
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -437,6 +437,13 @@ test-tplerr: $(BIN)
 # a backslash made it invalid); a plain page's body is unchanged.
 test-api-json: $(BIN)
 	@test/serve/api_fallback_json.sh ./$(BIN)
+
+# test-tplcache-log — story 121.63: tplrenderfilecached and tplcacheget log a
+# missing or unreadable template as tplrenderfile does. Builds and runs
+# test_template with the symlink fixtures its unreadable cases need, and reads
+# its stderr.
+test-tplcache-log: test-support-check
+	@test/template/cached_log.sh
 
 # test-static-mount — story 121.25 (audit OOK-01): /static/* serves static/
 # and nothing else of the project -- not ooke.toml, not pages/, not via "..".
