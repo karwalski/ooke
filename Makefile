@@ -174,7 +174,7 @@ $(IFACE_DIR)/validate.tki $(IFACE_DIR)/validate: $(SRC)/validate.tk | $(IFACE_DI
 $(IFACE_DIR)/repair.tki $(IFACE_DIR)/repair: $(SRC)/repair.tk | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/repair repair.tk
 
-$(IFACE_DIR)/run.tki $(IFACE_DIR)/run: $(SRC)/run.tk | $(IFACE_DIR)
+$(IFACE_DIR)/run.tki $(IFACE_DIR)/run: $(SRC)/run.tk $(IFACE_DIR)/config.tki | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-interface --emit-llvm --out ooke/run run.tk
 
 # ── Generated toke floor (story 134.35) ──────────────────────────────────

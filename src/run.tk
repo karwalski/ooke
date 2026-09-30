@@ -6,6 +6,7 @@ i=path:std.path;
 i=toml:std.toml;
 i=process:std.process;
 i=io:std.io;
+i=config:ooke.config;
 
 t=$runerr{msg:$str};
 
@@ -15,7 +16,11 @@ f=loadclicfg(projectdir:$str):$clicfg!$runerr{
   let tomlpath=path.join(projectdir;"ooke.toml");
   let src=file.read(tomlpath)!$runerr;
   let tab=toml.load(src)!$runerr;
-  let pkg=mt toml.section(tab;"package") {$ok:v v;$err:e tab};
+  (* Story 121.69 (1): a missing [package] is an empty table, as every
+     section configload reads is (121.67 (4)). It fell back to the ROOT
+     table, so without [package] a top-level `name` or `entry` named the
+     binary and the entry point. *)
+  let pkg=config.configsection(tab;"package");
   let name=mt toml.str(pkg;"name") {$ok:v v;$err:e "app"};
   let entry=mt toml.str(pkg;"entry") {$ok:v v;$err:e "src/main.tk"};
   <$clicfg{name:name;entry:entry}

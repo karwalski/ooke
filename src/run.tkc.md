@@ -1,6 +1,6 @@
 ---
 source_file: "run.tk"
-source_hash: "653a6600a4c4d18b22b5a43dd54aab7953038996286a141c47bb94775ac97a6e"
+source_hash: "d98a0c6a620a952850ff2b9eff8e88ae085c8dc1e2f040bbc8e3e705f7ce5571"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -24,6 +24,7 @@ compile. Used by the ooke CLI for `ooke run` and `ooke build --cli`.
 - `std.toml` (alias `toml`) — parse `ooke.toml` and read typed `[package]` keys.
 - `std.process` (alias `process`) — spawn `tkc` / the built binary and capture exit code + stdout/stderr.
 - `std.io` (alias `io`) — write the program's stdout to ooke's stdout (121.67).
+- `ooke.config` (alias `config`) — `configsection`, so a missing `[package]` is an empty table (121.69).
 
 ## Types
 
@@ -67,16 +68,17 @@ file cannot be read or parsed.
 1. `tomlpath = path.join(projectdir; "ooke.toml")`.
 2. Read the file with `file.read`; propagate failure as `$runerr` via `!$runerr`.
 3. Parse the source with `toml.load`; propagate parse failure as `$runerr`.
-4. Look up the `package` section with `toml.section`, matched
-   `{$ok:v v; $err:e tab}` — a missing section falls back to the root table.
+4. Look up the `package` section with `config.configsection(tab;"package")`
+   — a missing section is an empty table, so both keys take their defaults
+   (121.69 (1): it fell back to the root table, so without `[package]` a
+   top-level `name` or `entry` named the binary and the entry point).
 5. Read `name` with `toml.str(pkg;"name")`, matched `{$ok:v v; $err:e "app"}`.
 6. Read `entry` with `toml.str(pkg;"entry")`, matched
    `{$ok:v v; $err:e "src/main.tk"}`.
 7. Return `$clicfg{name; entry}`.
 
 **Error handling:** Only `file.read` and `toml.load` raise `$runerr`. Section and
-key lookups are total — they fall back to the root table or the documented
-default.
+key lookups are total — they fall back to the documented default.
 
 ### `runcompile(projectdir: $str; cfg: $clicfg): $str!$runerr`
 
