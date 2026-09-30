@@ -12,12 +12,14 @@ not one:
 ```toml
 [requires]
 mintoke       = "3.1.0"
-mintokedate   = "2026-09-30"
-mintokecommit = "216965f"
+mintokedate   = "2026-10-01"
+mintokecommit = "db47d591"
 ```
 
-(Raised for rc.2 by story 138.7 and set to toke's 3.1.0 release by story
-138.17 — see "Two more floors" and "The release floor" below. The history
+(Raised for rc.2 by story 138.7, set to toke's 3.1.0 release by story
+138.17, and raised past that release to an unreleased toke commit by story
+121.59 (3) — see "Two more floors", "The release floor" and "The realpath
+floor" below. The history
 that follows is the rc.1 record and is kept as evidence.)
 
 **A semver floor alone is meaningless for toke today.** `toke/VERSION` has read
@@ -180,6 +182,18 @@ Not measured: whether any commit between `v3.0.0` and `cee7cc0` also passes.
 and toke's 127.226 row records ooke's `test_template` failing on main from
 `25e55f5` until that merge, so no earlier main commit is a floor ooke should
 declare.
+
+### The realpath floor (story 121.59 (3), 2026-10-01)
+
+ooke now resolves partial and layout paths with toke's `file.realpath` (toke
+story 121.60) so a symlinked directory inside `templates/` cannot lead a read
+outside it, and links `os_glue.c`, where toke 121.70 moved `os.write`'s
+wrapper (`tk_os_write_w`; without it ooke fails to link against toke main).
+Both arrived in toke merge `db47d591` (2026-10-01), which is **not in any
+released toke**: 3.1.0 has neither. So `mintoke = "3.1.0"` is necessary but
+no longer sufficient, and the commit/date pair is the enforceable floor again.
+Measured: ooke's `make test` passes against toke main containing `db47d591`.
+When toke releases a version containing `db47d591`, set `mintoke` to it.
 
 ## 2. How the floor is enforced
 
