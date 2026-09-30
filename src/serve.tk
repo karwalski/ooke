@@ -115,7 +115,10 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
             (http.getstaticmime(webpath;defaultjson;"application/json"));
             (http.postecho(webpath))
           }el{
-            let fallbackhtml=str.join("";@("<html><body><p>";webpath;"</p></body></html>"));
+            (* Story 121.61: the path is HTML-escaped. It comes from a file
+               name under pages/, and a name like "<script>x</script>" was
+               served as markup. *)
+            let fallbackhtml=str.join("";@("<html><body><p>";tpl.tplescape(webpath);"</p></body></html>"));
             (log.info(str.concat("reg static (empty tpl fallback): ";webpath);@()));
             (http.getstatic(webpath;fallbackhtml))
           }
@@ -327,12 +330,19 @@ f=serverun(projectdir:$str;host:$str;port:i64;workers:i64;buildoutput:$str;tlsce
       "site.language":sitelanguage;
       "request.path":"(unknown)"
     );
-    let nfhtml=mt tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir) {$ok:h h;$err:e ""};
-    if(str.len(nfhtml)>0){
+    let nfrender=tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir);
+    let nffailed=mt nfrender {$ok:h false;$err:e true};
+    let nfhtml=mt nfrender {$ok:h h;$err:e ""};
+    (* Story 121.61: a 404 template that fails to render is an error in the
+       log, naming it, as serverenderfailed does for a page. The client still
+       gets the default 404, which names nothing. *)
+    if(nffailed){
+      (log.error(str.join("";@("serve: 404 template ";notfoundtpl;" could not be rendered; answering the default 404. The template's own error is logged above."));@()))
+    }el if(str.len(nfhtml)>0){
       (http.setnotfound(nfhtml));
       (log.info("custom 404 registered from templates/errors/404.tkt";@()))
     }el{
-      (log.info("404 template render failed, using default";@()))
+      (log.warn(str.concat("404 template rendered nothing, using the default 404: ";notfoundtpl);@()))
     }
   }el{
     (log.info("no templates/errors/404.tkt found, using default 404";@()))
