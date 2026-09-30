@@ -65,6 +65,12 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
 - `src/serve.tkc.md` and `src/template.tkc.md` describe the current code
   (host binding, `[log]`/`[tls]`/CORS checks, the 500 path; the context
   tracker, escapers and name confinement). (121.61)
+- **The API fallback body is valid JSON whatever the page is called.** An
+  API page with no handler answers `{"status":"ok","endpoint":"<path>"}`; the
+  path, taken from a file name under `pages/api/`, went in as written, so a
+  page named `a"b\c` answered `{"status":"ok","endpoint":"/api/a"b\c"}`, which
+  is not JSON (and a name could add keys). The path is now encoded with
+  `std.json`'s `json.enc`. A plain name's body is unchanged. (121.63)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

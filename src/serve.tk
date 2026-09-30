@@ -4,6 +4,7 @@ i=log:std.log;
 i=file:std.file;
 i=str:std.str;
 i=path:std.path;
+i=json:std.json;
 i=ookerouter:ooke.router;
 i=tpl:ooke.template;
 i=store:ooke.store;
@@ -110,7 +111,11 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
         }el{
           let isapiroute=str.startswith(webpath;"/api/");
           if(isapiroute){
-            let defaultjson=str.join("";@("{\"status\":\"ok\",\"endpoint\":\"";webpath;"\"}"));
+            (* Story 121.63: the path is JSON-encoded (json.enc quotes it and escapes
+               '"', '\\' and control bytes). It comes from a file name under
+               pages/, and a name holding a quote or a backslash made the body
+               invalid JSON or let the name inject keys. *)
+            let defaultjson=str.join("";@("{\"status\":\"ok\",\"endpoint\":";json.enc(webpath);"}"));
             (log.info(str.concat("reg static api json (fallback): ";webpath);@()));
             (http.getstaticmime(webpath;defaultjson;"application/json"));
             (http.postecho(webpath))
@@ -179,7 +184,8 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
         (log.info(str.concat("skip api (dynamic handler registered): ";apipath);@()))
       }el{
         (log.info(str.concat("api route (no handler, static fallback): ";apipath);@()));
-        let defaultjson=str.join("";@("{\"status\":\"ok\",\"endpoint\":\"";apipath;"\"}"));
+        (* Story 121.63: JSON-encoded, as in the first pass above. *)
+        let defaultjson=str.join("";@("{\"status\":\"ok\",\"endpoint\":";json.enc(apipath);"}"));
         (http.getstaticmime(apipath;defaultjson;"application/json"));
         (http.postecho(apipath))
       }

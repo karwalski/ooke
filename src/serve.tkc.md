@@ -1,6 +1,6 @@
 ---
 source_file: "serve.tk"
-source_hash: "0fdd6d581201a86410dcd0450060dda2597f2a236f86b7fdad86ed3d56b8b1cf"
+source_hash: "f0474ab590697bbb23e7b6cdd54e1f0fb1d7578bb9bcfd9b985333aa21bb99b8"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -28,6 +28,8 @@ starts either an HTTP worker pool or an HTTPS/TLS worker pool. The `[log]` and
 - `std.str` (alias `str`) — string building, prefix/suffix tests, replace, eq,
   split, trim.
 - `std.path` (alias `path`) — join project subdirectories.
+- `std.json` (alias `json`) — `json.enc`, which quotes and escapes the route
+  path in the API fallback body.
 - `ooke.router` (alias `ookerouter`) — scan `pages/` into `$route` records.
 - `ooke.template` (alias `tpl`) — render `.tkt` templates with a context map,
   and `tplescape` for the fallback page.
@@ -169,8 +171,11 @@ if the route scan failed (story 134.43 made the count meaningful).
       - Non-empty `html`: log `"reg static: " + webpath`, register
         `http.getstatic(webpath; html)`, `rendered += 1`.
       - Empty, and `webpath` starts with `"/api/"`: register the JSON body
-        `{"status":"ok","endpoint":"<webpath>"}` with
+        `{"status":"ok","endpoint":` + `json.enc(webpath)` + `}` with
         `http.getstaticmime(...; "application/json")` and `http.postecho(webpath)`.
+        The path is JSON-encoded (story 121.63): it comes from a file name
+        under `pages/`, and a name holding `"` or `\` made the body invalid
+        JSON.
       - Empty otherwise: register the fallback page
         `<html><body><p>` + `tpl.tplescape(webpath)` + `</p></body></html>`
         with `http.getstatic`. The path is HTML-escaped (story 121.61): it
