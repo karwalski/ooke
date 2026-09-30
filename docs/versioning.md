@@ -11,12 +11,13 @@ not one:
 
 ```toml
 [requires]
-mintoke       = "3.0.0"
-mintokedate   = "2026-09-28"
-mintokecommit = "668caa6"
+mintoke       = "3.1.0"
+mintokedate   = "2026-09-30"
+mintokecommit = "216965f"
 ```
 
-(Raised for rc.2 by story 138.7 — see "Two more floors" below. The history
+(Raised for rc.2 by story 138.7 and set to toke's 3.1.0 release by story
+138.17 — see "Two more floors" and "The release floor" below. The history
 that follows is the rc.1 record and is kept as evidence.)
 
 **A semver floor alone is meaningless for toke today.** `toke/VERSION` has read
@@ -160,10 +161,19 @@ before `668caa6`, and `cee7cc0` stops being the floor. So:
 | cache | `cee7cc0` | 2026-09-27 | the template cache stores (127.226) |
 | **host** | **`668caa6`** | **2026-09-28** | **`[server] host` compiles (138.1); the suite passes** |
 
-`mintoke = "3.0.0"` is now meaningful — it refuses every 2.8.0-labelled toke —
-but it is not sufficient, because `v3.0.0` itself is below the floor. The
-commit/date pair stays until a toke release contains `668caa6` (toke story
-138.17); then `mintoke` alone is the floor.
+`mintoke = "3.0.0"` was meaningful — it refused every 2.8.0-labelled toke —
+but it was not sufficient, because `v3.0.0` itself is below the floor.
+
+### The release floor (story 138.17, 2026-09-30)
+
+toke **3.1.0** is the first toke release that contains `668caa6` (and so
+`cee7cc0`). Measured: ooke rc.2's full `make test` against toke
+`release/3.1.0` (`toke 3.1.0`) exits 0 — every target, suite 12/12, the
+40-page registry built with `--max-imports=41`. So `mintoke = "3.1.0"` is now
+sufficient on its own. `mintokecommit`/`mintokedate` name `216965f`
+(2026-09-30), the commit that set toke's `VERSION` to 3.1.0 and an ancestor of
+the release; they stay only because CI clones toke at `mintokecommit`, and can
+be dropped (and the Makefile gate simplified) once `v3.1.0` is published.
 
 Not measured: whether any commit between `v3.0.0` and `cee7cc0` also passes.
 127.226's fix commits reach toke's main only through the `cee7cc0` merge,
@@ -232,7 +242,7 @@ Gate status as of 2026-09-19:
 | 134.13 RSS leak | superseded → 127.65; diagnosed as **not ooke's** |
 | 134.24 `ooke build` aborts on API routes | fixed 2026-09-19, verified end to end |
 | 134.15 toke has never cut a v0.4 version | resolved — toke tagged `v3.0.0` (2026-09-23) |
-| **138.7 toke 3.0.0 fails ooke's suite (127.226) and lacks the host-binding serve functions (138.1)** | **floor is `668caa6` until a toke release contains it (toke 138.17)** |
+| 138.7 toke 3.0.0 fails ooke's suite (127.226) and lacks the host-binding serve functions (138.1) | resolved — toke 3.1.0 contains both; the floor is `mintoke = "3.1.0"` (138.17) |
 
 **134.15 is why the artefact prepared by 134.10 is a release *candidate* and not
 a release**: ooke cannot express its one hard dependency as a version, only as a
@@ -258,9 +268,8 @@ For 3.0.0 onwards:
 
 ## 5. For downstream projects (loke, moke, toke-website)
 
-**Wait for toke `668caa6` (2026-09-28) or later — in practice, toke HEAD, or
-the toke release after 3.0.0 — and for ooke 3.0.0.** (Updated for rc.2, story
-138.7; the rest of this section is the rc.1 record.)
+**Use toke 3.1.0 or later, and wait for ooke 3.0.0.** (Updated for rc.2,
+stories 138.7 and 138.17; the rest of this section is the rc.1 record.)
 
 The floor is `6cc9061`, not `b66bd8e`: 134.16 raised it to `c2aa278` once ooke's
 suite could be run against an older compiler, and 134.10 raised it again to

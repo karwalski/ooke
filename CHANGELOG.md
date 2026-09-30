@@ -198,13 +198,17 @@ Read `docs/release-notes-3.0.0.md` before adopting.
 
 ### Breaking, relative to rc.1
 
-- **The toke floor moved to `3.0.0` + `668caa6` (2026-09-28).** toke has now
-  cut `3.0.0`, but ooke's suite fails on it (11 of 12): toke 3.0.0 lowers
-  `.set` on a map-typed struct field as an array `.set`, so ooke's template
-  cache never stores (toke 127.226, fixed in `cee7cc0`). And `[server] host`
-  (below) calls toke's host-binding serve functions (toke 138.1, `668caa6`).
-  `mintoke = "3.0.0"` is necessary, not sufficient, so the commit/date pair
-  stays until a toke release contains `668caa6`. (138.7)
+- **The toke floor is toke `3.1.0` (2026-09-30).** toke 3.0.0 is not enough:
+  ooke's suite fails on it (11 of 12) because toke 3.0.0 lowers `.set` on a
+  map-typed struct field as an array `.set`, so ooke's template cache never
+  stores (toke 127.226, fixed in `cee7cc0`), and `[server] host` (below)
+  calls toke's host-binding serve functions (toke 138.1, `668caa6`). rc.2 was
+  prepared against the commit `668caa6` (138.7); toke 3.1.0 is the first toke
+  release that contains it, so `mintoke = "3.1.0"` is now sufficient on its
+  own. `mintokecommit`/`mintokedate` name toke's 3.1.0 version commit
+  (`216965f`) and stay only because CI clones toke at that commit until the
+  `v3.1.0` tag is published. `make test` passes on toke 3.1.0: every target,
+  suite 12/12. (138.7, 138.17)
 - **`ooke serve` listens on 127.0.0.1 unless `[server] host` says otherwise.**
   It used to listen on every interface, with no setting to change it. A
   deployment that must be reachable from other machines sets
@@ -242,6 +246,20 @@ Read `docs/release-notes-3.0.0.md` before adopting.
   totals in the manifest, and stops on a failing suite (134.47).
 - The template cache test proves a stored entry is served, not re-read
   (127.226) — the test that fails on toke 3.0.0.
+- `[server] admin = true` refuses to start and names the key: ooke has no
+  admin interface and no authentication to put one behind, and the setting
+  used to be read by nothing. `admin = false` is ignored with a warning; the
+  README says what ooke does not do for you. (121.25)
+- `[server] corsorigins` is checked before it reaches `http.setcors`: `""`
+  (off), exactly `"*"` (with a warning), or a list of `http`/`https`
+  `scheme://host[:port]` entries; anything else refuses to start, naming the
+  entry. A malformed entry used to start, log "CORS enabled" and match no
+  browser's Origin. (121.25)
+- Table and column names in `store.tk` must be SQL identifiers
+  (`[A-Za-z_][A-Za-z0-9_]*`); `storesqlcreate` returns `!$storeerr`. They were
+  spliced into SQL unchecked. (121.25)
+- A test pins that `/static` serves `static/` and nothing else of the
+  project. (121.25)
 
 ## 3.0.0-rc.1 — unreleased (prepared 2026-09-19, story 134.10)
 

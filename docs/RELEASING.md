@@ -35,20 +35,20 @@ Pushing the tag **is** the publish. There is no separate upload.
 
 ## Before tagging 3.0.0 rather than a candidate
 
-- **The remaining blocker is a toke release that contains `668caa6`** (toke
-  story 138.17). 134.15 is resolved — toke tagged `v3.0.0` — but ooke's suite
-  fails on that tag (127.226) and ooke now calls serve functions added after it
-  (138.1), so rc.2's floor is still a commit. (134.24, the
-  P0 that blocked rc.1, was fixed and verified on 2026-09-19.)
-- Tag rc.2 only after the toke release it is verified against (138.17), and
-  re-run `scripts/package_release.sh` against that toke so the manifest names it.
+- **The toke release is 3.1.0** (toke story 138.17): the first toke release
+  that contains `668caa6`, and the floor `ooke.toml [requires]` declares.
+  (134.15 is resolved — toke tagged `v3.0.0` — but ooke's suite fails on that
+  tag (127.226) and ooke calls serve functions added after it (138.1). 134.24,
+  the P0 that blocked rc.1, was fixed and verified on 2026-09-19.)
+- Tag a candidate only after toke's `v3.1.0` tag exists, and re-run
+  `scripts/package_release.sh` against that tagged toke so the manifest names it.
 - Drop the `-rc.N` suffix in `VERSION` — the one place ooke's version is
   written. `ooke --version` prints `floor.ookeversion()`, which the Makefile
   generates from `VERSION` into `src/_floor.tk` (story 121.66); it used to be a
   second literal in `src/cli.tk`, and `make check-ooke-version` now fails if
   one comes back.
-- Re-check `ooke.toml [requires]`. It is a commit today; if story 134.15 has
-  cut toke's version by then, replace `mintokecommit`/`mintokedate` with a real
-  `mintoke` semver and simplify the Makefile gate accordingly.
+- Re-check `ooke.toml [requires]`. `mintoke = "3.1.0"` is the floor (138.17);
+  once toke's `v3.1.0` tag is published, drop `mintokecommit`/`mintokedate`
+  (or point CI at the tag) and simplify the Makefile gate accordingly.
 - Update `docs/release-notes-3.0.0.md` and `CHANGELOG.md` to say released, and
   re-run the packager so the manifest names the tagged commit.
