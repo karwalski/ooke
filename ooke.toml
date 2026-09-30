@@ -30,7 +30,19 @@ apiprefix = ""
 #   host floor        668caa6  2026-09-28  (138.1)   — [server] host compiles:
 #                                                      ooke calls http.serveworkerson
 #   release floor     3.1.0    2026-09-30  (138.17)  — the first toke RELEASE that
-#                     216965f                          contains every floor above
+#                     216965f                          contained every floor above
+#   realpath floor    db47d591 2026-10-01  (121.59)  — template names resolve with
+#                                                      file.realpath (121.60), and
+#                                                      os.write links os_glue.c
+#                                                      (121.70); NOT in any release
+#
+# The seventh (story 121.59 (3), 2026-10-01): ooke confines partial/layout
+# reads to templates/ with toke's file.realpath, and links os_glue.c, where
+# toke 121.70 moved os.write's wrapper.  Both arrived in toke merge db47d591,
+# which is on toke main and in NO released toke: toke 3.1.0 lacks both, so
+# `mintoke = "3.1.0"` is again necessary but not sufficient and the
+# commit/date pair is the floor.  When toke releases a version containing
+# db47d591, set mintoke to it.
 #
 # The sixth (toke story 138.17, 2026-09-30): toke 3.1.0 is the first toke
 # version that contains 668caa6, so mintoke = "3.1.0" is now sufficient on its
@@ -82,5 +94,5 @@ apiprefix = ""
 # pair can be dropped.  Makefile: check-toke-version reads these three keys;
 # they are the single source of truth.  Evidence: docs/versioning.md.
 mintoke = "3.1.0"
-mintokedate = "2026-09-30"
-mintokecommit = "216965f"
+mintokedate = "2026-10-01"
+mintokecommit = "db47d591"

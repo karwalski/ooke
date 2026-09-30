@@ -711,7 +711,25 @@ f=tplnamepath(templatesdir:$str;kind:$str;name:$str):$str!$tplerr{
     (log.error(m;@()));
     <$tplerr{msg:m}
   }el{};
-  <path.join(templatesdir;str.concat(name;".tkt"))
+  let joined=path.join(templatesdir;str.concat(name;".tkt"));
+  (* 121.59 (3): the name rule above is lexical, so it cannot see a symlinked
+     directory (or file) inside templates/ that points outside it.  Resolve the
+     path and the templates root with file.realpath (toke 121.60) and require
+     the one to be inside the other: the root plus a separator, not a bare
+     prefix, so templates2/ is not inside templates/.  A symlink whose target
+     stays inside templates/ keeps working, and the resolved path is what is
+     read, so what was checked is what is opened.  A name that does not exist
+     is returned unresolved: the caller reports it as missing, as before. *)
+  if(!file.exists(joined)){<joined}el{};
+  let root=mt file.realpath(templatesdir) {$ok:t t;$err:e ""};
+  let real=mt file.realpath(joined) {$ok:t t;$err:e ""};
+  let inside=str.len(root)>0&&str.len(real)>0&&str.startswith(real;str.concat(root;"/"));
+  if(!inside){
+    let mo=str.join("";@("template: refused ";kind;" name \"";name;"\": it resolves outside the templates directory (a symlink inside templates/ may only point within it)"));
+    (log.error(mo;@()));
+    <$tplerr{msg:mo}
+  }el{};
+  <real
 };
 
 f=tplrenderctx(
@@ -801,9 +819,10 @@ f=tplrenderctx(
           (* 121.59: a missing partial is an error, as a missing layout is.
              It used to render as nothing, with no error and no log, so a
              typo in a partial name shipped a page with a hole in it. A file
-             that exists but cannot be read (for one, a symlink: std.file
-             does not follow a final symlink, AMB-07) is an error too; an
-             empty partial file still renders as nothing. *)
+             that exists but cannot be read is an error too; an empty
+             partial file still renders as nothing.  (tplnamepath returns
+             the realpath-resolved file, 121.59 (3), so a symlink inside
+             templates/ is read through its in-tree target.) *)
           if(!file.exists(partialpath)){
             let mp=str.concat("template: no partial template: ";partialpath);
             (log.error(mp;@()));

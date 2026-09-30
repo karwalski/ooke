@@ -255,10 +255,8 @@ grep -q "no partial template: .*nosuchpartial.tkt" "$tmp/partial.log" \
   && ok "the build log names the missing partial" \
   || { bad "the build log does not name the missing partial"; tail -5 "$tmp/partial.log" | sed 's/^/       /'; }
 
-# A partial that is a symlink is refused, not rendered as nothing: std.file
-# does not follow a final symlink (AMB-07), and the read failure is now an
-# error. (A symlinked DIRECTORY inside templates/ is not caught -- 121.59
-# part 3, blocked on a realpath in std.file / std.path.)
+# A partial that is a symlink pointing outside templates/ is refused, not
+# rendered as nothing (121.59 part 3 resolves it with file.realpath).
 B4=$tmp/b-symlink; mkproj "$B4" "$port"
 mkdir -p "$B4/templates/partials"
 echo 'OUTSIDE' >"$tmp/outside.tkt"
@@ -268,6 +266,71 @@ build symlink "$B4"
 [ "$rc" != "0" ] && ok "a partial that is a symlink fails the build (exit $rc)" || bad "symlinked partial: build exited 0"
 grep -rq OUTSIDE "$B4/build" 2>/dev/null && bad "the symlink target was rendered into the site" \
   || ok "the symlink target was not rendered into the site"
+
+# ── symlinked directories (121.59 part 3) ──────────────────────────────────
+# The 121.57 name rule is lexical: partial("inc/secret") passes it, and when
+# templates/inc is a symlink to a directory outside templates/, the read left
+# the templates directory. The resolved path must lie inside the resolved
+# templates root (root + "/", not a bare prefix), or the render is refused.
+echo "=== a symlinked directory cannot lead a partial/layout outside templates/ (121.59) ==="
+B5=$tmp/b-symdir-out; mkproj "$B5" "$port"
+mkdir -p "$tmp/outdir"
+echo 'OUTSIDEDIR' >"$tmp/outdir/secret.tkt"
+ln -s "$tmp/outdir" "$B5/templates/inc"
+page "$B5" leak 'a{! partial("inc/secret") !}b'
+build symdirout "$B5"
+[ "$rc" != "0" ] && ok "a partial through a symlinked directory outside templates/ fails the build (exit $rc)" \
+  || bad "partial through an outside symlinked directory: build exited 0"
+grep -rq OUTSIDEDIR "$B5/build" 2>/dev/null && bad "the outside partial was rendered into the site" \
+  || ok "the outside partial was not rendered into the site"
+grep -q 'refused partial name .*inc/secret.*: it resolves outside the templates directory' "$tmp/symdirout.log" \
+  && ok "the build log names the refused partial" \
+  || { bad "the build log does not name the refused partial"; tail -5 "$tmp/symdirout.log" | sed 's/^/       /'; }
+
+B6=$tmp/b-symdir-layout; mkproj "$B6" "$port"
+echo '<html>OUTSIDELAYOUT{! yield("main") !}</html>' >"$tmp/outdir/base.tkt"
+ln -s "$tmp/outdir" "$B6/templates/lay"
+page "$B6" leaklayout '{! layout("lay/base") !}{! block("main") !}x{! end !}'
+build symdirlayout "$B6"
+[ "$rc" != "0" ] && ok "a layout through a symlinked directory outside templates/ fails the build (exit $rc)" \
+  || bad "layout through an outside symlinked directory: build exited 0"
+grep -rq OUTSIDELAYOUT "$B6/build" 2>/dev/null && bad "the outside layout was rendered into the site" \
+  || ok "the outside layout was not rendered into the site"
+
+# A sibling whose name extends the root's (templatesx/) is outside: the check
+# is a prefix plus a separator.
+B7=$tmp/b-symdir-sibling; mkproj "$B7" "$port"
+mkdir -p "$B7/templatesx"
+echo 'SIBLING' >"$B7/templatesx/p.tkt"
+ln -s "$B7/templatesx" "$B7/templates/sib"
+page "$B7" sib 'a{! partial("sib/p") !}b'
+build symdirsib "$B7"
+[ "$rc" != "0" ] && ok "a symlink into a sibling templatesx/ is outside templates/ (exit $rc)" \
+  || bad "symlink into sibling templatesx/: build exited 0"
+grep -rq SIBLING "$B7/build" 2>/dev/null && bad "the sibling partial was rendered into the site" \
+  || ok "the sibling partial was not rendered into the site"
+
+# Negative controls: a symlinked directory that stays inside templates/, and a
+# plain nested name, still render.
+B8=$tmp/b-symdir-in; mkproj "$B8" "$port"
+mkdir -p "$B8/templates/partials/real"
+echo 'INSIDEPARTIAL' >"$B8/templates/partials/real/hdr.tkt"
+ln -s "real" "$B8/templates/partials/alias"
+echo 'NESTEDPARTIAL' >"$B8/templates/partials/real/nested.tkt"
+page "$B8" viaalias 'a{! partial("partials/alias/hdr") !}b'
+echo 'FILELINKPARTIAL' >"$B8/templates/partials/real/target.tkt"
+ln -s "real/target.tkt" "$B8/templates/partials/filelink.tkt"
+page "$B8" nested 'a{! partial("partials/real/nested") !}b'
+page "$B8" viafilelink 'a{! partial("partials/filelink") !}b'
+build symdirin "$B8"
+[ "$rc" = "0" ] && ok "a project using an inside symlinked directory builds (exit 0)" \
+  || { bad "inside symlinked directory: build exited $rc"; tail -5 "$tmp/symdirin.log" | sed 's/^/       /'; }
+grep -rq INSIDEPARTIAL "$B8/build" 2>/dev/null && ok "a partial through a symlinked directory inside templates/ renders" \
+  || bad "the inside-symlink partial did not render"
+grep -rq NESTEDPARTIAL "$B8/build" 2>/dev/null && ok "a plain nested partial name renders" \
+  || bad "the plain nested partial did not render"
+grep -rq FILELINKPARTIAL "$B8/build" 2>/dev/null && ok "a symlinked partial file whose target is inside templates/ renders (the resolved path is read)" \
+  || bad "the inside file-symlink partial did not render"
 
 echo "  $pass passed, $fail failed"
 [ "$fail" = "0" ]

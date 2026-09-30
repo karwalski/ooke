@@ -104,6 +104,7 @@ STDLIB_SRCS += \
   $(TOKE_STDLIB)/process_glue.c \
   $(TOKE_STDLIB)/collections_glue.c \
   $(TOKE_STDLIB)/io_glue.c \
+  $(TOKE_STDLIB)/os_glue.c \
   $(TOKE_STDLIB)/tk_web_glue.c
 
 # ── Vendor C sources ───────────────────────────────────────────────────────

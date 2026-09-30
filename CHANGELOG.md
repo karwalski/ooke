@@ -7,6 +7,15 @@ been published; see `docs/RELEASING.md`.
 
 Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
 
+### Requirements
+
+- **The toke floor is raised past toke's last release**, to toke `db47d591`
+  (2026-10-01): `file.realpath` (toke 121.60), and `os.write`'s wrapper in
+  `os_glue.c` (toke 121.70), which ooke now links -- without it ooke does not
+  link against current toke. No released toke contains `db47d591`; `mintoke`
+  stays `3.1.0` and the commit/date pair is the enforced floor. See
+  `docs/versioning.md`, "The realpath floor". (121.59)
+
 ### Changed
 
 - **`{= x =}` is escaped for where it sits in the HTML, not only as HTML
@@ -34,6 +43,18 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   `templates/../secret.tkt` into the page. A name with a `..`, `.` or empty
   segment, a leading `/`, or a backslash is now refused with a logged template
   error; `partials/header` still works. (121.57)
+- **A symlink inside `templates/` cannot lead a partial or layout outside
+  it.** The 121.57 name rule is lexical, so `partial("inc/secret")` passed it
+  and, with `templates/inc` a symlink to a directory elsewhere, rendered that
+  file into the page. The path and the templates root are now resolved with
+  toke's `file.realpath`, and the render is refused with a logged template
+  error unless the path is inside the root (root plus `/`, so a sibling
+  `templatesx/` is outside). Symlinks that stay inside `templates/` work, and
+  the resolved path is what is read -- **behaviour change:** a symlinked
+  partial or layout *file* whose target is inside `templates/` now renders
+  (121.59 made it an error); one pointing outside is still refused.
+  **Needs toke `db47d591` or later (unreleased; see Requirements).**
+  (121.59)
 - A partial or layout that includes itself fails the render with an error
   after 32 levels instead of overflowing the stack. (121.58)
 - **A page whose template fails to render answers 500, not an empty 200.**
@@ -49,8 +70,7 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   now fails the build. (121.59)
 - **A missing partial is an error**, as a missing layout already was.
   `{! partial("nosuch") !}` rendered as nothing, with no error and no log. A
-  partial file that exists but cannot be read (for one, a symlink: std.file
-  does not follow a final symlink) is an error too, and a template, layout or
+  partial file that exists but cannot be read is an error too, and a template, layout or
   partial read failure is now logged. An empty partial file still renders as
   nothing. **Behaviour change:** a site that referenced a partial it does not
   have now fails `build` and answers 500 under `serve`. (121.59)
