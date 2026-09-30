@@ -81,7 +81,15 @@ f=testlogunsupported():bool{
   let none=mt config.configlogunsupported("/tmp/test_ooke_norot.toml") {$ok:v v;$err:e "ERR"};
   let a0=chk.eqstr(both;"maxlines, maxagedays";"configlogunsupported names both keys");
   let a1=chk.eqstr(none;"";"configlogunsupported is empty when neither is set");
-  <a0&&a1
+  (* Story 121.66 (m): a string or bool value is still a rotation key set. *)
+  let w2=mt file.write("/tmp/test_ooke_rotstr.toml";"[log]\nmaxlines = \"5\"\nmaxagedays = \"7\"\n") {$ok:v true;$err:e false};
+  let w3=mt file.write("/tmp/test_ooke_rotmix.toml";"[log]\nmaxagedays = true\n") {$ok:v true;$err:e false};
+  if(!(w2&&w3)){<false};
+  let strs=mt config.configlogunsupported("/tmp/test_ooke_rotstr.toml") {$ok:v v;$err:e "ERR"};
+  let mix=mt config.configlogunsupported("/tmp/test_ooke_rotmix.toml") {$ok:v v;$err:e "ERR"};
+  let a2=chk.eqstr(strs;"maxlines, maxagedays";"configlogunsupported names string-valued keys");
+  let a3=chk.eqstr(mix;"maxagedays";"configlogunsupported names a bool-valued key");
+  <a0&&a1&&a2&&a3
 };
 
 (* Story 121.25 (audit OOK-03): [server] admin is read so serve can refuse it. *)

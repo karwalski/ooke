@@ -126,6 +126,10 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   static page. The result of that mkdir was ignored, so the failure was
   reported as `write failed for …/index.html`. The build fails either way.
   (121.66)
+- `ooke serve` warns about `[log] maxlines` / `maxagedays` set to a string
+  or a boolean (`maxlines = "5"`), not only to an integer; they are ignored
+  either way. A float or array value is still not noticed -- std.toml cannot
+  test for a key or read a float. (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
