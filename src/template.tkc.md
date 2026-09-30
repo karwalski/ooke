@@ -1,6 +1,6 @@
 ---
 source_file: "template.tk"
-source_hash: "abf254c28ac4a38bf0ac894e90268c8ee694985c6030fe948ff54b4db6cdd508"
+source_hash: "34b347669dd5d06209132b2dc0c191ea27f69473aa92836138384bbaffb1da50"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -19,7 +19,8 @@ Values are escaped for the place in the HTML where they land (story 121.58), not
 with one HTML-body escaper everywhere: every byte of output is fed through an
 HTML context tracker (`hcfeed`, a port of toke's `src/stdlib/template.c`
 tracker, 121.37) and `ctxescape` picks the escaper from the state it leaves.
-Partial and layout names are confined to the templates directory (121.57). A
+Partial and layout names are confined to the templates directory (121.57),
+symlinks resolved (121.59 (3)). A
 missing or unreadable template, layout or partial is a `$tplerr`, logged where
 it is raised (121.59, 134.24). A per-path token cache lets repeated renders of
 the same template skip re-lexing.
@@ -339,7 +340,17 @@ refused); `/` is allowed as the separator for nested names
 #### `tplnamepath(templatesdir: $str; kind: $str; name: $str): $str!$tplerr`
 
 If `tplnameok(name)` is false, log and return `$tplerr` ("template: refused
-<kind> name "<name>": …"). Otherwise `path.join(templatesdir; name + ".tkt")`.
+<kind> name "<name>": …"). Otherwise `joined = path.join(templatesdir; name +
+".tkt")`. If `joined` does not exist, return it unresolved (the caller reports
+the missing file). Else resolve it and `templatesdir` with `file.realpath`
+(121.59 (3), toke 121.60; needs the fs.read grant) and return the resolved path
+only if it starts with the resolved root plus `/` (not a bare prefix, so a
+sibling `templatesx/` is outside); otherwise, or if either resolve fails, log
+and return `$tplerr` ("template: refused <kind> name "<name>": it resolves
+outside the templates directory …"). The lexical rule cannot see a symlinked
+directory inside templates/ that points outside; this can. Symlinks whose
+target stays inside templates/ work, a symlinked partial file included,
+because the resolved path is what is read.
 
 #### `tplrenderctx(tokens: @$token; ctx: @($str:$str); templatesdir: $str; blocks: @$block; hc0: $hc; depth: i64): $rout!$tplerr`
 
@@ -368,8 +379,7 @@ was rendered.
        `islands`.
      - `partial`: `tplnamepath(templatesdir; "partial"; arg)!`. A missing file
        ("template: no partial template: <path>") or a failed read ("template:
-       partial template could not be read: <path>" — for one, a symlink, which
-       std.file does not follow, AMB-07) is logged and returned as `$tplerr`
+       partial template could not be read: <path>") is logged and returned as `$tplerr`
        (121.59). An empty partial renders nothing; otherwise lex it and render
        with the current `hc` at `depth+1`, as for yield.
      - `island`: `tplislandparse`; append and feed
