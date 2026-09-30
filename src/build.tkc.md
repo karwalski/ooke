@@ -1,6 +1,6 @@
 ---
 source_file: "build.tk"
-source_hash: "3ec8d64d65e6c76334776e7c5307ddc4d668f092318529b6b568f98b6c8dc5a1"
+source_hash: "7171e9505c4925fc3bc13ee90213e373afcaa15792aae4eca7ba315eadfbce12"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -314,8 +314,12 @@ file does not abort the whole copy.
         `build: render produced no output for <templatepath> slug=<slug>`,
         `skippedcount += 1`.
      e. Non-empty output and slug: substitute `:slug` in the pattern, write to
-        `buildoutputpath(…; outdir)` (mkdir the parent first); success
-        increments `pagescount`, failure logs and increments `skippedcount`.
+        `buildoutputpath(…; outdir)`. mkdir the parent first: if that fails,
+        log at error `build: route <pattern> slug=<slug> — could not create
+        the output directory <dir>` and increment `skippedcount` (121.66; the
+        result was ignored and the failure surfaced as "write failed").
+        Otherwise write; success increments `pagescount`, failure logs
+        `build: write failed for <outpath>` and increments `skippedcount`.
 6. `validate.validatelogresult(allval)`.
 7. `assetscount = buildcopyassets(projectdir; outdir)` (0 on error).
 8. **404 pass:** if `templates/errors/404.tkt` exists, render it with

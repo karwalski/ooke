@@ -121,6 +121,11 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   cannot write, reported success and wrote nothing. The first failure now
   logs `could not write <path>` (or `could not create directory <path>`) at
   error and exits 1. (121.66)
+- `ooke build` names the output directory it could not create for a
+  content-backed page (`pages/blog/[slug].tk`), as it already did for a
+  static page. The result of that mkdir was ignored, so the failure was
+  reported as `write failed for …/index.html`. The build fails either way.
+  (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
