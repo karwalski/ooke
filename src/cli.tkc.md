@@ -1,6 +1,6 @@
 ---
 source_file: "cli.tk"
-source_hash: "e65374ab764f0f6323228b140e33cdcea0829ed70e6750e53151a2a0c2611f48"
+source_hash: "46f6ace132b55c4847da96e1f33e8abf660686ce99e0e031777f6cf78ab8ccd0"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -35,7 +35,8 @@ another — E3011), so the logic lives here and the entry is `ooke.main`.
   `configlogunsupported`, and the `$ookecfg` type.
 - `ooke.serve` (`serve`) — `servetlscheck`, `serveopenlogs`, `serverun`.
 - `ooke.floor` (`floor`) — `floortoml()`, the `[requires]` block for a new
-  project, generated from ooke's own `ooke.toml` (`src/_floor.tk`, 134.35).
+  project, generated from ooke's own `ooke.toml` (`src/_floor.tk`, 134.35);
+  and `ookeversion()`, generated from `VERSION` (121.66).
 - `ooke.build` (`build`) — `buildrun` and the `$buildreport` type.
 - `ooke.handlers` (`handlers`) — `registerall`, the dynamic-handler registry.
 
@@ -70,9 +71,12 @@ against the project, not the working directory.
 
 #### `cliprintversion(): i64`
 
-`io.println("ooke 3.0.0-rc.2")` — on stdout, exactly `ooke <VERSION>` (story
-134.43, public-api.md §1.1; it was a JSON log record on stderr). Returns 0.
-The string is a literal and must be kept in step with `VERSION`.
+`io.println(str.concat("ooke ";floor.ookeversion()))` — on stdout, exactly
+`ooke <VERSION>` (story 134.43, public-api.md §1.1; it was a JSON log record
+on stderr). Returns 0. `floor.ookeversion()` is generated from `VERSION` by
+the Makefile into `src/_floor.tk` (story 121.66; it was a literal here that
+had to be bumped beside `VERSION`). `make check-ooke-version` fails if this
+file hard-codes a version again.
 
 ### Scaffolding
 

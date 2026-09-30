@@ -97,9 +97,12 @@ f=cliprintcmdusage(cmd:$str):i64{
 };
 
 (* Story 134.43. public-api.md section 1.1: `--version` prints
-   `ooke <VERSION>`. It went through log.info, i.e. a JSON record on stderr. *)
+   `ooke <VERSION>`. It went through log.info, i.e. a JSON record on stderr.
+   Story 121.66 (i): the version is not written here. It was a literal that
+   every release had to bump beside VERSION; floor.ookeversion() is generated
+   from VERSION by the Makefile (src/_floor.tk). *)
 f=cliprintversion():i64{
-  (io.println("ooke 3.0.0-rc.2"));
+  (io.println(str.concat("ooke ";floor.ookeversion())));
   <0
 };
 

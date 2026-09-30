@@ -107,6 +107,12 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
 - `ooke run` and `ooke build --cli` log their failures -- a missing entry
   point, a tkc that fails or cannot be spawned, no output binary, "compilation
   failed" -- at error level. They were info records. (121.66)
+- **`VERSION` is the one place ooke's version is written.** `ooke --version`
+  printed a literal in `src/cli.tk` that every release bumped by hand beside
+  `VERSION`. The Makefile now generates `floor.ookeversion()` from `VERSION`
+  into `src/_floor.tk`, and `make check-ooke-version` fails if `src/cli.tk`
+  hard-codes a version again or if `VERSION` is not a plain version string.
+  The printed text is unchanged. (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
