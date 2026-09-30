@@ -134,6 +134,14 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   route if its path held `/api/` anywhere, so `pages/docs/api/intro.tk` was
   neither built nor served as a page, and the build said it was a handler
   "under pages/api/". Only `pages/api/` makes API routes now. (121.66)
+- **`ooke build` fails, naming the file, when a static asset cannot be
+  copied.** Both the mkdir and the copy of each `static/` file were matched
+  to a bool and dropped: the asset was missing from the site, `assets copied`
+  was one lower, and the build exited 0. Each failure is now logged at error
+  naming the asset (or the directory it could not create), the rest of
+  `static/` is still copied, and the build ends with `assets not copied: <n>
+  — build failed` and exits 1. `buildcopyassets` returns an `$assetreport`
+  (`copied`, `failed`) and `$buildreport` gains `assetsfailed`. (121.67)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

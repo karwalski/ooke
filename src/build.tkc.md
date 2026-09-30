@@ -1,6 +1,6 @@
 ---
 source_file: "build.tk"
-source_hash: "7171e9505c4925fc3bc13ee90213e373afcaa15792aae4eca7ba315eadfbce12"
+source_hash: "30d476d26faa28e4ed7ed0e3b8b0b62a3d95309aa11a5102155924eaadac0569"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -57,6 +57,16 @@ Summary of a completed build, returned by `buildrun`.
 | `valerrors` | `i64` | Number of validation errors accumulated. |
 | `valwarnings` | `i64` | Number of validation warnings accumulated. |
 | `pagesskipped` | `i64` | Pages that failed: a dynamic page whose template failed or rendered empty, a write failure, or a failed 404 template. `cli.runbuild` fails the build when it is non-zero. |
+| `assetsfailed` | `i64` | Static assets that were not copied (121.67). `cli.runbuild` fails the build when it is non-zero. |
+
+### `$assetreport`
+
+Result of `buildcopyassets` (121.67).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `copied` | `i64` | Asset files copied into `<outputdir>/static`. |
+| `failed` | `i64` | Asset files that could not be copied (each logged at error), or 1 when `static/` could not be listed. |
 
 ## Functions
 
@@ -252,26 +262,33 @@ comments.
 
 **Error handling:** Total. Slice results matched with `{$ok…;$err…}` to `""`.
 
-### `buildcopyassets(projectdir: $str; outputdir: $str): i64!$builderr`
+### `buildcopyassets(projectdir: $str; outputdir: $str): $assetreport`
 
 **Purpose:** Copy the project's `static/` tree into `<outputdir>/static`.
 
 **Logic:**
 
 1. `staticdir = path.join(projectdir; "static")`. If `!file.isdir(staticdir)`,
-   return `0`.
-2. List all files with `file.listall(staticdir)` (propagating `$builderr`).
-3. `count` is a mutable `0`. Loop `i` from `0` to `files.len`:
-   a. `rel = files.get(i)`; `srcpath = path.join(staticdir; rel)`;
-      `dstpath = path.join(outputdir + "/static"; rel)`.
-   b. mkdir the destination parent (`path.dir(dstpath)`, error matched to a
-      bool), copy `srcpath` to `dstpath` (`file.copy`, error matched to a bool).
-   c. If the copy succeeded, increment `count`.
-4. Return `count`.
+   return `{copied: 0; failed: 0}`.
+2. List all files with `file.listall(staticdir)`. On failure log at error
+   `build: could not list the static directory <staticdir>` and return
+   `{copied: 0; failed: 1}`.
+3. `staticout = trimsuffix(outputdir; "/") + "/static"`. `count` and `failed`
+   start at `0`. For each listed `rel`:
+   a. `srcpath = path.join(staticdir; rel)`;
+      `dstpath = path.join(staticout; rel)`.
+   b. mkdir `path.dir(dstpath)`. On failure log at error `build: static asset
+      <srcpath> — could not create the directory <dir>` and increment
+      `failed`.
+   c. Otherwise `file.copy(srcpath; dstpath)`: success increments `count`;
+      failure logs at error `build: could not copy <srcpath> to <dstpath>`
+      and increments `failed`.
+4. Return `{copied: count; failed: failed}`.
 
-**Error handling:** `file.listall` propagates `$builderr`. Per-file `mkdir`/
-`copy` failures are absorbed (matched `{$ok:v true;$err:e false}`) so one bad
-file does not abort the whole copy.
+**Error handling:** Total. Every failure is logged where it happens and
+counted; one bad file does not stop the rest of the tree being copied
+(121.67: both results used to be dropped, so a missing asset left the build
+at exit 0).
 
 ### `buildrun(projectdir: $str; config: $ookecfg): $buildreport!$builderr`
 
@@ -321,20 +338,21 @@ file does not abort the whole copy.
         Otherwise write; success increments `pagescount`, failure logs
         `build: write failed for <outpath>` and increments `skippedcount`.
 6. `validate.validatelogresult(allval)`.
-7. `assetscount = buildcopyassets(projectdir; outdir)` (0 on error).
+7. `assets = buildcopyassets(projectdir; outdir)`.
 8. **404 pass:** if `templates/errors/404.tkt` exists, render it with
    `site.*` and `"request.path":"(unknown)"`. A failed render logs at error
    naming the template and increments `skippedcount` (121.59: it used to be
    skipped silently, shipping no `404.html`). A non-empty result goes through
    `buildfinish` and is written to `outdir + "404.html"`, incrementing
    `pagescount` on success.
-9. Return `$buildreport{pagesbuilt; assetscopy; valerrors; valwarnings;
-   pagesskipped}`.
+9. Return `$buildreport{pagesbuilt; assetscopy = assets.copied; valerrors;
+   valwarnings; pagesskipped; assetsfailed = assets.failed}`.
 
 **Error handling:** A failed route scan and any failed static page return
 `$builderr` (each logged first). Dynamic pages and the 404 page are counted in
 `pagesskipped` instead, so the build reports every failed page and
-`cli.runbuild` then fails it; asset copy failures are absorbed.
+`cli.runbuild` then fails it; asset copy failures are counted in
+`assetsfailed`, which fails the build the same way (121.67).
 
 ## Control Flow
 

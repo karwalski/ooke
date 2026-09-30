@@ -1,6 +1,6 @@
 ---
 source_file: "cli.tk"
-source_hash: "d855dce3e51ac9cf23ac6a1f6ededc18de27b18c6b3ddb9cad97a13496e75574"
+source_hash: "75257b656cf33ac7abf7fc734c11c3a2b372b9622ca461483ed9ef4d2826569f"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -221,7 +221,9 @@ traps RT005 (toke 127.78, open).
 4. Log `pages built` and `assets copied`; log validation errors and warnings
    when non-zero.
 5. `pagesskipped > 0`: log `pages skipped: <n> — build failed` at error and
-   return 1. Otherwise return 0.
+   return 1.
+6. `assetsfailed > 0`: log `assets not copied: <n> — build failed` at error
+   and return 1 (121.67). Otherwise return 0.
 
 ## Control Flow
 

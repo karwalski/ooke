@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir test-asset-copy test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -385,7 +385,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk $(P
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir test-asset-copy
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -475,6 +475,11 @@ test-gen-scaffold: $(BIN)
 # does, instead of reporting a failed write.
 test-dynamic-outdir: $(BIN)
 	@sh test/build/dynamic_outdir.sh ./$(BIN)
+
+# test-asset-copy — story 121.67 (1): `ooke build` fails, naming the file,
+# when a static asset cannot be copied, and still copies the rest.
+test-asset-copy: $(BIN)
+	@sh test/build/asset_copy.sh ./$(BIN)
 
 # test-companions — story 121.63: every src/*.tkc.md's source_hash matches the
 # source it documents (companions of generated src/_*.tk are skipped). Fails

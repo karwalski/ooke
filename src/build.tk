@@ -11,7 +11,8 @@ i=validate:ooke.validate;
 
 t=$builderr{msg:$str};
 
-t=$buildreport{pagesbuilt:i64;assetscopy:i64;valerrors:i64;valwarnings:i64;pagesskipped:i64};
+t=$buildreport{pagesbuilt:i64;assetscopy:i64;valerrors:i64;valwarnings:i64;pagesskipped:i64;assetsfailed:i64};
+t=$assetreport{copied:i64;failed:i64};
 
 (* Story 134.24. routerscan has always set $route.isapi — anything under
    pages/api/ is a request handler, not a page — and serve.tk has always read
@@ -226,24 +227,45 @@ f=buildminify(html:$str):$str{
   <s
 };
 
-f=buildcopyassets(projectdir:$str;outputdir:$str):i64!$builderr{
+(* 121.67 (1): a static asset that could not be copied is a failure, said
+   as one. file.mkdir and file.copy were matched to a bool and dropped, so a
+   missing asset left the site incomplete while the build exited 0. Each
+   failure is logged at error naming the path, the rest of the tree is still
+   copied, and the count comes back in `failed` so cli.runbuild fails the
+   build. An unreadable static/ directory is one failure. *)
+f=buildcopyassets(projectdir:$str;outputdir:$str):$assetreport{
   let staticdir=path.join(projectdir;"static");
   if(!file.isdir(staticdir)){
-    <0
-  }el{
-    let files=file.listall(staticdir)!$builderr;
-    let count=mut.0;
-    lp(let i=0;i<files.len;i=i+1){
-      let rel=files.get(i);
-      let srcpath=path.join(staticdir;rel);
-      let dstpath=path.join(str.concat(outputdir;"/static");rel);
-      let dstparent=path.dir(dstpath);
-      let mkr2=mt file.mkdir(dstparent) {$ok:v true;$err:e false};
+    <$assetreport{copied:0;failed:0}
+  }el{};
+  let listed=file.listall(staticdir);
+  let listok=mt listed {$ok:v true;$err:e false};
+  if(!listok){
+    (log.error(str.concat("build: could not list the static directory ";staticdir);@()));
+    <$assetreport{copied:0;failed:1}
+  }el{};
+  let files=mt listed {$ok:v v;$err:e @($str)};
+  let staticout=str.concat(str.trimsuffix(outputdir;"/");"/static");
+  let count=mut.0;
+  let failed=mut.0;
+  lp(let i=0;i<files.len;i=i+1){
+    let rel=files.get(i);
+    let srcpath=path.join(staticdir;rel);
+    let dstpath=path.join(staticout;rel);
+    let dstparent=path.dir(dstpath);
+    let mkok=mt file.mkdir(dstparent) {$ok:v true;$err:e false};
+    if(!mkok){
+      (log.error(str.join("";@("build: static asset ";srcpath;" — could not create the directory ";dstparent));@()));
+      failed=failed+1
+    }el{
       let copyok=mt file.copy(srcpath;dstpath) {$ok:v true;$err:e false};
-      if(copyok){count=count+1}el{}
-    };
-    <count
-  }
+      if(copyok){count=count+1}el{
+        (log.error(str.join("";@("build: could not copy ";srcpath;" to ";dstpath));@()));
+        failed=failed+1
+      }
+    }
+  };
+  <$assetreport{copied:count;failed:failed}
 };
 
 f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
@@ -358,7 +380,7 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
 
   (validate.validatelogresult(allval));
 
-  let assetscount=mt buildcopyassets(projectdir;outdir) {$ok:n n;$err:e 0};
+  let assets=buildcopyassets(projectdir;outdir);
 
   let notfoundtpl=path.join(templatesdir;"errors/404.tkt");
   if(file.exists(notfoundtpl)){
@@ -387,5 +409,5 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     }el{}
   }el{};
 
-  <$buildreport{pagesbuilt:pagescount;assetscopy:assetscount;valerrors:allval.errors.len;valwarnings:allval.warnings.len;pagesskipped:skippedcount}
+  <$buildreport{pagesbuilt:pagescount;assetscopy:assets.copied;valerrors:allval.errors.len;valwarnings:allval.warnings.len;pagesskipped:skippedcount;assetsfailed:assets.failed}
 };
