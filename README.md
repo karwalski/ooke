@@ -167,7 +167,7 @@ This creates the component skeleton in `islands/` and wires it into the `ooke-is
 | Filter   | Effect                              |
 |----------|-------------------------------------|
 | `md`     | Render Markdown to HTML             |
-| `escape` | HTML-escape special characters      |
+| `escape` | Escape for the context (the default) |
 | `upper`  | Uppercase                           |
 | `lower`  | Lowercase                           |
 | `trim`   | Strip leading/trailing whitespace   |
@@ -197,8 +197,14 @@ authentication, sessions, CSRF protection or rate limiting**, and **no admin
 interface**: a `POST`, `PUT`, `PATCH` or `DELETE` handler you register is open
 to anyone who can reach the server, and it is your code that must check who is
 calling and whether to act. Treat route parameters and request bodies as
-untrusted. Template output is HTML-escaped by default (`{=x=}`); `|raw` opts
-out, so use it only for HTML you produced yourself.
+untrusted. Template output is escaped by default (`{=x=}`) for where it sits:
+HTML text and attribute values get entities, a URL attribute refuses any
+scheme but `http`, `https` and `mailto` (the value becomes `#ZtokeZ`), a value
+in `<script>` or an `on*` attribute becomes a quoted JavaScript string, and one
+in `<style>` or `style=` is kept only if it is a plain CSS value. `ZtokeZ` in
+the output marks a refused value. `|raw` opts out, so use it only for HTML you
+produced yourself. `{!partial("…")!}` and `{!layout("…")!}` take a name inside
+`templates/` (`partials/header`); `..`, a leading `/` and backslashes are refused.
 
 `[server] admin = true` refuses to start, because there is no admin interface
 to enable; an old `admin = false` is ignored with a warning.

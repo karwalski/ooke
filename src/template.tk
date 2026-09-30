@@ -14,10 +14,19 @@ t=$token{
 
 t=$tplerr{msg:$str};
 
+(* A block's tokens, not its rendered text (121.58): a block is rendered
+   where the layout yields it, so its values are escaped for that place. *)
 t=$block{
   name:$str;
-  content:$str
+  toks:@$token
 };
+
+(* HTML context tracker state; see hcfeed. *)
+t=$hc{st:i64;closing:i64;tagel:i64;rawel:i64;rname:$str;name:$str;nover:i64;ak:i64;quote:i64;vlen:i64;urlpart:i64;js:i64;css:i64;esc:i64;slash:i64;star:i64;dashes:i64;mcount:i64;endlen:i64};
+
+(* One render's output, the tracker state after it, and whether it held an
+   island directive (the islands script is appended once, at the top). *)
+t=$rout{text:$str;hc:$hc;islands:bool};
 
 t=$tplcache{entries:@($str:@$token)};
 
@@ -32,36 +41,452 @@ f=tplescape(s:$str):$str{
   <s5
 };
 
-f=tplapplyfilter(val:$str;filtername:$str):$str{
-  let fname=str.trim(filtername);
-  if(fname=="md"){
-    <md.render(val)
-  }el{
-    if(fname=="raw"){
-      <val
-    }el{
-      if(fname=="escape"){
-        <tplescape(val)
-      }el{
-        if(fname=="upper"){
-          <tplescape(str.upper(val))
-        }el{
-          if(fname=="lower"){
-            <tplescape(str.lower(val))
-          }el{
-            if(fname=="trim"){
-              <tplescape(str.trim(val))
-            }el{
-              <tplescape(val)
-            }
-          }
-        }
-      }
-    }
-  }
+(* ── HTML context tracker (story 121.58) ────────────────────────────────
+   A port of toke's src/stdlib/template.c tracker (121.37, be8086d0) so that
+   ooke's {= x =} is escaped for the place in the HTML where it lands, not
+   with one HTML-body escaper everywhere.  Every byte of output -- template
+   text, escaped values and |raw / |md values -- is fed through hcfeed, and
+   ctxescape picks the escaper from the state it leaves:
+
+     text, comment, <title>, <textarea>   & < > " ' as entities
+     quoted attribute value               the same entities
+     unquoted attribute value             every byte but [A-Za-z0-9] as &#N;
+     URL attribute, at the value start    scheme other than http/https/mailto
+                                          -> "#ZtokeZ"; else percent-encoded
+     URL attribute after ? or #           percent-encoded as a component
+     <script>, on* attribute              in a string/comment: \u00HH;
+                                          in code: a quoted "..." literal
+     <style>, style attribute             in a string/comment: \HH ;
+                                          in code: [A-Za-z0-9 #%.,_-] only,
+                                          else "ZtokeZ"
+     tag or attribute name                [A-Za-z0-9_-] naming a plain
+                                          attribute, else "ZtokeZ"
+
+   Numeric encodings (template.c's enums, in the same order):
+     st   0 text 1 tagopen 2 endtagopen 3 tagname 4 intag 5 attrname
+          6 afterattrname 7 beforevalue 8 value 9 markup 10 comment
+          11 rawtext
+     ak   0 normal 1 url 2 js 3 css
+     tagel 0 none 1 script 2 style 3 rcdata (title, textarea)
+     js   0 code 1 "..." 2 '...' 3 `...` 4 // 5 /* */
+     css  0 code 1 "..." 2 '...' 3 /* */
+   The JS and CSS sub-machines are pure functions over a packed i64
+   (mode | esc<<3 | slash<<4 | star<<5) so hcfeed allocates nothing per byte.
+
+   Limits, as in toke: character references written in the template inside
+   an attribute are not decoded, and JS regular-expression literals are not
+   recognised.  Either can only mislead the tracker about being inside a
+   string; every JS/CSS escaper's output holds no quote, slash, star, newline
+   or angle bracket, so a mis-tracked value comes out as wrong text, not code. *)
+
+f=hcnew():$hc{
+  <$hc{st:0;closing:0;tagel:0;rawel:0;rname:"";name:"";nover:0;ak:0;quote:0;vlen:0;urlpart:0;js:0;css:0;esc:0;slash:0;star:0;dashes:0;mcount:0;endlen:0}
 };
 
-f=tplresolveexpr(expr:$str;ctx:@($str:$str)):$str{
+f=hcspace(c:i64):bool{
+  <c==32||c==9||c==10||c==13||c==12
+};
+
+f=hcalpha(c:i64):bool{
+  <(c>96&&c<123)||(c>64&&c<91)
+};
+
+f=hcalnum(c:i64):bool{
+  <hcalpha(c)||(c>47&&c<58)
+};
+
+f=hcpack(m:i64;e:i64;sl:i64;sr:i64):i64{
+  <m|(e<<3)|(sl<<4)|(sr<<5)
+};
+
+f=hcjs(p:i64;c:i64):i64{
+  let js=p&7;
+  let esc=(p>>3)&1;
+  let slash=(p>>4)&1;
+  let star=(p>>5)&1;
+  if(js==0){
+    if(slash==1&&c==47){<hcpack(4;esc;0;star)};
+    if(slash==1&&c==42){<hcpack(5;esc;0;0)};
+    let sl=if(c==47){1}el{0};
+    let m=if(c==34){1}el if(c==39){2}el if(c==96){3}el{0};
+    <hcpack(m;0;sl;star)
+  }el{};
+  if(js<4){
+    if(esc==1){<hcpack(js;0;slash;star)};
+    if(c==92){<hcpack(js;1;slash;star)};
+    let q=if(js==1){34}el if(js==2){39}el{96};
+    let m=if(c==q||(c==10&&js!=3)){0}el{js};
+    <hcpack(m;esc;0;star)
+  }el{};
+  if(js==4){
+    let m=if(c==10){0}el{4};
+    <hcpack(m;esc;slash;star)
+  }el{};
+  if(star==1&&c==47){<hcpack(0;esc;0;0)};
+  let sr=if(c==42){1}el{0};
+  <hcpack(5;esc;slash;sr)
+};
+
+f=hccss(p:i64;c:i64):i64{
+  let css=p&7;
+  let esc=(p>>3)&1;
+  let slash=(p>>4)&1;
+  let star=(p>>5)&1;
+  if(css==0){
+    if(slash==1&&c==42){<hcpack(3;esc;0;0)};
+    let sl=if(c==47){1}el{0};
+    let m=if(c==34){1}el if(c==39){2}el{0};
+    <hcpack(m;0;sl;star)
+  }el{};
+  if(css<3){
+    if(esc==1){<hcpack(css;0;slash;star)};
+    if(c==92){<hcpack(css;1;slash;star)};
+    let q=if(css==1){34}el{39};
+    let m=if(c==q||c==10){0}el{css};
+    <hcpack(m;esc;slash;star)
+  }el{};
+  if(star==1&&c==47){<hcpack(0;esc;slash;0)};
+  let sr=if(c==42){1}el{0};
+  <hcpack(3;esc;slash;sr)
+};
+
+f=hcelemkind(n:$str;over:i64):i64{
+  if(over==1){<0};
+  if(n=="script"){<1};
+  if(n=="style"){<2};
+  if(n=="title"||n=="textarea"){<3};
+  <0
+};
+
+f=hcattrkind(n:$str;over:i64):i64{
+  if(str.startswith(n;"on")){<2};
+  if(over==1){<0};
+  if(n=="style"){<3};
+  let urls=@("href";"src";"action";"formaction";"cite";"data";"poster";"background";"codebase";"longdesc";"usemap";"manifest";"icon";"profile";"classid";"archive";"srcset";"ping";"lowsrc";"dynsrc";"xlink:href";"xmlns");
+  lp(let i=0;i<urls.len;i=i+1){
+    if(urls.get(i)==n){<1}
+  };
+  if(str.contains(n;"url")||str.contains(n;"uri")){<1};
+  <0
+};
+
+(* Feed s through the tracker; returns the state after its last byte. *)
+f=hcfeed(h:$hc;s:$str):$hc{
+  let st=mut.h.st;
+  let closing=mut.h.closing;
+  let tagel=mut.h.tagel;
+  let rawel=mut.h.rawel;
+  let rname=mut.h.rname;
+  let name=mut.h.name;
+  let nover=mut.h.nover;
+  let ak=mut.h.ak;
+  let quote=mut.h.quote;
+  let vlen=mut.h.vlen;
+  let urlpart=mut.h.urlpart;
+  let js=mut.h.js;
+  let css=mut.h.css;
+  let esc=mut.h.esc;
+  let slash=mut.h.slash;
+  let star=mut.h.star;
+  let dashes=mut.h.dashes;
+  let mcount=mut.h.mcount;
+  let endlen=mut.h.endlen;
+  let n=str.len(s);
+  lp(let i=0;i<n;i=i+1){
+    let c=str.charat(s;i);
+    let sp=hcspace(c);
+    let tagend=mut.false;
+    let attrstart=mut.false;
+    let vstart=mut.false;
+    let vbyte=mut.false;
+    let nameadd=mut.false;
+    if(st==0){
+      if(c==60){st=1}el{}
+    }el if(st==1){
+      if(hcalpha(c)){
+        closing=0;name="";nover=0;nameadd=true;st=3
+      }el if(c==47){
+        st=2
+      }el if(c==33||c==63){
+        st=9;dashes=0;mcount=if(c==63){2}el{0}
+      }el if(c==60){
+        st=1
+      }el{
+        st=0
+      }
+    }el if(st==2){
+      if(hcalpha(c)){
+        closing=1;name="";nover=0;nameadd=true;st=3
+      }el if(c==62){
+        st=0
+      }el{
+        st=9;mcount=2;dashes=0
+      }
+    }el if(st==3){
+      if(sp||c==47){
+        tagel=if(closing==1){0}el{hcelemkind(name;nover)};st=4
+      }el if(c==62){
+        tagel=if(closing==1){0}el{hcelemkind(name;nover)};tagend=true
+      }el{
+        nameadd=true
+      }
+    }el if(st==4){
+      if(sp||c==47){}el if(c==62){tagend=true}el{attrstart=true}
+    }el if(st==5){
+      if(sp){
+        ak=hcattrkind(name;nover);st=6
+      }el if(c==61){
+        ak=hcattrkind(name;nover);st=7
+      }el if(c==47){
+        st=4
+      }el if(c==62){
+        tagend=true
+      }el{
+        nameadd=true
+      }
+    }el if(st==6){
+      if(sp){}el if(c==61){st=7}el if(c==47){st=4}el if(c==62){tagend=true}el{attrstart=true}
+    }el if(st==7){
+      if(sp){}el if(c==34||c==39){vstart=true;quote=c}el if(c==62){tagend=true}el{vstart=true;quote=0;vbyte=true}
+    }el if(st==8){
+      let closes=if(quote!=0){c==quote}el{sp};
+      if(closes){st=4}el if(quote==0&&c==62){tagend=true}el{vbyte=true}
+    }el if(st==9){
+      (* "<!--" opens a comment; any other "<!" or "<?" runs to '>' *)
+      let mdone=mut.false;
+      if(mcount<2){
+        mcount=mcount+1;
+        if(c==45){
+          if(mcount==2){st=10;dashes=0}el{};
+          mdone=true
+        }el{
+          mcount=2
+        }
+      }el{};
+      if(!mdone&&c==62){st=0}el{}
+    }el if(st==10){
+      if(c==62&&dashes>1){st=0}el{dashes=if(c==45){dashes+1}el{0}}
+    }el{
+      (* RAWTEXT: "</name" followed by space, '/' or '>' ends the element even
+         inside a JS string -- that is how HTML parses it. *)
+      let wlen=str.len(rname);
+      let rdone=mut.false;
+      if(endlen==2+wlen){
+        endlen=0;
+        if(sp||c==47){
+          st=4;closing=1;tagel=0;rawel=0;rdone=true
+        }el if(c==62){
+          st=0;rawel=0;rdone=true
+        }el{}
+      }el{};
+      if(!rdone){
+        let lcc=if(c>64&&c<91){c+32}el{c};
+        if(c==60){
+          endlen=1
+        }el if(endlen==1&&c==47){
+          endlen=2
+        }el if(endlen>1&&lcc==str.charat(rname;endlen-2)){
+          endlen=endlen+1
+        }el{
+          endlen=0
+        };
+        if(rawel==1){
+          let r=hcjs(hcpack(js;esc;slash;star);c);
+          js=r&7;esc=(r>>3)&1;slash=(r>>4)&1;star=(r>>5)&1
+        }el if(rawel==2){
+          let r2=hccss(hcpack(css;esc;slash;star);c);
+          css=r2&7;esc=(r2>>3)&1;slash=(r2>>4)&1;star=(r2>>5)&1
+        }el{}
+      }el{}
+    };
+    if(attrstart){name="";nover=0;nameadd=true;st=5}el{};
+    if(nameadd){
+      if(str.len(name)<31){
+        let one=mt str.slice(s;i;i+1) {$ok:v v;$err:e ""};
+        name=str.concat(name;str.lower(one))
+      }el{
+        nover=1
+      }
+    }el{};
+    if(tagend){
+      if(closing==0&&tagel!=0){
+        st=11;rawel=tagel;endlen=0;rname=name;js=0;css=0;esc=0;slash=0;star=0
+      }el{
+        st=0
+      };
+      tagel=0;closing=0
+    }el{};
+    if(vstart){st=8;vlen=0;urlpart=0;js=0;css=0;esc=0;slash=0;star=0}el{};
+    if(vbyte){
+      if(vlen==0&&sp){}el{
+        vlen=vlen+1;
+        if(ak==1&&(c==63||c==35)){
+          urlpart=1
+        }el if(ak==2){
+          let r3=hcjs(hcpack(js;esc;slash;star);c);
+          js=r3&7;esc=(r3>>3)&1;slash=(r3>>4)&1;star=(r3>>5)&1
+        }el if(ak==3){
+          let r4=hccss(hcpack(css;esc;slash;star);c);
+          css=r4&7;esc=(r4>>3)&1;slash=(r4>>4)&1;star=(r4>>5)&1
+        }el{}
+      }
+    }el{}
+  };
+  <$hc{st:st;closing:closing;tagel:tagel;rawel:rawel;rname:rname;name:name;nover:nover;ak:ak;quote:quote;vlen:vlen;urlpart:urlpart;js:js;css:css;esc:esc;slash:slash;star:star;dashes:dashes;mcount:mcount;endlen:endlen}
+};
+
+(* ── escapers ─────────────────────────────────────────────────────────── *)
+
+f=hchexdigit(d:i64):$str{
+  <mt str.slice("0123456789ABCDEF";d;d+1) {$ok:v v;$err:e "0"}
+};
+
+f=hchex2(c:i64):$str{
+  <str.concat(hchexdigit((c>>4)&15);hchexdigit(c&15))
+};
+
+(* Which bytes pass unchanged.  mode 1 unquoted attribute, 2 JS string body,
+   3 CSS string body, 4 URL, 5 URL component (after ? or #). *)
+f=esckeep(mode:i64;c:i64):bool{
+  if(hcalnum(c)){<true};
+  if(mode==1){<c>127};
+  if(mode==2){<c>127||c==32||c==95||c==44||c==46};
+  if(mode==3){<c>127||c==32};
+  if(c==45||c==46||c==95||c==126){<true};
+  if(mode==5){<false};
+  (* : / ? # [ ] @ ! $ & ' ( ) * + , ; = % *)
+  <c==58||c==47||c==63||c==35||c==91||c==93||c==64||c==33||c==36||c==38||c==39||c==40||c==41||c==42||c==43||c==44||c==59||c==61||c==37
+};
+
+f=escrepl(mode:i64;c:i64):$str{
+  if(mode==1){<str.join("";@("&#";str.fromint(c);";"))};
+  if(mode==2){<str.concat("\\u00";hchex2(c))};
+  if(mode==3){
+    if(c<16){<str.join("";@("\\";hchexdigit(c);" "))};
+    <str.join("";@("\\";hchex2(c);" "))
+  };
+  <str.concat("%";hchex2(c))
+};
+
+f=escbytes(s:$str;mode:i64):$str{
+  let b=str.builder();
+  let n=str.len(s);
+  let run=mut.0;
+  let skip=mut.0;
+  lp(let i=0;i<n;i=i+1){
+    if(skip>0){
+      skip=skip-1
+    }el{
+      let c=str.charat(s;i);
+      (* U+2028 / U+2029 (E2 80 A8/A9) end a line in pre-2019 JS strings *)
+      let ls=mode==2&&c==226&&str.charat(s;i+1)==128&&(str.charat(s;i+2)==168||str.charat(s;i+2)==169);
+      if(ls){
+        if(i>run){str.add(b;mt str.slice(s;run;i) {$ok:v v;$err:e ""})}el{};
+        str.add(b;if(str.charat(s;i+2)==168){"\\u2028"}el{"\\u2029"});
+        skip=2;
+        run=i+3
+      }el if(esckeep(mode;c)){}el{
+        if(i>run){str.add(b;mt str.slice(s;run;i) {$ok:v v;$err:e ""})}el{};
+        str.add(b;escrepl(mode;c));
+        run=i+1
+      }
+    }
+  };
+  if(n>run){str.add(b;mt str.slice(s;run;n) {$ok:v v;$err:e ""})}el{};
+  <str.build(b)
+};
+
+f=escjs(js:i64;s:$str):$str{
+  if(js==0){<str.join("";@("\"";escbytes(s;2);"\""))};
+  <escbytes(s;2)
+};
+
+f=esccss(css:i64;s:$str):$str{
+  if(css==0){
+    let n=str.len(s);
+    lp(let i=0;i<n;i=i+1){
+      let c=str.charat(s;i);
+      let ok=hcalnum(c)||c>127||c==32||c==35||c==37||c==46||c==44||c==95||c==45;
+      if(!ok){<"ZtokeZ"}
+    };
+    <s
+  };
+  <escbytes(s;3)
+};
+
+f=escurl(vlen:i64;urlpart:i64;s:$str):$str{
+  if(vlen==0&&urlpart==0){
+    (* the value starts here, so the scheme is decided here *)
+    let n=str.len(s);
+    let p=mut.0;
+    lp(let k=0;p<n&&hcspace(str.charat(s;p));k=k+1){p=p+1};
+    let i=mut.p;
+    let scanning=mut.true;
+    lp(let k2=0;scanning;k2=k2+1){
+      if(!(i<n)){
+        scanning=false
+      }el{
+        let c=str.charat(s;i);
+        if(c==58||c==47||c==63||c==35){scanning=false}el{i=i+1}
+      }
+    };
+    if(i<n&&str.charat(s;i)==58){
+      let scheme=str.lower(mt str.slice(s;p;i) {$ok:v v;$err:e ""});
+      if(!(scheme=="http"||scheme=="https"||scheme=="mailto")){<"#ZtokeZ"}
+    }
+  };
+  if(urlpart==1){<escbytes(s;5)};
+  <escbytes(s;4)
+};
+
+f=escname(s:$str):$str{
+  let n=str.len(s);
+  if(n==0||n>31){<"ZtokeZ"};
+  lp(let i=0;i<n;i=i+1){
+    let c=str.charat(s;i);
+    if(!(hcalnum(c)||c==45||c==95)){<"ZtokeZ"}
+  };
+  if(hcattrkind(str.lower(s);0)!=0){<"ZtokeZ"};
+  <s
+};
+
+(* Escape one value for the context the output is in. *)
+f=ctxescape(h:$hc;v:$str):$str{
+  let st=h.st;
+  if(st==0||st==9||st==10){<tplescape(v)};
+  if(st==11){
+    if(h.rawel==1){<escjs(h.js;v)};
+    if(h.rawel==2){<esccss(h.css;v)};
+    <tplescape(v)
+  };
+  if(st<7){<escname(v)};
+  (* 7: the value starts an unquoted attribute value; 8: inside a value *)
+  let fresh=st==7;
+  let quote=if(fresh){0}el{h.quote};
+  let vlen=if(fresh){0}el{h.vlen};
+  let urlpart=if(fresh){0}el{h.urlpart};
+  let js=if(fresh){0}el{h.js};
+  let css=if(fresh){0}el{h.css};
+  let inner=if(h.ak==1){escurl(vlen;urlpart;v)}el if(h.ak==2){escjs(js;v)}el if(h.ak==3){esccss(css;v)}el{v};
+  if(quote!=0){<tplescape(inner)};
+  <escbytes(inner;1)
+};
+
+(* ── values ──────────────────────────────────────────────────────────── *)
+
+(* A filtered value for the context h.  |md and |raw write their output
+   unchanged (md is HTML ooke produced; raw is the explicit opt-out); every
+   other filter -- escape, upper, lower, trim, or an unknown name -- is
+   escaped for the context after it is applied. *)
+f=tplfilterctx(val:$str;filtername:$str;h:$hc):$str{
+  let fname=str.trim(filtername);
+  if(fname=="md"){<md.render(val)};
+  if(fname=="raw"){<val};
+  let v=if(fname=="upper"){str.upper(val)}el if(fname=="lower"){str.lower(val)}el if(fname=="trim"){str.trim(val)}el{val};
+  <ctxescape(h;v)
+};
+
+f=tplexprctx(expr:$str;ctx:@($str:$str);h:$hc):$str{
   let trimmed=str.trim(expr);
   let pipepos=str.indexof(trimmed;"|");
   if(!(pipepos<0)){
@@ -69,12 +494,21 @@ f=tplresolveexpr(expr:$str;ctx:@($str:$str)):$str{
     let filter=str.trim(mt str.slice(trimmed;pipepos+1;str.len(trimmed)) {$ok:v v;$err:e ""});
     let vgot=ctx.get(key);
     let val=mt vgot {$ok:v v;$err:e ""};
-    <tplapplyfilter(val;filter)
+    <tplfilterctx(val;filter;h)
   }el{
     let vgot2=ctx.get(trimmed);
     let raw=mt vgot2 {$ok:v v;$err:e ""};
-    <tplescape(raw)
+    <ctxescape(h;raw)
   }
+};
+
+(* The HTML-text forms, kept for callers outside a template render. *)
+f=tplapplyfilter(val:$str;filtername:$str):$str{
+  <tplfilterctx(val;filtername;hcnew())
+};
+
+f=tplresolveexpr(expr:$str;ctx:@($str:$str)):$str{
+  <tplexprctx(expr;ctx;hcnew())
 };
 
 f=tpllex(src:$str):@$token!$tplerr{
@@ -205,14 +639,14 @@ f=tpldirectivearg(content:$str):$str{
   }
 };
 
-f=tplfindblock(blocks:@$block;name:$str):$str{
+f=tplfindblock(blocks:@$block;name:$str):@$token{
   lp(let i=0;i<blocks.len;i=i+1){
     let b=blocks.get(i);
     if(b.name==name){
-      <b.content
+      <b.toks
     }el{}
   };
-  <""
+  <@()
 };
 
 f=tplislandparse(content:$str):@($str:$str){
@@ -253,127 +687,143 @@ f=tplislandparse(content:$str):@($str:$str){
   }
 };
 
-f=tplrender(
+f=tplnameok(name:$str):bool{
+  (* 121.57: a partial or layout name is a name inside the templates
+     directory, not a path.  `partials/header` is a name; `../x`, `/etc/x`,
+     `a/../../x`, `a\x`, `a//b`, `./a` and the empty name are not, because
+     each either leaves the directory or is not the one spelling of a file
+     in it.  Mirrors toke's layout() rule (121.41), which also forbids '/'
+     outright; ooke keeps '/' as the separator for nested template names. *)
+  if(str.len(name)==0){<false};
+  if(str.contains(name;"\\")){<false};
+  if(str.startswith(name;"/")){<false};
+  let segs=str.split(name;"/");
+  lp(let i=0;i<segs.len;i=i+1){
+    let sg=segs.get(i);
+    if(str.len(sg)==0||sg=="."||sg==".."){<false}
+  };
+  <true
+};
+
+f=tplnamepath(templatesdir:$str;kind:$str;name:$str):$str!$tplerr{
+  if(!tplnameok(name)){
+    let m=str.join("";@("template: refused ";kind;" name \"";name;"\": a ";kind;" is named relative to the templates directory (e.g. partials/header), without .., a leading /, a backslash or empty segments"));
+    (log.error(m;@()));
+    <$tplerr{msg:m}
+  }el{};
+  <path.join(templatesdir;str.concat(name;".tkt"))
+};
+
+f=tplrenderctx(
   tokens:@$token;
   ctx:@($str:$str);
   templatesdir:$str;
-  blocks:@$block
-):$str!$tplerr{
-  (* Story 134.4. Both accumulators were `x=str.concat(x;part)` chains. That
-     is the form the Epic 131 catalogue measures as worse-bigO on `str-build-
-     loop` -- it copies the whole accumulator on every token, so rendering a
-     63 KB page from N tokens copies O(N x 63 KB). The catalogue's canonical
-     form is str.builder/str.add/str.build, one growing buffer. 134.3 left
-     this site alone because no lint rule covers string-building loops
-     (131.64); the macro numbers are what found it. *)
+  blocks:@$block;
+  hc0:$hc;
+  depth:i64
+):$rout!$tplerr{
+  (* 121.58: renders tokens as a continuation of output whose HTML context
+     is hc0, and returns the context after its own output.  Partials and
+     yielded blocks are rendered through here with the current context, so
+     their values are escaped for where they land in the page.  depth bounds
+     partial/layout/yield nesting: a template that includes itself was
+     unbounded recursion. *)
+  if(depth>32){
+    let md0="template: partials, layouts and yields nest more than 32 deep (does a template include itself?)";
+    (log.error(md0;@()));
+    <$tplerr{msg:md0}
+  }el{};
+  (* Story 134.4: one str.builder per render, not a str.concat chain. *)
   let buf=str.builder();
+  let hc=mut.hc0;
   let hasislands=mut.false;
 
   let inblock=mut.false;
-  let currentblockname=mut."";
-  let currentblockbuf=mut.str.builder();
+  let blockname=mut."";
+  let blocktoks=mut.@();
   let collectedblocks=mut.@();
 
   let layoutname=mut."";
 
   lp(let i=0;i<tokens.len;i=i+1){
     let tok=tokens.get(i);
+    let isend=tok.kind.directive&&tpldirectivename(tok.content)=="end";
 
-    if(tok.kind.raw){
-      if(inblock){
-        str.add(currentblockbuf;tok.content)
-      }el{
-        str.add(buf;tok.content)
-      }
-    }el{};
+    if(inblock&&!isend){
+      (* inside a block: keep the tokens, render them where they are yielded *)
+      blocktoks=blocktoks.append(tok)
+    }el{
+      if(tok.kind.raw){
+        str.add(buf;tok.content);
+        hc=hcfeed(hc;tok.content)
+      }el{};
 
-    if(tok.kind.expr){
-      let val=tplresolveexpr(tok.content;ctx);
-      if(inblock){
-        str.add(currentblockbuf;val)
-      }el{
-        str.add(buf;val)
-      }
-    }el{};
+      if(tok.kind.expr){
+        let val=tplexprctx(tok.content;ctx;hc);
+        str.add(buf;val);
+        hc=hcfeed(hc;val)
+      }el{};
 
-    if(tok.kind.directive){
-      let dname=tpldirectivename(tok.content);
-      let darg=tpldirectivearg(tok.content);
+      if(tok.kind.directive){
+        let dname=tpldirectivename(tok.content);
+        let darg=tpldirectivearg(tok.content);
 
-      if(dname=="layout"){
-        layoutname=darg
-      }el{
-        if(dname=="block"){
+        if(dname=="layout"){
+          layoutname=darg
+        }el if(dname=="block"){
           inblock=true;
-          currentblockname=darg;
-          currentblockbuf=str.builder()
-        }el{
-          if(dname=="end"){
-            if(inblock){
-              let b=$block{name:currentblockname;content:str.build(currentblockbuf)};
-              collectedblocks=collectedblocks.append(b);
-              inblock=false;
-              currentblockname="";
-              currentblockbuf=str.builder()
-            }el{}
-          }el{
-            if(dname=="var"){
-              let vargot=ctx.get(darg);
-              let varraw=mt vargot {$ok:v v;$err:e ""};
-              let varval=tplescape(varraw);
-              if(inblock){
-                str.add(currentblockbuf;varval)
-              }el{
-                str.add(buf;varval)
-              }
-            }el{
-            if(dname=="yield"){
-              let blockcontent=tplfindblock(blocks;darg);
-              if(str.len(blockcontent)>0){
-                str.add(buf;blockcontent)
-              }el{}
-            }el{
-              if(dname=="partial"){
-                let partialpath=path.join(templatesdir;str.concat(darg;".tkt"));
-                let psrcr=file.read(partialpath);
-                let partialsrc=mt psrcr {$ok:s s;$err:e ""};
-                if(str.len(partialsrc)>0){
-                  let partialtokens=tpllex(partialsrc)!$tplerr;
-                  let partialout=tplrender(partialtokens;ctx;templatesdir;@())!$tplerr;
-                  if(inblock){
-                    str.add(currentblockbuf;partialout)
-                  }el{
-                    str.add(buf;partialout)
-                  }
-                }el{}
-              }el{
-                if(dname=="island"){
-                  let iparse=tplislandparse(tok.content);
-                  let inameg=iparse.get("name");
-                  let iname=mt inameg {$ok:v v;$err:e ""};
-                  let ihydrateg=iparse.get("hydrate");
-                  let ihydrate=mt ihydrateg {$ok:v v;$err:e "load"};
-                  let idiv=str.join("";@("<div data-island=\"";iname;"\" data-hydrate=\"";ihydrate;"\"></div>"));
-                  if(inblock){
-                    str.add(currentblockbuf;idiv)
-                  }el{
-                    str.add(buf;idiv)
-                  };
-                  hasislands=true
-                }el{}
-              }
-            }
-          }
-          }
-        }
-      }
-    }el{}
+          blockname=darg;
+          blocktoks=@()
+        }el if(dname=="end"){
+          if(inblock){
+            let b=$block{name:blockname;toks:blocktoks};
+            collectedblocks=collectedblocks.append(b);
+            inblock=false;
+            blockname="";
+            blocktoks=@()
+          }el{}
+        }el if(dname=="var"){
+          let vargot=ctx.get(darg);
+          let varraw=mt vargot {$ok:v v;$err:e ""};
+          let varval=ctxescape(hc;varraw);
+          str.add(buf;varval);
+          hc=hcfeed(hc;varval)
+        }el if(dname=="yield"){
+          let btoks=tplfindblock(blocks;darg);
+          if(btoks.len>0){
+            let yr=tplrenderctx(btoks;ctx;templatesdir;@();hc;depth+1)!$tplerr;
+            str.add(buf;yr.text);
+            hc=yr.hc;
+            if(yr.islands){hasislands=true}el{}
+          }el{}
+        }el if(dname=="partial"){
+          let partialpath=tplnamepath(templatesdir;"partial";darg)!$tplerr;
+          let psrcr=file.read(partialpath);
+          let partialsrc=mt psrcr {$ok:s s;$err:e ""};
+          if(str.len(partialsrc)>0){
+            let partialtokens=tpllex(partialsrc)!$tplerr;
+            let pr=tplrenderctx(partialtokens;ctx;templatesdir;@();hc;depth+1)!$tplerr;
+            str.add(buf;pr.text);
+            hc=pr.hc;
+            if(pr.islands){hasislands=true}el{}
+          }el{}
+        }el if(dname=="island"){
+          let iparse=tplislandparse(tok.content);
+          let inameg=iparse.get("name");
+          let iname=mt inameg {$ok:v v;$err:e ""};
+          let ihydrateg=iparse.get("hydrate");
+          let ihydrate=mt ihydrateg {$ok:v v;$err:e "load"};
+          let idiv=str.join("";@("<div data-island=\"";iname;"\" data-hydrate=\"";ihydrate;"\"></div>"));
+          str.add(buf;idiv);
+          hc=hcfeed(hc;idiv);
+          hasislands=true
+        }el{}
+      }el{}
+    }
   };
 
-  let islandscript="<script src=\"/static/ooke-islands.js\" defer></script>";
-
   if(str.len(layoutname)>0){
-    let layoutpath=path.join(templatesdir;str.concat(layoutname;".tkt"));
+    let layoutpath=tplnamepath(templatesdir;"layout";layoutname)!$tplerr;
     if(!file.exists(layoutpath)){
       (* 134.24: log where the message exists. A caller cannot read `e.msg` off
          this payload (RT005, toke 127.78, open), so an unlogged $tplerr is a
@@ -384,19 +834,24 @@ f=tplrender(
     }el{};
     let layoutsrc=file.read(layoutpath)!$tplerr;
     let layouttokens=tpllex(layoutsrc)!$tplerr;
-    let layoutout=tplrender(layouttokens;ctx;templatesdir;collectedblocks)!$tplerr;
-    if(hasislands){
-      <str.concat(layoutout;islandscript)
-    }el{
-      <layoutout
-    }
-  }el{
-    if(hasislands){
-      <str.concat(str.build(buf);islandscript)
-    }el{
-      <str.build(buf)
-    }
-  }
+    (* the layout's output replaces this template's, from the same start *)
+    let lr=tplrenderctx(layouttokens;ctx;templatesdir;collectedblocks;hc0;depth+1)!$tplerr;
+    <$rout{text:lr.text;hc:lr.hc;islands:hasislands||lr.islands}
+  }el{};
+  <$rout{text:str.build(buf);hc:hc;islands:hasislands}
+};
+
+f=tplrender(
+  tokens:@$token;
+  ctx:@($str:$str);
+  templatesdir:$str;
+  blocks:@$block
+):$str!$tplerr{
+  let r=tplrenderctx(tokens;ctx;templatesdir;blocks;hcnew();0)!$tplerr;
+  if(r.islands){
+    <str.concat(r.text;"<script src=\"/static/ooke-islands.js\" defer></script>")
+  }el{};
+  <r.text
 };
 
 f=tplrenderfile(

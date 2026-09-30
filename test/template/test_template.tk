@@ -275,6 +275,152 @@ f=testpartial():bool{
 };
 
 
+(* 121.57: a partial or layout name resolves only inside the templates
+ * directory.  The fixture puts secret.tkt one level ABOVE templates/, so a
+ * name that escapes can read it; the nested partials/header.tkt is the
+ * legitimate control that must keep working. *)
+f=trvsetup():bool{
+  let root="/tmp/test_ooke_12157";
+  (mt file.mkdir(root) {$ok:v 0;$err:e 0});
+  (mt file.mkdir("/tmp/test_ooke_12157/templates") {$ok:v 0;$err:e 0});
+  (mt file.mkdir("/tmp/test_ooke_12157/templates/partials") {$ok:v 0;$err:e 0});
+  let w0=file.write("/tmp/test_ooke_12157/secret.tkt";"TOPSECRET");
+  let a0=mt w0 {$ok:v true;$err:e failret("could not write secret.tkt")};
+  let w1=file.write("/tmp/test_ooke_12157/templates/partials/header.tkt";"<header>NESTEDOK</header>");
+  let a1=mt w1 {$ok:v true;$err:e failret("could not write partials/header.tkt")};
+  <a0&&a1
+};
+
+
+f=trvrender(src:$str):$str{
+  let toks=mt tpl.tpllex(src) {$ok:t t;$err:e @()};
+  let out=tpl.tplrender(toks;@($str:$str);"/tmp/test_ooke_12157/templates";@());
+  <mt out {$ok:s s;$err:e "<<REFUSED>>"}
+};
+
+
+f=trvrefused(src:$str;what:$str):bool{
+  let r=trvrender(src);
+  let refused=r=="<<REFUSED>>";
+  let leaked=str.contains(r;"TOPSECRET");
+  let a0=chk.istrue(refused;str.concat(what;" is refused with an error"));
+  let a1=chk.isfalse(leaked;str.concat(what;" does not read a file outside templates/"));
+  <a0&&a1
+};
+
+
+f=testpartialtraversal():bool{
+  let a0=trvsetup();
+  let a1=trvrefused("a{! partial(\"../secret\") !}b";"partial(\"../secret\")");
+  let a2=trvrefused("a{! partial(\"/tmp/test_ooke_12157/secret\") !}b";"partial with an absolute path");
+  let a3=trvrefused("a{! partial(\"partials/../../secret\") !}b";"partial with a .. segment mid-name");
+  let a4=trvrefused("a{! partial(\"\") !}b";"partial with an empty name");
+  <a0&&a1&&a2&&a3&&a4
+};
+
+
+f=testlayouttraversal():bool{
+  let a0=trvsetup();
+  let a1=trvrefused("{! layout(\"../secret\") !}x";"layout(\"../secret\")");
+  let a2=trvrefused("{! layout(\"/tmp/test_ooke_12157/secret\") !}x";"layout with an absolute path");
+  <a0&&a1&&a2
+};
+
+
+f=testpartialnestedname():bool{
+  let a0=trvsetup();
+  let r=trvrender("a{! partial(\"partials/header\") !}b");
+  let a1=chk.eqstr(r;"a<header>NESTEDOK</header>b";"a nested partial name inside templates/ still renders");
+  <a0&&a1
+};
+
+
+(* 121.58: {= x =} is escaped for the HTML context it lands in (toke's
+ * template.c context tracker, 121.37, ported to ooke).  Before this, every
+ * value went through one HTML-body escaper, so href took javascript:,
+ * an on* handler decoded &#39; back into a quote before running, and a
+ * value inside <script> became code. *)
+f=cxr(src:$str;val:$str):$str{
+  let toks=mt tpl.tpllex(src) {$ok:t t;$err:e @()};
+  let out=tpl.tplrender(toks;@("x":val);"/tmp";@());
+  <mt out {$ok:s s;$err:e "<<ERR>>"}
+};
+
+
+f=cxeq(src:$str;val:$str;want:$str;what:$str):bool{
+  <chk.eqstr(cxr(src;val);want;what)
+};
+
+
+f=testctxurl():bool{
+  let a0=cxeq("<a href=\"{= x =}\">l</a>";"javascript:alert(1)";"<a href=\"#ZtokeZ\">l</a>";"href refuses a javascript: URL");
+  let a1=cxeq("<a href=\"{= x =}\">l</a>";" JavaScript:alert(1)";"<a href=\"#ZtokeZ\">l</a>";"href refuses a javascript: URL behind space and mixed case");
+  let a2=cxeq("<img src={= x =}>";"data:text/html,x";"<img src=&#35;ZtokeZ>";"unquoted src refuses a data: URL");
+  let a3=cxeq("<a href=\"{= x =}\">l</a>";"https://example.com/a?b=c&d=e";"<a href=\"https://example.com/a?b=c&amp;d=e\">l</a>";"href keeps an https URL");
+  let a4=cxeq("<a href=\"{= x =}\">l</a>";"mailto:a@example.com";"<a href=\"mailto:a@example.com\">l</a>";"href keeps a mailto URL");
+  let a5=cxeq("<a href=\"{= x =}\">l</a>";"/blog/post one";"<a href=\"/blog/post%20one\">l</a>";"href keeps a relative path and percent-encodes a space");
+  let a6=cxeq("<a href=\"/s?q={= x =}\">l</a>";"a&b=c#d";"<a href=\"/s?q=a%26b%3Dc%23d\">l</a>";"after ? the value is a query component");
+  let a7=cxeq("<a href=\"/p/{= x =}\">l</a>";"javascript:x";"<a href=\"/p/javascript:x\">l</a>";"mid-URL the scheme rule does not apply");
+  let a8=cxeq("<form action=\"{= x =}\">";"vbscript:x";"<form action=\"#ZtokeZ\">";"action is a URL attribute too");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8
+};
+
+
+f=testctxjs():bool{
+  let a0=cxeq("<script>var s={= x =};</script>";"1;alert(1)";"<script>var s=\"1\\u003Balert\\u00281\\u0029\";</script>";"in script code the value is a quoted string literal");
+  let a1=cxeq("<script>var s='{= x =}';</script>";"';alert(1)//";"<script>var s='\\u0027\\u003Balert\\u00281\\u0029\\u002F\\u002F';</script>";"in a script string the value cannot close the string");
+  let a2=cxeq("<script>var s=\"{= x =}\";</script>";"</script><b>";"<script>var s=\"\\u003C\\u002Fscript\\u003E\\u003Cb\\u003E\";</script>";"a value cannot close the script element");
+  let a3=cxeq("<button onclick=\"f('{= x =}')\">b</button>";"');alert(1)//";"<button onclick=\"f('\\u0027\\u0029\\u003Balert\\u00281\\u0029\\u002F\\u002F')\">b</button>";"in an on* string the value is JS-escaped, not entity-escaped");
+  let a4=cxeq("<button onclick=\"f({= x =})\">b</button>";"a";"<button onclick=\"f(&quot;a&quot;)\">b</button>";"in on* code the value is a quoted literal, then attribute-escaped");
+  let a5=cxeq("<script>// {= x =}\n</script>";"a\nalert(1)";"<script>// a\\u000Aalert\\u00281\\u0029\n</script>";"in a JS line comment a newline cannot escape the comment");
+  let a6=cxeq("<script>var s=\"{= x =}\";</script>";"a\xE2\x80\xA8b";"<script>var s=\"a\\u2028b\";</script>";"U+2028 is escaped in a JS string");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6
+};
+
+
+f=testctxcss():bool{
+  let a0=cxeq("<div style=\"color:{= x =}\">d</div>";"red;background:url(x)";"<div style=\"color:ZtokeZ\">d</div>";"style code refuses a value that is not a plain value");
+  let a1=cxeq("<div style=\"color:{= x =}\">d</div>";"#ff0000";"<div style=\"color:#ff0000\">d</div>";"style code keeps a plain value");
+  let a2=cxeq("<style>p{font-family:\"{= x =}\"}</style>";"a\"}*{x:y";"<style>p{font-family:\"a\\22 \\7D \\2A \\7B x\\3A y\"}</style>";"a CSS string value is \\HH-escaped");
+  <a0&&a1&&a2
+};
+
+
+f=testctxattr():bool{
+  let a0=cxeq("<div class={= x =}>d</div>";"a onmouseover=alert(1)";"<div class=a&#32;onmouseover&#61;alert&#40;1&#41;>d</div>";"an unquoted attribute value cannot add an attribute");
+  let a1=cxeq("<div title=\"{= x =}\">d</div>";"\"><script>";"<div title=\"&quot;&gt;&lt;script&gt;\">d</div>";"a quoted attribute value is entity-escaped");
+  let a2=cxeq("<div {= x =}=\"1\">d</div>";"onclick";"<div ZtokeZ=\"1\">d</div>";"an attribute-name value cannot name an event handler");
+  let a3=cxeq("<div {= x =}=\"1\">d</div>";"data-id";"<div data-id=\"1\">d</div>";"an attribute-name value can name a plain attribute");
+  let a4=cxeq("<title>{= x =}</title>";"</title><script>";"<title>&lt;/title&gt;&lt;script&gt;</title>";"title content is entity-escaped");
+  let a5=cxeq("<!-- {= x =} --><p>{= x =}</p>";"-->";"<!-- --&gt; --><p>--&gt;</p>";"a comment value cannot close the comment");
+  let a6=cxeq("<script>{= x | raw =}</script>";"alert(1)";"<script>alert(1)</script>";"|raw still writes the value unchanged");
+  let a7=cxeq("<p>{= x | upper =}</p><a href=\"{= x | upper =}\">l</a>";"javascript:x";"<p>JAVASCRIPT:X</p><a href=\"#ZtokeZ\">l</a>";"filters are context-escaped too");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7
+};
+
+
+(* A value reached through a partial or a layout's yield is escaped for the
+ * place it lands in the final page, not for where its template began. *)
+f=testctxcomposed():bool{
+  let w0=file.write("/tmp/test_ooke_12158_p.tkt";"{= x =}");
+  let a0=mt w0 {$ok:v true;$err:e failret("could not write partial")};
+  let w1=file.write("/tmp/test_ooke_12158_l.tkt";"<script>var t={! yield(\"v\") !};</script>");
+  let a1=mt w1 {$ok:v true;$err:e failret("could not write layout")};
+  let a2=cxeq("<script>var p={! partial(\"test_ooke_12158_p\") !};</script>";"1;alert(1)";"<script>var p=\"1\\u003Balert\\u00281\\u0029\";</script>";"a value in a partial is escaped for the script it lands in");
+  let a3=cxeq("{! layout(\"test_ooke_12158_l\") !}{! block(\"v\") !}{= x =}{! end !}";"1;alert(1)";"<script>var t=\"1\\u003Balert\\u00281\\u0029\";</script>";"a value in a block is escaped for where the layout yields it");
+  <a0&&a1&&a2&&a3
+};
+
+
+(* A partial that includes itself is refused with an error once nesting
+ * passes 32 levels; before 121.58 it recursed until the stack ran out. *)
+f=testpartialselfinclude():bool{
+  let w0=file.write("/tmp/test_ooke_12158_self.tkt";"x{! partial(\"test_ooke_12158_self\") !}");
+  let a0=mt w0 {$ok:v true;$err:e failret("could not write partial")};
+  let a1=chk.eqstr(cxr("{! partial(\"test_ooke_12158_self\") !}";"");"<<ERR>>";"a self-including partial is refused with an error");
+  <a0&&a1
+};
+
 
 f=main():i64{
   let r0=testrawpassthrough();
@@ -296,7 +442,16 @@ f=main():i64{
   let r16=testfilterraw();
   let r17=testfilteruppertescapes();
   let r18=testcacheservesstored();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18){
+  let r19=testpartialtraversal();
+  let r20=testlayouttraversal();
+  let r21=testpartialnestedname();
+  let r22=testctxurl();
+  let r23=testctxjs();
+  let r24=testctxcss();
+  let r25=testctxattr();
+  let r26=testctxcomposed();
+  let r27=testpartialselfinclude();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21&&r22&&r23&&r24&&r25&&r26&&r27){
     <0
   }el{
     <1
