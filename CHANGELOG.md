@@ -3,6 +3,40 @@
 Dates are the dates the work was done, not publication dates. Nothing below has
 been published; see `docs/RELEASING.md`.
 
+## 3.0.0-rc.3 — unreleased (main, after rc.2 was frozen at 3cc4998)
+
+Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
+
+### Changed
+
+- **`{= x =}` is escaped for where it sits in the HTML, not only as HTML
+  text** (121.58, a port of toke's 121.37 context tracker). A value at the
+  start of `href`/`src`/`action` (and other URL attributes) with a scheme
+  other than `http`, `https` or `mailto` becomes `#ZtokeZ`; URL values are
+  percent-encoded, as a component after `?` or `#`. In `<script>` or an `on*`
+  attribute a value in code becomes a quoted JS string (`"…"`) and one inside
+  a string is `\u00HH`-escaped. In `<style>` or `style=` a value in code is
+  kept only if it is `[A-Za-z0-9 #%.,_-]`, else `ZtokeZ`. Unquoted attribute
+  values and tag/attribute-name positions are escaped too. `|escape`,
+  `|upper`, `|lower` and `|trim` escape for the context; `|raw` and `|md` are
+  unchanged. A template that put a value in a URL, script or style position
+  now gets different text: `<script>var n={= n =};</script>` renders
+  `var n="3";`, a string, where it rendered `var n=3;`.
+- **Blocks are rendered where the layout yields them**, so a block's values
+  are escaped for that place and a block's islands are detected as before;
+  the islands script is appended once per page. `$block` holds tokens
+  (`toks`), not rendered text (`content`). (121.58)
+
+### Fixed
+
+- **`{! partial("…") !}` and `{! layout("…") !}` cannot leave `templates/`.**
+  A name was joined straight into the path, so `partial("../secret")` rendered
+  `templates/../secret.tkt` into the page. A name with a `..`, `.` or empty
+  segment, a leading `/`, or a backslash is now refused with a logged template
+  error; `partials/header` still works. (121.57)
+- A partial or layout that includes itself fails the render with an error
+  after 32 levels instead of overflowing the stack. (121.58)
+
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
 Second release candidate. **Why a new candidate:** rc.1's `src/store.tk` no
@@ -27,33 +61,9 @@ Read `docs/release-notes-3.0.0.md` before adopting.
   names the setting. Why loopback is ooke's default although toke's port-only
   functions keep every interface: `docs/logging-and-tls.md`, "Bind address".
   `ooke new` writes `host = "127.0.0.1"` explicitly. (138.7, loke O-3)
-- **`{= x =}` is escaped for where it sits in the HTML, not only as HTML
-  text** (121.58, a port of toke's 121.37 context tracker). A value at the
-  start of `href`/`src`/`action` (and other URL attributes) with a scheme
-  other than `http`, `https` or `mailto` becomes `#ZtokeZ`; URL values are
-  percent-encoded, as a component after `?` or `#`. In `<script>` or an `on*`
-  attribute a value in code becomes a quoted JS string (`"…"`) and one inside
-  a string is `\u00HH`-escaped. In `<style>` or `style=` a value in code is
-  kept only if it is `[A-Za-z0-9 #%.,_-]`, else `ZtokeZ`. Unquoted attribute
-  values and tag/attribute-name positions are escaped too. `|escape`,
-  `|upper`, `|lower` and `|trim` escape for the context; `|raw` and `|md` are
-  unchanged. A template that put a value in a URL, script or style position
-  now gets different text: `<script>var n={= n =};</script>` renders
-  `var n="3";`, a string, where it rendered `var n=3;`.
-- **Blocks are rendered where the layout yields them**, so a block's values
-  are escaped for that place and a block's islands are detected as before;
-  the islands script is appended once per page. `$block` holds tokens
-  (`toks`), not rendered text (`content`). (121.58)
 
 ### Fixed since rc.1
 
-- **`{! partial("…") !}` and `{! layout("…") !}` cannot leave `templates/`.**
-  A name was joined straight into the path, so `partial("../secret")` rendered
-  `templates/../secret.tkt` into the page. A name with a `..`, `.` or empty
-  segment, a leading `/`, or a backslash is now refused with a logged template
-  error; `partials/header` still works. (121.57)
-- A partial or layout that includes itself fails the render with an error
-  after 32 levels instead of overflowing the stack. (121.58)
 - **`src/store.tk` compiles on current toke**: `storeslug`/`storefind` return
   an explicit not-found error instead of ending in a bare propagation. (127.127)
 - **An app with more than 31 handler pages compiles.** The generated handler
