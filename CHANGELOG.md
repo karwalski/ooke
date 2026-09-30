@@ -36,6 +36,24 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   error; `partials/header` still works. (121.57)
 - A partial or layout that includes itself fails the render with an error
   after 32 levels instead of overflowing the stack. (121.58)
+- **A page whose template fails to render answers 500, not an empty 200.**
+  `ooke serve` turned a template error into `""` and served the empty-template
+  fallback page (200), or skipped a content page (404). The route now answers
+  500 with the body `500 Internal Server Error` -- no template name, path or
+  error reaches the client -- and the server log names the route, the template
+  and the error. (121.59)
+- **`ooke build` fails, naming the template, when a template fails.** A
+  content page's template error was reported only as "render produced no
+  output"; it now names the template and points at the logged error. A broken
+  `templates/errors/404.tkt` was skipped silently (exit 0, no `404.html`); it
+  now fails the build. (121.59)
+- **A missing partial is an error**, as a missing layout already was.
+  `{! partial("nosuch") !}` rendered as nothing, with no error and no log. A
+  partial file that exists but cannot be read (for one, a symlink: std.file
+  does not follow a final symlink) is an error too, and a template, layout or
+  partial read failure is now logged. An empty partial file still renders as
+  nothing. **Behaviour change:** a site that referenced a partial it does not
+  have now fails `build` and answers 500 under `serve`. (121.59)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
