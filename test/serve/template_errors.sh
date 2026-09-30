@@ -13,8 +13,18 @@
 #   partial  {! partial("nosuch") !} rendered as nothing with no error and no
 #          log, while a missing layout was an error. It is an error now.
 #
+# Story 121.61:
+#   404    A templates/errors/404.tkt that fails to render fell back to the
+#          default 404 with only an info line. It must log at error level,
+#          naming the template; the client still gets the default 404.
+#   xss    The empty-template fallback page put the route's path into the
+#          HTML unescaped, so a page named /<script>x</script> served a live
+#          script element. The path is HTML-escaped now.
+#
 # Negative controls: a good page in the same project still answers 200 with
-# its content, and a project with no broken templates builds with exit 0.
+# its content, and a project with no broken templates builds with exit 0; a
+# good 404 template is served and logs no error; a plain empty-template page
+# still shows its path.
 #
 # Usage: test/serve/template_errors.sh [path/to/ooke-toke]
 set -u
@@ -36,6 +46,12 @@ ok()  { echo "  PASS $1"; pass=$((pass+1)); }
 bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 
 port=$(( 20000 + ($$ % 20000) ))
+
+# leaks BODY -> 0 when the body names a template, a path or the error
+leaks() {
+  case $1 in *nosuch*|*template*|*.tkt*|*"$tmp"*|*layout*|*partial*) return 0;; esac
+  return 1
+}
 
 # mkproj DIR PORT -- a project with one good page and nothing else.
 mkproj() {
@@ -83,6 +99,8 @@ mkproj "$S" "$port" || exit 2
 page "$S" broken '{! layout("nosuchlayout") !}x'
 page "$S" nopartial 'a{! partial("nosuchpartial") !}b'
 blog "$S" '{! layout("nosuchlayout") !}{= body =}'
+mkdir -p "$S/templates/errors"
+echo '<p>CUSTOM404</p>' >"$S/templates/errors/404.tkt"
 
 (cd "$S" && exec "$BIN" serve) >"$tmp/serve.log" 2>&1 &
 pid=$!
@@ -107,11 +125,6 @@ else
     && ok "control: a good page in the same project answers 200 with its content" \
     || bad "control: / answered $code: $(printf '%s' "$body" | head -c 80)"
 
-  # leaks BODY -> 0 when the body names a template, a path or the error
-  leaks() {
-    case $1 in *nosuch*|*template*|*.tkt*|*"$S"*|*layout*|*partial*) return 0;; esac
-    return 1
-  }
   for p in /broken /nopartial /blog/one; do
     fetch $p
     if [ "$code" = "500" ]; then ok "$p answers 500"
@@ -131,6 +144,75 @@ grep -q "no partial template" "$tmp/serve.log" \
 grep "answering 500" "$tmp/serve.log" | grep -q "templates/broken.tkt" \
   && ok "serve log names the route's template for the 500" \
   || bad "serve log does not name templates/broken.tkt beside the 500"
+# The good 404 template is registered. (Whether its body is then served for an
+# unknown path is toke's: http.setnotfound's body is used only inside the
+# static-route dispatcher, so the router's own "Not Found" answers unrouted
+# paths -- reported with 121.61, not asserted here.)
+grep -q "custom 404 registered from templates/errors/404.tkt" "$tmp/serve.log" \
+  && ok "control: a good templates/errors/404.tkt renders and is registered" \
+  || bad "control: the good 404 template was not registered"
+grep '"level":"error"' "$tmp/serve.log" | grep -q "errors/404.tkt" \
+  && bad "control: a good 404 template logged an error: $(grep 'errors/404.tkt' "$tmp/serve.log" | head -1)" \
+  || ok "control: a good 404 template logs no error"
+
+# ── serve: broken 404 template, empty-template fallback (121.61) ───────────
+echo "=== serve logs a broken 404 template as an error; the fallback page escapes its path (121.61) ==="
+port2=$((port + 1))
+F=$tmp/fallback
+mkproj "$F" "$port2" || exit 2
+mkdir -p "$F/templates/errors"
+printf '%s\n' '{! layout("nosuchlayout") !}x' >"$F/templates/errors/404.tkt"
+# A page whose name is markup. pages/<script>x</script>.tk is the file
+# "script>.tk" in the directory "<script>x<", so its route is /<script>x</script>.
+# Its template renders to nothing, which is what serves the fallback page.
+xss='<script>x</script>'
+mkdir -p "$F/pages/<script>x<" "$F/templates/<script>x<"
+echo 'm=page.x;' >"$F/pages/$xss.tk"
+: >"$F/templates/$xss.tkt"
+echo 'm=page.x;' >"$F/pages/plain.tk"
+: >"$F/templates/plain.tkt"
+
+(cd "$F" && exec "$BIN" serve) >"$tmp/fallback.log" 2>&1 &
+pid=$!
+up=""; i=0
+while [ $i -lt 50 ]; do
+  kill -0 "$pid" 2>/dev/null || break
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "http://127.0.0.1:$port2/" 2>/dev/null)
+  [ "$code" = "200" ] && { up=1; break; }
+  sleep 0.2; i=$((i+1))
+done
+if [ -z "$up" ]; then
+  bad "serve: no answer on :$port2"; sed 's/^/       /' "$tmp/fallback.log" | tail -8
+else
+  # curl sends < and > as they are; toke matches a static route on the raw path.
+  code=$(curl -s -o "$tmp/body" -w '%{http_code}' --max-time 3 "http://127.0.0.1:$port2/$xss")
+  body=$(cat "$tmp/body" 2>/dev/null)
+  if [ "$code" != "200" ]; then bad "/$xss answered $code, want 200 (the empty-template fallback)"
+  else
+    case $body in *"$xss"*) bad "the fallback page carries the path unescaped: $body";;
+      *) ok "the fallback page does not carry /$xss as markup";; esac
+    case $body in *'/&lt;script&gt;x&lt;/script&gt;'*) ok "the fallback page shows the path HTML-escaped";;
+      *) bad "the fallback page does not show the escaped path: $body";; esac
+  fi
+  code=$(curl -s -o "$tmp/body" -w '%{http_code}' --max-time 3 "http://127.0.0.1:$port2/plain")
+  body=$(cat "$tmp/body" 2>/dev/null)
+  [ "$code" = "200" ] && [ "$body" = '<html><body><p>/plain</p></body></html>' ] \
+    && ok "control: a plain empty-template page still shows its path" \
+    || bad "control: /plain answered $code: $body"
+  code=$(curl -s -o "$tmp/body" -w '%{http_code}' --max-time 3 "http://127.0.0.1:$port2/nosuchpage")
+  body=$(cat "$tmp/body" 2>/dev/null)
+  [ "$code" = "404" ] && ! leaks "$body" \
+    && ok "a broken 404 template still answers the default 404 ($(printf '%s' "$body" | head -c 40))" \
+    || bad "broken 404 template: /nosuchpage answered $code: $(printf '%s' "$body" | head -c 120)"
+fi
+kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null; pid=""
+
+grep '"level":"error"' "$tmp/fallback.log" | grep -q "errors/404.tkt" \
+  && ok "a broken 404 template is logged at error level, naming templates/errors/404.tkt" \
+  || { bad "no error-level log line names the broken 404 template"; grep -i 404 "$tmp/fallback.log" | sed 's/^/       /'; }
+grep '"level":"info"' "$tmp/fallback.log" | grep -q "404 template render failed" \
+  && bad "the broken 404 template is still reported at info level" \
+  || ok "the broken 404 template is not reported at info level"
 
 # ── build ──────────────────────────────────────────────────────────────────
 echo "=== build fails, naming the template, for a template that fails (121.59) ==="

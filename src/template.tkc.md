@@ -1,8 +1,8 @@
 ---
 source_file: "template.tk"
-source_hash: "56111dcadc157aad3ce284f75f208cb8c9768326411cc73756beed06316897b5"
-compiler_version: "0.3.9"
-generated_at: "2026-06-15T00:00:00Z"
+source_hash: "445e9672b333a7579b9d7dd69b83a1a95de0cc0d3e4aeb493014387edbea1d47"
+compiler_version: "3.0.0"
+generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
 ---
 
@@ -13,14 +13,22 @@ format_version: "1.0"
 The ooke `.tkt` template engine. It lexes template source into a token stream,
 resolves `{= expr =}` expressions (with an optional `| filter` pipe), executes
 `{! directive !}` directives (layout, block/end, var, yield, partial, island),
-strips `{# comment #}` regions, and renders the result to an HTML string. It also
-provides a simple per-path token cache so repeated renders of the same template
-skip re-lexing.
+strips `{# comment #}` regions, and renders the result to an HTML string.
+
+Values are escaped for the place in the HTML where they land (story 121.58), not
+with one HTML-body escaper everywhere: every byte of output is fed through an
+HTML context tracker (`hcfeed`, a port of toke's `src/stdlib/template.c`
+tracker, 121.37) and `ctxescape` picks the escaper from the state it leaves.
+Partial and layout names are confined to the templates directory (121.57). A
+missing or unreadable template, layout or partial is a `$tplerr`, logged where
+it is raised (121.59, 134.24). A per-path token cache lets repeated renders of
+the same template skip re-lexing.
 
 **Imports:**
-- `std.file` (alias `file`) — read template, layout, and partial files from disk.
-- `std.str` (alias `str`) — string scanning/slicing (`indexof`, `slice`, `trim`,
-  `len`, `replace`, `concat`, `upper`, `lower`).
+- `std.file` (alias `file`) — probe and read template, layout and partial files.
+- `std.log` (alias `log`) — error-level logging of every `$tplerr` where it is
+  raised (a caller cannot read `e.msg` off the payload: RT005, toke 127.78).
+- `std.str` (alias `str`) — scanning, slicing, builders, case and replace.
 - `std.path` (alias `path`) — join the templates dir with a layout/partial name.
 - `std.md` (alias `md`) — Markdown rendering for the `md` filter.
 
@@ -28,8 +36,7 @@ skip re-lexing.
 
 ### `$tokenkind`
 
-A one-hot flag set classifying a lexed token. Exactly one field is `true` per
-token.
+A one-hot flag set classifying a lexed token. Exactly one field is `true`.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -40,41 +47,71 @@ token.
 
 ### `$token`
 
-A single lexed template token.
-
 | Field | Type | Description |
 |-------|------|-------------|
 | `kind` | `$tokenkind` | The token classification. |
-| `content` | `$str` | For `raw`, the literal text; otherwise the inner text between the delimiters (delimiters stripped). |
+| `content` | `$str` | For `raw`, the literal text; otherwise the text between the delimiters. |
 
 ### `$tplerr`
 
-Error type for fallible template operations.
-
 | Field | Type | Description |
 |-------|------|-------------|
-| `msg` | `$str` | Human-readable failure description. |
+| `msg` | `$str` | Human-readable failure description (also logged at error level). |
 
 ### `$block`
 
-A named content block collected from a child template for layout inheritance.
+A named block collected from a child template for layout inheritance. It holds
+the block's **tokens**, not rendered text (121.58), so the block is rendered —
+and its values escaped — where the layout yields it.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | `$str` | Block name (the directive argument). |
-| `content` | `$str` | Rendered block body. |
+| `toks` | `@$token` | The block's tokens. |
 
-### `$tplcache`
+### `$hc`
 
-A per-path cache of already-lexed token streams.
+HTML context tracker state; every field is an `i64` code except the two names.
+
+| Field | Description |
+|-------|-------------|
+| `st` | Tokenizer state: 0 text, 1 tagopen, 2 endtagopen, 3 tagname, 4 intag, 5 attrname, 6 afterattrname, 7 beforevalue, 8 value, 9 markup (`<!`/`<?`), 10 comment, 11 rawtext. |
+| `closing` | 1 inside an end tag. |
+| `tagel` | Kind of the element being opened: 0 none, 1 script, 2 style, 3 rcdata (title, textarea). |
+| `rawel` | Kind of the rawtext element currently open (same codes). |
+| `rname` | Lower-case name of that rawtext element (to find its end tag). |
+| `name` | Lower-case tag or attribute name being read (max 31 bytes). |
+| `nover` | 1 when `name` overflowed 31 bytes. |
+| `ak` | Attribute kind: 0 normal, 1 url, 2 js (`on*`), 3 css (`style`). |
+| `quote` | The value's quote byte (34 or 39), or 0 when unquoted. |
+| `vlen` | Bytes of the attribute value so far (leading spaces not counted). |
+| `urlpart` | 1 once a URL value has passed `?` or `#`. |
+| `js` | JS sub-state: 0 code, 1 `"…"`, 2 `'…'`, 3 `` `…` ``, 4 `//`, 5 `/* */`. |
+| `css` | CSS sub-state: 0 code, 1 `"…"`, 2 `'…'`, 3 `/* */`. |
+| `esc` | 1 after a backslash in a JS/CSS string. |
+| `slash` | 1 after a `/` (possible comment start). |
+| `star` | 1 after a `*` in a block comment. |
+| `dashes` | Consecutive `-` in an HTML comment. |
+| `mcount` | Bytes read of a `<!` markup opener (to recognise `<!--`). |
+| `endlen` | Bytes matched of `</rname` in rawtext. |
+
+### `$rout`
+
+One render's output, the tracker state after it, and whether it held an island.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `entries` | `@($str:@$token)` | Map from template path to its lexed token array. |
+| `text` | `$str` | The rendered text. |
+| `hc` | `$hc` | Tracker state after `text`. |
+| `islands` | `bool` | An `island` directive was rendered (the islands script is appended once, at the top). |
+
+### `$tplcache`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entries` | `@($str:@$token)` | Template path → lexed tokens. |
 
 ### `$renderresult`
-
-The result of a cached render: the output plus the (possibly updated) cache.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -85,335 +122,325 @@ The result of a cached render: the output plus the (possibly updated) cache.
 
 ### `tplescape(s: $str): $str`
 
-**Purpose:** HTML-escape a string.
+**Purpose:** HTML-escape text (for HTML text and quoted attribute values).
 
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| `s` | `$str` | Raw text to escape. |
-
-**Returns:** `$str` — the escaped text.
-
-**Logic:** Apply `str.replace` in order: `&`→`&amp;`, `<`→`&lt;`, `>`→`&gt;`,
+**Logic:** `str.replace` in order: `&`→`&amp;`, `<`→`&lt;`, `>`→`&gt;`,
 `"`→`&quot;`, `'`→`&#39;` (ampersand first so later entities are not
-double-escaped). Return the final string.
+double-escaped). Also used by serve.tk for the empty-template fallback page
+(121.61).
 
-**Error handling:** None.
+### HTML context tracker
 
-### `tplapplyfilter(val: $str; filtername: $str): $str`
+#### `hcnew(): $hc`
 
-**Purpose:** Apply a named expression filter to a value.
+The start state: every field `0` or `""` (text context).
 
-**Parameters:**
+#### `hcspace(c: i64): bool` / `hcalpha(c: i64): bool` / `hcalnum(c: i64): bool`
 
-| Name | Type | Description |
-|------|------|-------------|
-| `val` | `$str` | The value to transform. |
-| `filtername` | `$str` | Filter name (leading/trailing whitespace is trimmed). |
+Byte classes: HTML whitespace (32, 9, 10, 13, 12); ASCII letter; letter or digit.
 
-**Returns:** `$str` — the filtered value.
+#### `hcpack(m: i64; e: i64; sl: i64; sr: i64): i64`
 
-**Logic:** Trim `filtername`. Dispatch via a nested `if`/`el` chain: `md` →
-`md.render(val)`; `escape` → `tplescape(val)`; `upper` → `str.upper(val)`;
-`lower` → `str.lower(val)`; `trim` → `str.trim(val)`. Any other (or empty) name
-returns `val` unchanged.
+Packs a JS/CSS sub-state as `m | e<<3 | sl<<4 | sr<<5` (mode, esc, slash, star)
+so the sub-machines are pure `i64 → i64` functions and `hcfeed` allocates
+nothing per byte.
 
-**Error handling:** None. Unknown filters are a no-op.
+#### `hcjs(p: i64; c: i64): i64`
 
-### `tplresolveexpr(expr: $str; ctx: @($str:$str)): $str`
+One byte of the JS sub-machine over a packed state. In code: `/` then `/` opens
+a line comment (4), `/` then `*` a block comment (5); `"`, `'`, `` ` `` open a
+string (1, 2, 3). In a string: a backslash sets `esc`, which the next byte
+clears; the matching quote closes it, and so does a newline except in a
+template literal. A line comment ends at newline; a block comment at `*/`.
 
-**Purpose:** Resolve a `{= … =}` expression body against the context map,
-applying an optional `| filter`.
+#### `hccss(p: i64; c: i64): i64`
 
-**Parameters:**
+The CSS equivalent: `/*` opens a comment (3); `"` and `'` open strings (1, 2),
+closed by the matching quote or a newline, with backslash escapes; a comment
+ends at `*/`.
 
-| Name | Type | Description |
-|------|------|-------------|
-| `expr` | `$str` | The raw inner expression text. |
-| `ctx` | `@($str:$str)` | Variable name → value map. |
+#### `hcelemkind(n: $str; over: i64): i64`
 
-**Returns:** `$str` — the resolved (and optionally filtered) value, or `""` if
-the key is absent.
+Element kind for a tag name: `script` 1, `style` 2, `title`/`textarea` 3, else
+0 (always 0 when the name overflowed).
+
+#### `hcattrkind(n: $str; over: i64): i64`
+
+Attribute kind: a name starting `on` is 2 (JS) even when overflowed; otherwise
+(0 when overflowed) `style` is 3; the URL attributes (`href`, `src`, `action`,
+`formaction`, `cite`, `data`, `poster`, `background`, `codebase`, `longdesc`,
+`usemap`, `manifest`, `icon`, `profile`, `classid`, `archive`, `srcset`,
+`ping`, `lowsrc`, `dynsrc`, `xlink:href`, `xmlns`) and any name containing
+`url` or `uri` are 1; else 0.
+
+#### `hcfeed(h: $hc; s: $str): $hc`
+
+**Purpose:** Feed `s` through the tracker; return the state after its last byte.
+
+**Logic:** Copy every field into a mutable local, then for each byte `c`:
+
+- **0 text:** `<` → 1.
+- **1 tagopen:** letter → start a tag name (`closing=0`) in 3; `/` → 2; `!` or
+  `?` → 9 (`mcount` 0 for `!`, 2 for `?`); `<` stays 1; else → 0.
+- **2 endtagopen:** letter → tag name with `closing=1`; `>` → 0; else → 9 as a
+  bogus comment.
+- **3 tagname:** space or `/` → 4, recording `tagel` (0 for an end tag); `>` →
+  tag end (same `tagel`); else append to the name.
+- **4 intag:** space or `/` stay; `>` → tag end; else start an attribute name.
+- **5 attrname:** space → 6 and `ak`; `=` → 7 and `ak`; `/` → 4; `>` → tag end;
+  else append.
+- **6 afterattrname:** `=` → 7; `/` → 4; `>` → tag end; other non-space → a new
+  attribute name.
+- **7 beforevalue:** `"`/`'` → value start with that quote; `>` → tag end; other
+  non-space → value start unquoted, and the byte is a value byte.
+- **8 value:** the quote (or a space, unquoted) → 4; `>` unquoted → tag end;
+  else a value byte.
+- **9 markup:** within the first two bytes after `<!`, `--` → 10; otherwise `>`
+  → 0.
+- **10 comment:** `>` after two or more dashes → 0.
+- **11 rawtext:** track `</rname` case-insensitively; followed by space or `/`
+  → 4 (as an end tag), by `>` → 0. This ends the element even inside a JS
+  string, as HTML does. Otherwise run the byte through `hcjs` (script) or
+  `hccss` (style).
+
+Then: a new attribute name resets `name`; name bytes are appended lower-cased
+up to 31 bytes, past which `nover=1`; a tag end enters 11 for an opening
+script/style/title/textarea (recording `rawel` and `rname`, clearing the
+sub-states) or 0 otherwise; a value start enters 8 with `vlen`, `urlpart` and
+the sub-states cleared; a value byte (leading spaces skipped) increments
+`vlen`, sets `urlpart` on `?` or `#` in a URL value, and runs `hcjs`/`hccss` in
+a JS/CSS value. Return the rebuilt `$hc`.
+
+**Limits (as in toke):** character references in an attribute are not decoded,
+and JS regular-expression literals are not recognised. Either can only mislead
+the tracker about being in a string; every JS/CSS escaper's output holds no
+quote, slash, star, newline or angle bracket, so a mis-tracked value comes out
+as wrong text, not code.
+
+### Escapers
+
+#### `hchexdigit(d: i64): $str` / `hchex2(c: i64): $str`
+
+One upper-case hex digit; a byte as two.
+
+#### `esckeep(mode: i64; c: i64): bool`
+
+Which bytes pass unchanged. Letters and digits always. Mode 1 (unquoted
+attribute): also bytes > 127. Mode 2 (JS string body): also > 127, space, `_`,
+`,`, `.`. Mode 3 (CSS string body): also > 127 and space. Modes 4 (URL) and 5
+(URL component): also `-`, `.`, `_`, `~`; mode 4 also the reserved set
+`: / ? # [ ] @ ! $ & ' ( ) * + , ; = %`.
+
+#### `escrepl(mode: i64; c: i64): $str`
+
+The replacement for a byte: mode 1 `&#N;`; mode 2 `\u00HH`; mode 3 `\H ` (one
+digit below 16) or `\HH `; modes 4 and 5 `%HH`.
+
+#### `escbytes(s: $str; mode: i64): $str`
+
+Escapes `s` byte by byte in one `str.builder`, copying runs of kept bytes as
+slices. In mode 2 the UTF-8 line separators U+2028/U+2029 (E2 80 A8/A9) become
+` `/` ` (they end a line in pre-2019 JS strings).
+
+#### `escjs(js: i64; s: $str): $str`
+
+In JS code (`js==0`) a value becomes a quoted literal `"` + `escbytes(s;2)` +
+`"`; inside a string or comment it is `escbytes(s;2)`.
+
+#### `esccss(css: i64; s: $str): $str`
+
+In CSS code a value passes only if every byte is a letter, digit, > 127, space
+or one of `# % . , _ -`; otherwise it becomes `ZtokeZ`. Inside a CSS string or
+comment it is `escbytes(s;3)`.
+
+#### `escurl(vlen: i64; urlpart: i64; s: $str): $str`
+
+When the value starts the URL (`vlen==0 && urlpart==0`) the scheme is decided
+here: skip leading spaces, scan to the first `: / ? #`; if that is `:` and the
+lower-cased scheme is not `http`, `https` or `mailto`, return `#ZtokeZ`. Then
+`escbytes(s;5)` after `?`/`#`, else `escbytes(s;4)`.
+
+#### `escname(s: $str): $str`
+
+A value in a tag or attribute name: allowed only if 1–31 bytes of
+`[A-Za-z0-9_-]` naming a plain attribute (`hcattrkind` 0); otherwise `ZtokeZ`.
+
+#### `ctxescape(h: $hc; v: $str): $str`
+
+Escape one value for the context `h`:
+
+- text, markup, comment (st 0, 9, 10): `tplescape`.
+- rawtext (11): script → `escjs(h.js)`, style → `esccss(h.css)`, title/textarea
+  → `tplescape`.
+- inside a tag before a value (st < 7): `escname`.
+- a value (7 starts one, fresh; 8 continues one): apply the attribute kind's
+  escaper (`escurl`, `escjs`, `esccss`, or none), then `tplescape` when quoted
+  or `escbytes(…;1)` when unquoted.
+
+### Values
+
+#### `tplfilterctx(val: $str; filtername: $str; h: $hc): $str`
+
+Trim the filter name. `md` → `md.render(val)` and `raw` → `val`, both written
+unchanged (md is HTML ooke produced; raw is the explicit opt-out). Every other
+name — `upper`, `lower`, `trim`, `escape`, or unknown (unchanged value) — is
+applied and the result escaped with `ctxescape(h; …)`.
+
+#### `tplexprctx(expr: $str; ctx: @($str:$str); h: $hc): $str`
+
+Trim the expression. With a `|`: the key is the trimmed text before it, the
+filter the trimmed text after it; the value is `ctx.get(key)` (`""` when
+absent) passed to `tplfilterctx`. Without: `ctxescape(h; ctx.get(expr) or "")`.
+
+#### `tplapplyfilter(val: $str; filtername: $str): $str` / `tplresolveexpr(expr: $str; ctx: @($str:$str)): $str`
+
+The HTML-text forms, kept for callers outside a render: `tplfilterctx` /
+`tplexprctx` with `hcnew()`.
+
+### Lexing and directive parsing
+
+#### `tpllex(src: $str): @$token!$tplerr`
+
+Loop over the remaining text: find the earliest of `{=`, `{!`, `{#`. None → the
+rest is one `raw` token. Otherwise emit a `raw` token for any text before it,
+find the matching close (`=}`, `!}`, `#}`) after the opener; if there is none
+the rest is `raw` (an unterminated tag is literal text); else emit an `expr`,
+`directive` or `comment` token with the inner text and continue after the
+close. The error arm is declared for signature compatibility; it never raises.
+
+#### `tpldirectivename(content: $str): $str`
+
+The trimmed text before `(`, or the whole trimmed text.
+
+#### `tpldirectivearg(content: $str): $str`
+
+The trimmed text between the first `(` and the next `)`, with one pair of
+surrounding double quotes removed; `""` when either paren is missing.
+
+#### `tplfindblock(blocks: @$block; name: $str): @$token`
+
+The `toks` of the first block with that name, or `@()`.
+
+#### `tplislandparse(content: $str): @($str:$str)`
+
+Parse `island("name" hydrate="…")` into `@("name":…; "hydrate":…)`; the
+defaults are `""` and `"load"` for any part that is missing or malformed.
+
+### Names and rendering
+
+#### `tplnameok(name: $str): bool`
+
+121.57: a partial or layout name is a name inside the templates directory, not
+a path. False for the empty name, a backslash, a leading `/`, or any empty,
+`.` or `..` segment (so `../x`, `/etc/x`, `a/../../x`, `a//b`, `./a` are
+refused); `/` is allowed as the separator for nested names
+(`partials/header`).
+
+#### `tplnamepath(templatesdir: $str; kind: $str; name: $str): $str!$tplerr`
+
+If `tplnameok(name)` is false, log and return `$tplerr` ("template: refused
+<kind> name "<name>": …"). Otherwise `path.join(templatesdir; name + ".tkt")`.
+
+#### `tplrenderctx(tokens: @$token; ctx: @($str:$str); templatesdir: $str; blocks: @$block; hc0: $hc; depth: i64): $rout!$tplerr`
+
+**Purpose:** The engine. Render tokens as a continuation of output whose HTML
+context is `hc0`; return the text, the context after it, and whether an island
+was rendered.
 
 **Logic:**
 
-1. Trim the expression.
-2. Find the first `|` with `str.indexof`.
-3. If a pipe is present (`indexof >= 0`): the key is the trimmed slice before the
-   pipe (slice matched `{$ok:v v;$err:e trimmed}`); the filter name is the
-   trimmed slice after the pipe (matched `{$ok:v v;$err:e ""}`). Bind the
-   context lookup to `vgot=ctx.get(key)`, take its value with
-   `mt vgot {$ok:v v;$err:e ""}`, then return `tplapplyfilter(val;filter)`.
-4. Otherwise bind `vgot2=ctx.get(trimmed)` and return
-   `mt vgot2 {$ok:v v;$err:e ""}`.
-
-**Error handling:** Total — a missing key resolves to `""`.
-
-### `tpllex(src: $str): @$token!$tplerr`
-
-**Purpose:** Lex template source into a `@$token` stream.
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| `src` | `$str` | Template source. |
-
-**Returns:** `@$token!$tplerr` — the token array. (The error arm is declared for
-signature compatibility; this implementation never raises.)
-
-**Logic:**
-
-1. Initialise mutable `tokens=@()` and mutable `remaining=src`. Precompute the
-   four `$tokenkind` flag records (`rawkind`, `exprkind`, `dirkind`, `cmtkind`).
-2. Loop with mutable `running=true` (counter `ii` from `0`, unused for control):
-   a. Let `rem=remaining`, `rlen=str.len(rem)`. If `rlen=0`, set `running=false`.
-   b. Otherwise find the earliest of `{=`, `{!`, `{#` via `str.indexof`
-      (`posexpr`, `posdir`, `poscmt`). Track the smallest non-negative position
-      in mutable `bestpos` (init `-1`) and the matching `besttype` (`"expr"`,
-      `"dir"`, or `"cmt"`).
-   c. If no delimiter found (`bestpos<0`): append a `raw` token with the whole
-      `rem`, clear `remaining`, stop.
-   d. Otherwise: if `bestpos>0`, append a `raw` token for the text before the
-      delimiter. Compute `afteropen` = slice from `bestpos+2`. Pick the matching
-      close delimiter (`=}`, `!}`, or `#}`). Find it via `str.indexof`.
-      - If the close is missing (`closepos<0`): append a `raw` token for the
-        remaining text, clear `remaining`, stop (unterminated tag is treated as
-        literal).
-      - Otherwise slice the `inner` content `[0,closepos)` and `afterclose`
-        `[closepos+2,end)`. Append a token of the corresponding kind (`expr`,
-        `dir`, or `cmt`) carrying `inner`, then set `remaining=afterclose`.
-3. Return `tokens`.
-
-All `str.slice` results are matched `{$ok:v v;$err:e ""}`.
-
-**Error handling:** Total in practice; malformed/unterminated tags degrade to raw
-text rather than erroring.
-
-### `tpldirectivename(content: $str): $str`
-
-**Purpose:** Extract the directive name (the part before `(`).
-
-**Parameters:** `content: $str` — the directive inner text.
-
-**Returns:** `$str` — the trimmed name, or the whole trimmed content if there is
-no `(`.
-
-**Logic:** Trim. Find `(` with `str.indexof`. If present, return the slice
-`[0,paren)` (matched `{$ok:v v;$err:e trimmed}`); else return the trimmed text.
-
-**Error handling:** None.
-
-### `tpldirectivearg(content: $str): $str`
-
-**Purpose:** Extract a directive's single parenthesised argument, unquoting a
-double-quoted string.
-
-**Parameters:** `content: $str` — the directive inner text.
-
-**Returns:** `$str` — the argument, or `""` if absent/malformed.
-
-**Logic:** Trim. Find `(`; if absent return `""`. Slice after `(` to get
-`afteropen`; find `)`; if absent return `""`. Slice the raw arg `[0,close)`,
-trim it to `t`, let `tlen=str.len(t)`. If `tlen>1`, take the first and last
-characters; if both are `"`, return the inner `[1,tlen-1)` (matched
-`{$ok:v v;$err:e t}`), else return `t`. If `tlen<=1`, return `t`. All slices
-matched `{$ok:v v;$err:e ""}` (or the noted fallback).
-
-**Error handling:** None; malformed args yield `""`.
-
-### `tplfindblock(blocks: @$block; name: $str): $str`
-
-**Purpose:** Find a collected block's content by name.
-
-**Parameters:** `blocks: @$block`; `name: $str`.
-
-**Returns:** `$str` — the matching block's `content`, or `""` if not found.
-
-**Logic:** Loop `i` from `0` to `blocks.len`; if `blocks.get(i).name = name`
-return its `content`. After the loop, return `""`.
-
-**Error handling:** None.
-
-### `tplislandparse(content: $str): @($str:$str)`
-
-**Purpose:** Parse an `island("name" hydrate="…")` directive into a
-`{name, hydrate}` map.
-
-**Parameters:** `content: $str` — the directive inner text.
-
-**Returns:** `@($str:$str)` — keys `"name"` and `"hydrate"`. Defaults are
-`name=""` and `hydrate="load"`.
-
-**Logic:** Trim. Find `(`; if absent return the default map. Slice after `(` to
-`afteropen`, find `)`, slice `inner` `[0,close)`. Find the first `"` (`q1`); if
-absent return defaults. Slice after `q1` to `afterq1`, find the next `"` (`q2`);
-if absent return defaults. `iname` is the slice `[0,q2)` of `afterq1`; `rest` is
-the slice after `q2`. Search `rest` for `hydrate="`; if absent return
-`{name:iname, hydrate:"load"}`. Otherwise slice after the `hydrate="` match
-(offset `+9`), find the closing `"`; if absent return `{name:iname,
-hydrate:"load"}`, else `hval` is the slice up to that quote and return
-`{name:iname, hydrate:hval}`. All slices matched `{$ok:v v;$err:e <fallback>}`.
-
-**Error handling:** None; malformed input degrades to defaults.
-
-### `tplrender(tokens: @$token; ctx: @($str:$str); templatesdir: $str; blocks: @$block): $str!$tplerr`
-
-**Purpose:** Render a token stream to an HTML string, handling expressions,
-directives, layout inheritance, partials, and islands.
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| `tokens` | `@$token` | The lexed tokens to render. |
-| `ctx` | `@($str:$str)` | Variable context. |
-| `templatesdir` | `$str` | Directory used to resolve layout/partial paths. |
-| `blocks` | `@$block` | Blocks supplied by a child template (used by `yield` when rendering a layout). |
-
-**Returns:** `$str!$tplerr` — rendered output, or `$tplerr` if a referenced
-layout/partial file or its lex/render fails.
-
-**Logic:**
-
-1. Mutable state: `buf=""` (main output), `hasislands=false`, `inblock=false`,
-   `currentblockname=""`, `currentblockbuf=""`, `collectedblocks=@()`,
-   `layoutname=""`.
-2. Loop `i` over `tokens`:
-   - `raw` token: append `tok.content` to `currentblockbuf` if `inblock` else to
-     `buf`.
-   - `expr` token: `val=tplresolveexpr(tok.content;ctx)`; append to the block
-     buffer or `buf` per `inblock`.
-   - `comment` token: ignored (no branch body).
-   - `directive` token: compute `dname=tpldirectivename` and
-     `darg=tpldirectivearg`, then dispatch:
-     - `layout`: set `layoutname=darg`.
-     - `block`: set `inblock=true`, `currentblockname=darg`,
-       `currentblockbuf=""`.
-     - `end`: if `inblock`, append a `$block{name:currentblockname;
-       content:currentblockbuf}` to `collectedblocks` and reset block state.
-     - `var`: bind `vargot=ctx.get(darg)`, take `varval` via
-       `mt vargot {$ok:v v;$err:e ""}`, append per `inblock`.
-     - `yield`: `blockcontent=tplfindblock(blocks;darg)`; if non-empty append to
-       `buf`.
-     - `partial`: `partialpath=tplnamepath(templatesdir;"partial";darg)`
-       (`!$tplerr`); if the file does not exist, or `file.read` fails, log and
-       return `$tplerr` (121.59: a missing partial is an error, as a missing
-       layout is); take `partialsrc` from the read; if non-empty, lex it (`!$tplerr`),
-       recursively `tplrender(...;@())` (`!$tplerr`), append per `inblock`.
-     - `island`: `iparse=tplislandparse(tok.content)`; bind
-       `inameg=iparse.get("name")` / `ihydrateg=iparse.get("hydrate")` and read
-       them via `mt … {$ok:v v;$err:e <"" / "load">}`; build
-       `<div data-island="NAME" data-hydrate="HYDRATE"></div>` with nested
-       `str.concat`, append per `inblock`, and set `hasislands=true`.
-     - Any other directive name: no-op.
-3. After the loop, `islandscript` =
-   `<script src="/static/ooke-islands.js" defer></script>`.
-4. If `layoutname` is non-empty: read the layout file
-   (`path.join(templatesdir; layoutname+".tkt")`, `!$tplerr`), lex it
-   (`!$tplerr`), and render it passing `collectedblocks` as the blocks
-   (`!$tplerr`). Return that output, appending `islandscript` if `hasislands`.
-5. Otherwise return `buf`, appending `islandscript` if `hasislands`.
-
-**Error handling:** Layout reading/lexing/rendering propagate `$tplerr` via `!`.
-Partial reads are total (missing partial → empty). Context lookups are total.
-
-### `tplrenderfile(templatepath: $str; ctx: @($str:$str); templatesdir: $str): $str!$tplerr`
-
-**Purpose:** Read a template file, lex it, and render it.
-
-**Parameters:** `templatepath` (file to read); `ctx`; `templatesdir`.
-
-**Returns:** `$str!$tplerr`.
-
-**Logic:** `src=file.read(templatepath)!$tplerr`; `tokens=tpllex(src)!$tplerr`;
-return `tplrender(tokens;ctx;templatesdir;@())!$tplerr`.
-
-**Error handling:** File read, lex, and render failures propagate via `!`.
-
-### `tplcachenew(): $tplcache`
-
-**Purpose:** Construct an empty template cache.
-
-**Parameters:** None.
-
-**Returns:** `$tplcache` — `entries` is an empty map of the cache's element type,
-written as the literal `@($str:@($token))` (an empty `$str`→`@$token` map).
-
-**Logic:** Return `$tplcache{entries:@($str:@($token))}`.
-
-**Error handling:** None.
-
-### `tplcacheget(cache: $tplcache; path: $str): @$token!$tplerr`
-
-**Purpose:** Return the cached token stream for `path`, lexing the file on a
-miss.
-
-**Parameters:** `cache: $tplcache`; `path: $str`.
-
-**Returns:** `@$token!$tplerr`.
-
-**Logic:** `r=cache.entries.get(path)`; `hit=mt r {$ok:toks true;$err:e false}`.
-If `hit`, return the cached tokens via `mt r {$ok:toks toks;$err:e @()}`.
-Otherwise read the file (`!$tplerr`) and lex it (`!$tplerr`).
-
-**Error handling:** On a miss, file read/lex failures propagate via `!`.
-
-### `tplrenderfilecached(templatepath: $str; ctx: @($str:$str); templatesdir: $str; cache: $tplcache): $renderresult!$tplerr`
-
-**Purpose:** Render a template using a token cache, returning both the output and
-the updated cache.
-
-**Parameters:** `templatepath`; `ctx`; `templatesdir`; `cache`.
-
-**Returns:** `$renderresult!$tplerr`.
-
-**Logic:** `r=cache.entries.get(templatepath)`;
-`hit=mt r {$ok:toks true;$err:e false}`. Mutable `tokens=@()`. If `hit`, set
-`tokens` from the cache via `mt r {$ok:toks toks;$err:e @()}`; else read the file
-(`!$tplerr`) and lex (`!$tplerr`). Compute
-`newentries=cache.entries.set(templatepath;tokens)`,
-`newcache=$tplcache{entries:newentries}`,
-`out=tplrender(tokens;ctx;templatesdir;@())!$tplerr`, and return
-`$renderresult{output:out;cache:newcache}`.
-
-**Error handling:** File read, lex, and render failures propagate via `!`.
+1. If `depth > 32`, log and return `$tplerr` (partials, layouts and yields nest
+   too deep — a template that includes itself was unbounded recursion).
+2. State: a `str.builder`, `hc = hc0`, `hasislands`, block collection
+   (`inblock`, `blockname`, `blocktoks`, `collectedblocks`), `layoutname`.
+3. For each token: inside a block, any token but `end` is kept in `blocktoks`.
+   Otherwise:
+   - `raw`: append; `hc = hcfeed(hc; text)`.
+   - `expr`: `val = tplexprctx(content; ctx; hc)`; append and feed.
+   - `comment`: nothing.
+   - `directive`, by name:
+     - `layout`: `layoutname = arg`.
+     - `block`: start collecting under `arg`; `end`: store
+       `$block{name; toks}` in `collectedblocks`.
+     - `var`: `ctxescape(hc; ctx.get(arg) or "")`; append and feed.
+     - `yield`: the named block's tokens from `blocks`, if any, rendered with
+       `tplrenderctx(…; @(); hc; depth+1)!`; append, take its `hc`, carry its
+       `islands`.
+     - `partial`: `tplnamepath(templatesdir; "partial"; arg)!`. A missing file
+       ("template: no partial template: <path>") or a failed read ("template:
+       partial template could not be read: <path>" — for one, a symlink, which
+       std.file does not follow, AMB-07) is logged and returned as `$tplerr`
+       (121.59). An empty partial renders nothing; otherwise lex it and render
+       with the current `hc` at `depth+1`, as for yield.
+     - `island`: `tplislandparse`; append and feed
+       `<div data-island="NAME" data-hydrate="HYDRATE"></div>`; `hasislands`.
+     - anything else: nothing.
+4. With a `layoutname`: `tplnamepath(…; "layout"; …)!`; a missing file
+   ("template: no layout template: <path>") or failed read is logged and
+   returned as `$tplerr`. Lex it and render it from `hc0` (the layout's output
+   replaces this template's, from the same start) with `collectedblocks` at
+   `depth+1`; return its text and `hc`, islands from either.
+5. Otherwise return the built text, `hc`, `hasislands`.
+
+**Error handling:** Every failure is logged at error level where it is raised
+and propagated with `!$tplerr`.
+
+#### `tplrender(tokens: @$token; ctx: @($str:$str); templatesdir: $str; blocks: @$block): $str!$tplerr`
+
+`tplrenderctx(…; hcnew(); 0)!`; if it rendered an island, append
+`<script src="/static/ooke-islands.js" defer></script>` once.
+
+#### `tplrenderfile(templatepath: $str; ctx: @($str:$str); templatesdir: $str): $str!$tplerr`
+
+A missing file ("template: no template file: <path>", 134.24) or a failed read
+("template: template file could not be read: <path>", 121.59) is logged and
+returned as `$tplerr`. Otherwise lex and `tplrender(…; @())!`.
+
+### Cache
+
+#### `tplcachenew(): $tplcache`
+
+`$tplcache{entries:@($str:@($token))}` — an empty typed map.
+
+#### `tplcacheget(cache: $tplcache; path: $str): @$token!$tplerr`
+
+The cached tokens for `path`, or read (`!`) and lex (`!`) it on a miss. The
+cache is not updated.
+
+#### `tplrenderfilecached(templatepath: $str; ctx: @($str:$str); templatesdir: $str; cache: $tplcache): $renderresult!$tplerr`
+
+Tokens from the cache, or read and lex on a miss; store them under
+`templatepath`; render with `tplrender(…; @())!`; return the output and the new
+cache. Unlike `tplrenderfile`, a missing or unreadable file here propagates
+`file.read`'s error without a log line.
 
 ## Control Flow
 
-There is no module entry point; this is a library. The typical pipeline is
-`tplrenderfile` (or `tplrenderfilecached`): read → `tpllex` → `tplrender`.
-`tplrender` is the engine. It is recursive: a `partial` directive re-enters
-`tplrender` for the included template, and a `layout` directive re-enters
-`tplrender` for the parent layout, threading the child's `collectedblocks` so the
-layout's `yield` directives (resolved through `tplfindblock`) can splice in the
-child's blocks. Expression resolution flows token → `tplresolveexpr` →
-(optional) `tplapplyfilter`. The cache functions wrap lexing with a
-path-keyed `$tplcache` map.
+A library; no entry point. `tplrenderfile` (or `tplrenderfilecached`): read →
+`tpllex` → `tplrender` → `tplrenderctx`. `tplrenderctx` is recursive: `yield`
+and `partial` re-enter it with the current tracker state, so their values are
+escaped for where they land; `layout` re-enters it from the template's start
+state, threading the collected blocks so the layout's `yield` renders them.
+Every byte written goes through `hcfeed`, and every value through `ctxescape`
+(directly, or via `tplexprctx` → `tplfilterctx`).
 
 ## Notes
 
-- **Canonical result form.** All match arms use the spec-canonical `$ok`/`$err`
-  variant names (toke-spec-prompt.md: "Variants are `$lowercase`"). The previous
-  source used the non-canonical `Ok`/`Err` (Track B 113.B.9).
-- **Empty cache literal (compiler-bug workaround).** `tplcachenew` initialises
-  `entries` with the empty typed-map literal `@($str:@($token))`. The previous
-  source used a sentinel entry `@("__init__":@())` whose value was an *untyped*
-  empty array literal (`@()`) placed into a map whose declared value type is the
-  array `@$token`. That mismatch produces a corrupt map that segfaults on the
-  next `.get` — a real toke codegen bug (Track B). The empty typed-map literal
-  is the canonical, behaviourally-equivalent fix (the cache simply starts empty
-  rather than carrying a dummy entry; callers only `.get`/`.set` real paths, so
-  observable behaviour is unchanged).
-- **Behaviour preserved for loke parity.** Signatures, types, directive set
-  (`layout`/`block`/`end`/`var`/`yield`/`partial`/`island`), filter set
-  (`md`/`escape`/`upper`/`lower`/`trim`), delimiters (`{= =}`/`{! !}`/`{# #}`),
-  the island `<div>`/`<script>` emission, and the layout/partial recursion are
-  all unchanged from the reference.
-- **Inline `mt` over a method call.** `mt ctx.get(k) {…}` and
-  `mt iparse.get(k) {…}` are bound to an intermediate `let` first (e.g.
-  `let vgot=ctx.get(k); mt vgot {…}`). Writing the method call inline before the
-  match `{` makes the parser read `ctx.get(k) {…}` as map indexing
-  (`E4031: cannot index into 'map'`). Inline `mt` over a *free function* call
-  (e.g. `mt str.slice(…) {…}`) is fine and is kept.
+- **Canonical result form.** All match arms use `$ok`/`$err`.
+- **Empty cache literal.** `tplcachenew` uses the empty typed-map literal
+  `@($str:@($token))`. A sentinel entry with an untyped `@()` value produced a
+  corrupt map that segfaulted on the next `.get` (a toke codegen bug, Track B).
+- **Errors are logged where raised.** A caller cannot read `e.msg` off a
+  `$tplerr` (RT005, toke 127.78, open), so each is logged at error level by the
+  function that raises it; serve.tk and build.tk log the route or page.
+- **Directive and filter set** (`layout`/`block`/`end`/`var`/`yield`/
+  `partial`/`island`; `md`/`raw`/`escape`/`upper`/`lower`/`trim`) and the
+  delimiters (`{= =}`/`{! !}`/`{# #}`) are unchanged from the reference; the
+  escaping (121.58), name confinement (121.57), missing-partial error (121.59)
+  and depth bound are deliberate departures.
+- **Inline `mt` over a method call.** `mt ctx.get(k) {…}` is written through a
+  `let` first; inline, the parser reads `ctx.get(k) {…}` as map indexing
+  (`E4031`). Inline `mt` over a free function call is fine.
+- **Tests.** `test/template/test_template.tk` (lexing, rendering, escaping per
+  context, names, partials); `test/serve/template_errors.sh` (failures under
+  serve and build).

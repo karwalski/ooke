@@ -1,8 +1,8 @@
 ---
 source_file: "serve.tk"
-source_hash: "59e8b242ef51129a56eb496ef5359e3f44e299d750ff2c1fb7173a07259ba03d"
-compiler_version: "0.3.9"
-generated_at: "2026-06-16T00:00:00Z"
+source_hash: "0fdd6d581201a86410dcd0450060dda2597f2a236f86b7fdad86ed3d56b8b1cf"
+compiler_version: "3.0.0"
+generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
 ---
 
@@ -12,28 +12,34 @@ format_version: "1.0"
 
 Compiles an ooke site into a live HTTP server. It scans the project's `pages/`
 directory for routes, renders each page's template, and registers the result as
-a static GET (or JSON GET + echo POST for API routes) handler. It then wires up
-CORS, a custom 404 page, a `/static` file mount, and finally starts either an
-HTTP worker pool or an HTTPS/TLS listener. Most behaviour is observable only
-against a running server (covered by `test/e2e/*.sh`); the pure registration,
-api-prefix path-rewrite, and dedup logic is unit-tested in `test/serve/`.
+a static GET (or JSON GET + echo POST for API routes) handler. A page whose
+template fails to render answers 500. It then validates and wires up CORS, a
+custom 404 page, a `/static` file mount, and finally binds `[server] host` and
+starts either an HTTP worker pool or an HTTPS/TLS worker pool. The `[log]` and
+`[tls]` settings are checked and applied by helpers the CLI calls first.
 
 **Imports:**
-- `std.http` (alias `http`) — static/JSON route registration, CORS, custom 404,
-  static-dir mount, and the worker-pool / TLS listeners.
-- `std.log` (alias `log`) — structured info logging of each registration step.
-- `std.file` (alias `file`) — `file.exists` probe for the optional 404 template.
-- `std.str` (alias `str`) — string building, prefix/suffix tests, replace, eq.
+- `std.http` (alias `http`) — static/JSON route registration, the 500 handler,
+  CORS, custom 404, static-dir mount, and the host-bound HTTP / TLS worker pools.
+- `std.log` (alias `log`) — info/warn/error logging, and the access/error logs
+  (`openaccess`, `openerror`, `accessformat`).
+- `std.file` (alias `file`) — `file.exists` probes for the 404 template and the
+  TLS cert/key.
+- `std.str` (alias `str`) — string building, prefix/suffix tests, replace, eq,
+  split, trim.
 - `std.path` (alias `path`) — join project subdirectories.
 - `ooke.router` (alias `ookerouter`) — scan `pages/` into `$route` records.
-- `ooke.template` (alias `tpl`) — render `.tkt` templates with a context map.
+- `ooke.template` (alias `tpl`) — render `.tkt` templates with a context map,
+  and `tplescape` for the fallback page.
 - `ooke.store` (alias `store`) — load content collections for dynamic routes.
+- `ooke.build` (alias `build`) — `buildresolve`, which anchors a
+  project-relative path (template, log, cert, key) to the project directory.
 
 ## Types
 
 ### `$serveerr`
 
-Error type for `serverun`.
+Error type for the fallible serve functions.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -41,7 +47,7 @@ Error type for `serverun`.
 
 ## Functions
 
-### `servegetjson(pattern: $str; json: $str): void`
+### `servegetjson(pattern: $str; json: $str): i64`
 
 **Purpose:** Register a static GET route that returns a fixed JSON body.
 
@@ -52,42 +58,74 @@ Error type for `serverun`.
 | `pattern` | `$str` | The URL path to register. |
 | `json` | `$str` | The JSON body to serve verbatim. |
 
-**Returns:** `void`.
+**Returns:** `i64` — always `0`.
 
 **Logic:**
 
-1. Call `http.getstaticmime(pattern; json; "application/json")` to register the
-   route with an explicit `application/json` Content-Type.
+1. Call `http.getstaticmime(pattern; json; "application/json")`.
 2. Log an info line `"static json GET: " + pattern`.
+3. Return `0`.
 
 **Error handling:** None.
 
-### `servepostjson(pattern: $str; json: $str): void`
+### `servetplerrorbody(): $str`
 
-**Purpose:** Register a static POST route that returns a fixed JSON body.
+**Purpose:** The body a client gets for a page whose template failed to render
+(story 121.59).
+
+**Returns:** `$str` — the constant `"500 Internal Server Error"`. It names no
+template, path or error: those go to the server log only.
+
+### `servetplerror(req: i64): i64`
+
+**Purpose:** The request handler registered for a page whose template failed.
+
+**Parameters:** `req: i64` — the request (unused).
+
+**Returns:** `i64` — `http.reserr(servetplerrorbody())`, a 500 response.
+
+### `serverenderfailed(route: $str; tpath: $str): i64`
+
+**Purpose:** Handle a page whose template failed to render (story 121.59).
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| `pattern` | `$str` | The URL path to register. |
-| `json` | `$str` | The JSON body to serve verbatim. |
+| `route` | `$str` | The URL path of the page. |
+| `tpath` | `$str` | The resolved template path. |
 
-**Returns:** `void`.
+**Returns:** `i64` — always `0`.
 
 **Logic:**
 
-1. Call `http.postjson(pattern; json)` to register the POST route.
-2. Log an info line `"static json POST: " + pattern`.
+1. Log at error level `"serve: <route> — template <tpath> could not be
+   rendered; answering 500. The template's own error is logged above."`
+   (template.tk logs the template's own error where it is raised).
+2. Register `servetplerror` for the route with `http.get(route; &servetplerror)`.
+
+**Error handling:** None. Before 121.59 a failed render became `""` and the page
+was served as the empty-template fallback (200) or skipped (404).
+
+### `servepostjson(pattern: $str; json: $str): i64`
+
+**Purpose:** Register a static POST route that returns a fixed JSON body.
+
+**Parameters:** as `servegetjson`.
+
+**Returns:** `i64` — always `0`.
+
+**Logic:** Call `http.postjson(pattern; json)`, log `"static json POST: " +
+pattern`, return `0`.
 
 **Error handling:** None.
 
 ### `serveregisterstatic(projectdir: $str; pagesdir: $str; contentdir: $str; templatesdir: $str; sitename: $str; siteurl: $str; sitelanguage: $str; apiprefix: $str; handledpaths: @$str): i64!$serveerr`
 
-**Purpose:** Scan the pages directory and register every page as a static HTTP
+**Purpose:** Scan the pages directory and register every page as an HTTP
 route, in three passes: plain static pages, dynamic content pages, and API
-routes. Dynamic handler paths in `handledpaths` are skipped so a live handler
-takes precedence over a static fallback.
+routes. Paths in `handledpaths` are skipped so a live handler takes precedence
+over a static fallback.
 
 **Parameters:**
 
@@ -96,7 +134,7 @@ takes precedence over a static fallback.
 | `projectdir` | `$str` | Project root. Each route's project-relative `templatepath` is anchored to it with `build.buildresolve` before rendering, so serving works from any working directory (story 134.37). |
 | `pagesdir` | `$str` | Directory scanned for page routes. |
 | `contentdir` | `$str` | Directory of content collections (for dynamic routes). |
-| `templatesdir` | `$str` | Directory used as the template render base. |
+| `templatesdir` | `$str` | Directory layouts and partials are named in. |
 | `sitename` | `$str` | `site.name` context value. |
 | `siteurl` | `$str` | `site.url` context value. |
 | `sitelanguage` | `$str` | `site.language` context value. |
@@ -105,172 +143,232 @@ takes precedence over a static fallback.
 
 **Returns:** `i64!$serveerr` — on success, the number of routes registered
 from a real template render (static pages plus dynamic content pages; API
-fallbacks and empty-template fallbacks are not counted); `$serveerr` if the
-route scan failed. (Story 134.43: this returned `0` unconditionally, so the unit
-tests could assert nothing but success.)
+fallbacks, empty-template fallbacks and 500 routes are not counted); `$serveerr`
+if the route scan failed (story 134.43 made the count meaningful).
 
 **Logic:**
 
-1. Scan routes with `ookerouter.routerscan(pagesdir)`. **If the scan failed, log
-   the reason and return `$serveerr`** — the caller must not start a listener.
-   (Story 134.18: this used to be
-   `mt ookerouter.routerscan(pagesdir) {$ok:r r; $err:e @($route)}`, which
-   turned a failed scan into an *empty* route set, so the server came up, served
-   404 for every path, and reported itself healthy.)
-2. **Pass 1 — static, non-API pages.** Loop `i` from `0` to `routes.len`
-   (exclusive). For each route `r` where `!r.isdynamic && !r.isapi`:
-   a. Start `webpath` mutable at `r.pattern`. If `r.pattern` starts with
-      `"/api/"` **and** `apiprefix` is non-empty, rewrite it to
-      `"/api/" + apiprefix + "/" + (pattern with "/api/" prefix trimmed)`.
-   b. Set a mutable flag `alreadyhandled = false`; loop over `handledpaths` and
-      set it `true` if any equals `webpath` (via `str.eq`).
-   c. If `alreadyhandled`, log a skip line and do nothing else.
-   d. Otherwise build a context map `@("site.name":sitename; "site.url":siteurl;
-      "site.language":sitelanguage)` and render the route's `templatepath`, resolved as
-      `tpath = build.buildresolve(projectdir; templatepath)`, with
-      `tpl.tplrenderfile(tpath; ctx; templatesdir)`.
-      - If the render fails (`$err`), call `serverenderfailed(webpath; tpath)`:
-        it logs the route and template and registers `servetplerror` for the
-        path, which answers 500 with the generic body `servetplerrorbody()`
-        ("500 Internal Server Error") and no template detail (121.59).
-      - If the rendered `html` is non-empty: log `"reg static: " + webpath` and
-        register it via `http.getstatic(webpath; html)`.
-      - If empty and `webpath` starts with `"/api/"`: build a default JSON body
-        `{"status":"ok","endpoint":"<webpath>"}`, log, register it via
-        `http.getstaticmime(webpath; defaultjson; "application/json")`, and add
-        an echo POST handler via `http.postecho(webpath)`.
-      - If empty and not an API path: build fallback HTML
-        `<html><body><p><webpath></p></body></html>`, log, and register via
-        `http.getstatic(webpath; fallbackhtml)`.
-3. **Pass 2 — dynamic, non-API pages.** Loop `j` over routes. For each route
-   where `isdynamic && !isapi`:
-   a. Take its `contenttype` and load the collection via
-      `store.storeallflat(contentdir; ctype)`, matched `{$ok:c c; $err:e @()}`.
-   b. Loop `k` over the collection. For each item read `slug`, `body`, `title`,
-      build a context map adding `slug`/`body`/`title` to the site fields, and
-      render the route's `templatepath`, resolved the same way.
-      - If the render fails, `serverenderfailed(fullurl; tpath2)` (500, as above).
-      - If the rendered `html2` is non-empty: compute `fullurl` by replacing
-        `":slug"` in the route pattern with the item's `slug`, log
-        `"reg dyn: " + fullurl`, and register via `http.getstatic(fullurl; html2)`.
-      - Otherwise log a `"skip dyn (no html): " + slug` line.
-4. **Pass 3 — API routes.** Loop `a` over routes. For each route `ra` where
-   `ra.isapi`:
-   a. Start `apipath` mutable at `ra.pattern`. If `apiprefix` is non-empty,
-      rewrite to `"/api/" + apiprefix + "/" + (pattern with "/api/" trimmed)`.
-   b. Set `apihandled = false`; loop over `handledpaths` and set it `true` if any
-      equals `apipath`.
-   c. If `apihandled`, log a skip line. Otherwise log a fallback line, build the
-      default JSON body `{"status":"ok","endpoint":"<apipath>"}`, register it via
-      `http.getstaticmime(apipath; defaultjson; "application/json")`, and add an
-      echo POST via `http.postecho(apipath)`.
+1. Scan routes with `ookerouter.routerscan(pagesdir)`. If the scan failed, log
+   `"route scan failed, refusing to start: " + pagesdir` at error level and
+   return `$serveerr{msg:"route scan failed: " + pagesdir}` (story 134.18: a
+   failed scan used to become an empty route set, so the server answered 404
+   for everything and looked healthy). Otherwise take the routes.
+2. Mutable `rendered = 0`.
+3. **Pass 1 — static, non-API pages.** For each route `r` with
+   `!r.isdynamic && !r.isapi`:
+   a. `webpath` starts as `r.pattern`. If it starts with `"/api/"` and
+      `apiprefix` is non-empty, rewrite it to
+      `"/api/" + apiprefix + "/" + (pattern without "/api/")`.
+   b. If any entry of `handledpaths` equals `webpath` (`str.eq`), log
+      `"skip (dynamic handler registered): " + webpath` and do nothing else.
+   c. Otherwise build `ctx = @("site.name":sitename; "site.url":siteurl;
+      "site.language":sitelanguage)`, resolve
+      `tpath = build.buildresolve(projectdir; r.templatepath)`, and render with
+      `tpl.tplrenderfile(tpath; ctx; templatesdir)`:
+      - Render failed (`$err`): `serverenderfailed(webpath; tpath)` — 500.
+      - Non-empty `html`: log `"reg static: " + webpath`, register
+        `http.getstatic(webpath; html)`, `rendered += 1`.
+      - Empty, and `webpath` starts with `"/api/"`: register the JSON body
+        `{"status":"ok","endpoint":"<webpath>"}` with
+        `http.getstaticmime(...; "application/json")` and `http.postecho(webpath)`.
+      - Empty otherwise: register the fallback page
+        `<html><body><p>` + `tpl.tplescape(webpath)` + `</p></body></html>`
+        with `http.getstatic`. The path is HTML-escaped (story 121.61): it
+        comes from a file name under `pages/`, and a page named
+        `/<script>x</script>` was served as markup.
+4. **Pass 2 — dynamic, non-API pages.** For each route with
+   `isdynamic && !isapi`: load `store.storeallflat(contentdir; contenttype)`
+   (a failure gives an empty collection). For each item, build `ctx2` adding
+   `slug`, `body`, `title` to the site fields, resolve and render the route's
+   template the same way:
+   - Render failed: `serverenderfailed(pattern with ":slug" replaced by slug;
+     tpath2)` — 500.
+   - Non-empty `html2`: `fullurl` = pattern with `":slug"` replaced by the slug;
+     log `"reg dyn: " + fullurl`, `http.getstatic(fullurl; html2)`,
+     `rendered += 1`.
+   - Empty: log `"skip dyn (no html): " + slug`.
+5. **Pass 3 — API routes.** For each route with `isapi`: `apipath` is its
+   pattern, rewritten with `apiprefix` as in 3a when that is non-empty. If
+   `handledpaths` holds it, log a skip line; otherwise log
+   `"api route (no handler, static fallback): " + apipath` and register the
+   default JSON body and echo POST as in 3c.
+6. Return `rendered`.
 
-**Error handling:** Both fallible calls (`routerscan`, `storeall`) are matched
-with total `mt … {$ok…; $err…}` arms that fall back to an empty/default
-collection; the function never raises.
+**Error handling:** Only the route scan fails the function. A failed
+collection load is an empty collection; a failed template render answers 500
+for that route.
 
-### `serverun(projectdir: $str; port: i64; workers: i64; buildoutput: $str; tlscert: $str; tlskey: $str; sitename: $str; siteurl: $str; sitelanguage: $str; apiprefix: $str; corsorigins: $str; handledpaths: @$str): i64!$serveerr`
+The scan failure is logged from `pagesdir` rather than read off the error
+payload, because reading a field off a struct-style error payload traps RT005 —
+toke story 127.78, open. Carry the payload's message once that is fixed.
 
-**Purpose:** Wire up and start the live HTTP(S) server for a project: register
-all static routes, enable CORS, install a custom 404, mount `/static`, and start
-either the HTTP worker pool or the TLS listener. This call blocks in the
-listener and does not return under normal operation.
+### `servelogtarget(projectdir: $str; p: $str): $str`
+
+**Purpose:** Map a `[log]` path to the file std.log opens (story 134.40).
+
+**Returns:** `"/dev/stderr"` when `p` is `"-"`; otherwise
+`build.buildresolve(projectdir; p)`.
+
+### `serveopenlogs(projectdir: $str; access: $str; errorlog: $str; format: $str): i64!$serveerr`
+
+**Purpose:** Apply the `[log]` settings: open the access and error logs std.http
+writes to (story 134.40).
+
+**Parameters:** `access` and `errorlog` are `"-"` (stderr), `""` (off) or a
+project-relative file; `format` is `"combined"` or `"json"`.
+
+**Returns:** `i64!$serveerr` — `0`, or `$serveerr` naming the problem.
+
+**Logic:**
+
+1. If `format` is neither `"combined"` nor `"json"`, log and return
+   `$serveerr` (`[log] accessformat must be "combined" or "json", got "<format>"`).
+2. `log.accessformat(format)`.
+3. If `access` is non-empty, `log.openaccess(servelogtarget(...); 0; 0; 0)`; a
+   non-zero result logs and returns `$serveerr` (`[log] access log could not be
+   opened: <path>`).
+4. The same for `errorlog` with `log.openerror`.
+
+**Error handling:** A configured log that cannot be opened is an error, not a
+silent no-log. Rotation is not wired: std.log's rotation loses lines
+(`config.configlogunsupported`). Design: docs/logging-and-tls.md.
+
+### `servetlscheck(projectdir: $str; cert: $str; key: $str): i64!$serveerr`
+
+**Purpose:** Check `[tls]` before anything binds (story 134.40).
+
+**Returns:** `i64!$serveerr` — `0` when both are empty or both name existing
+files (resolved with `build.buildresolve`); otherwise log and return
+`$serveerr`: `[tls] needs both cert and key, or neither`, `[tls] cert not found:
+<path>`, or `[tls] key not found: <path>`.
+
+### `servecorscheck(origins: $str): i64!$serveerr`
+
+**Purpose:** Validate `[server] corsorigins` before it reaches `http.setcors`
+(story 121.25, audit OOK-05).
+
+**Returns:** `i64!$serveerr`.
+
+**Logic:**
+
+1. Empty: return `0`.
+2. Exactly `"*"` after trimming: log a warning (any web page may read every
+   response) and return `0`.
+3. Otherwise split on `,`; for each trimmed entry strip an `https://` or
+   `http://` scheme. The entry is bad if nothing is left after the scheme (this
+   includes no scheme at all) or the rest contains `/`, a space or `*`. A bad
+   entry logs and returns `$serveerr` naming it:
+   `[server] corsorigins: "<entry>" is not an origin -- each entry is
+   scheme://host[:port] (http or https, no path), or the whole value is "*"`.
+4. Return `0`.
+
+**Error handling:** toke matches an Origin against the list exactly, so a
+malformed entry would fail silently; refusing to start is the only visible
+failure.
+
+### `serverlisten(projectdir: $str; host: $str; port: i64; uport: u64; uworkers: u64; tlscert: $str; tlskey: $str): i64`
+
+**Purpose:** Bind `[server] host` and run the worker pool (story 138.7, O-3).
+
+**Returns:** `i64` — the listener's result; non-zero means it failed (a host
+toke refuses, a port that does not bind, a certificate that does not load).
+
+**Logic:**
+
+1. `addr = host + ":" + port`. If `host` is `"127.0.0.1"` or `"localhost"`, log
+   that the server listens on loopback only and how to accept other machines.
+2. With `tlscert` non-empty: resolve cert and key with `build.buildresolve`, log
+   `"mode: HTTPS (TLS) on " + addr`, and return
+   `http.servetlsworkerson(host; uport; cert; key; uworkers)` (`[server]
+   workers` is honoured under TLS, story 134.47; `0` = auto).
+3. Otherwise log `"mode: HTTP on " + addr` and return
+   `http.serveworkerson(host; uport; uworkers)`.
+
+**Error handling:** Host validation is toke's; a refused host fails the start
+and toke prints a diagnostic with `stage="host"`.
+
+### `serverun(projectdir: $str; host: $str; port: i64; workers: i64; buildoutput: $str; tlscert: $str; tlskey: $str; sitename: $str; siteurl: $str; sitelanguage: $str; apiprefix: $str; corsorigins: $str; handledpaths: @$str): i64!$serveerr`
+
+**Purpose:** Register everything and start the live HTTP(S) server. Blocks in
+the listener.
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
 | `projectdir` | `$str` | Project root (contains `pages/`, `content/`, `templates/`). |
-| `port` | `i64` | TCP port to listen on. |
-| `workers` | `i64` | Worker count for the HTTP pool. |
-| `buildoutput` | `$str` | Static build output dir (accepted for signature parity). |
+| `host` | `$str` | Address to bind (`[server] host`). |
+| `port` | `i64` | TCP port. |
+| `workers` | `i64` | Worker count (`0` = auto). |
+| `buildoutput` | `$str` | Static build output dir (accepted for signature parity; unused). |
 | `tlscert` | `$str` | TLS certificate path; empty selects plain HTTP. |
-| `tlskey` | `$str` | TLS key path (used only when `tlscert` is non-empty). |
+| `tlskey` | `$str` | TLS key path. |
 | `sitename` | `$str` | `site.name` context value. |
 | `siteurl` | `$str` | `site.url` context value. |
 | `sitelanguage` | `$str` | `site.language` context value. |
 | `apiprefix` | `$str` | API path namespace prefix. |
-| `corsorigins` | `$str` | CORS allow-origin; empty disables CORS. |
+| `corsorigins` | `$str` | CORS allow-origin list; empty disables CORS. |
 | `handledpaths` | `@$str` | Paths already served by dynamic handlers. |
 
-**Returns:** `i64!$serveerr` — does not return normally (the listener blocks);
-the type permits `$serveerr` for plumbing parity.
+**Returns:** `i64!$serveerr` — `$serveerr` when the route scan fails, the CORS
+value is malformed, or the listener stops with an error; otherwise it blocks.
 
 **Logic:**
 
-1. Join `projectdir` with `"pages"`, `"content"`, `"templates"` to get the three
-   subdirectories.
-2. Call `serveregisterstatic` with `projectdir`, those directories, the site context, the
-   `apiprefix`, and `handledpaths` to register every static route.
-3. If `corsorigins` is non-empty, call `http.setcors(corsorigins)` and log
-   `"CORS enabled: " + corsorigins`. Otherwise do nothing.
-4. Log a "registering 404 handler" line. Build the 404 template path
-   `templatesdir + "/errors/404.tkt"`. If `file.exists` of that path is true,
-   render it with a context that also carries `"request.path":"(unknown)"`,
-   matched `{$ok:h h; $err:e ""}`:
-   - If the rendered HTML is non-empty, install it via `http.setnotfound(nfhtml)`
-     and log success.
-   - Otherwise log that the render failed and fall back to the default 404.
-   If the template file does not exist, log that the default 404 is used.
-5. Log "starting servedir" and mount the static directory with
-   `http.servedir("/static"; projectdir)`, then log "servedir done".
-6. Cast `port` and `workers` to `u64` as `uport`/`uworkers`.
-7. Call `serverlisten`: if `tlscert` is non-empty, resolve `tlscert`/`tlskey`
-   against `projectdir` (`build.buildresolve`), log the HTTPS mode line and
-   call `http.servetls(uport; cert; key)`; otherwise log the HTTP mode line and
-   call `http.serveworkers(uport; uworkers)`.
-8. If the listener returned non-zero (a cert that does not load, a port that
-   does not bind), log it and return `$serveerr`. Before story 134.40 this
-   result was discarded and the process exited 0 with no message.
+1. Join `projectdir` with `"pages"`, `"content"`, `"templates"`.
+2. `serveregisterstatic(...)!$serveerr` — nothing is bound before this point.
+3. `servecorscheck(corsorigins)!$serveerr`; if `corsorigins` is non-empty,
+   `http.setcors(corsorigins)` and log `"CORS enabled: " + corsorigins`.
+4. Log `"routes registered, registering 404 handler"`. If
+   `templatesdir/errors/404.tkt` exists, render it with the site context plus
+   `"request.path":"(unknown)"`:
+   - Render failed: log at **error** level `"serve: 404 template <path> could
+     not be rendered; answering the default 404. The template's own error is
+     logged above."` (story 121.61; it was an info line). The client gets the
+     default 404, which names nothing.
+   - Non-empty output: `http.setnotfound(nfhtml)` and log
+     `"custom 404 registered from templates/errors/404.tkt"`.
+   - Empty output: log a warning that the template rendered nothing and the
+     default 404 is used.
+   If the file does not exist, log that the default 404 is used.
+5. Log `"starting servedir"`, `http.servedir("/static"; projectdir)`, log
+   `"servedir done, starting listen"`. The mount is `projectdir`, not
+   `projectdir/static`: toke's servedir keeps the URL prefix (root + path), so
+   `/static/x` is `projectdir/static/x` and `/static/ooke.toml` is a 404
+   (story 121.25, audit OOK-01; pinned by test/serve/static_mount.sh).
+6. Cast `port` and `workers` to `u64`; `rc = serverlisten(...)`.
+7. If `rc` is non-zero, log `"server stopped with an error on port <port>
+   (host <host>)"` and return `$serveerr` (story 134.40: this result used to be
+   discarded, so a failed bind exited 0 with no message). Otherwise return `0`.
 
-Callers apply `[tls]` and `[log]` first: `servetlscheck(projectdir; cert;
-key)` refuses half a pair or a missing file, and `serveopenlogs(projectdir;
-access; error; format)` opens the std.log access/error logs (`"-"` = stderr,
-`""` = off, else a project-relative path) and refuses an unknown format or an
-unopenable file. Both return `i64!$serveerr` and log their reason. Design:
-docs/logging-and-tls.md.
-
-**Error handling:** `serveregisterstatic` propagates its `$serveerr` through
-`!$serveerr`, so a failed route scan aborts startup before anything is bound
-(story 134.18). Every other fallible sub-call is handled inside
-`serveregisterstatic`. The listener call blocks.
-
-The failure reason is logged inside `serveregisterstatic` rather than read from
-the error payload, because reading a field off a struct-style error payload
-traps RT005 — toke story 127.78, open. Carry the payload's own message once
-that is fixed.
+**Error handling:** As under Returns. `[tls]` and `[log]` are applied by the
+caller (cli.tk) through `servetlscheck` and `serveopenlogs` before `serverun`.
 
 ## Control Flow
 
-`serverun` is the entry point. It performs all route registration up front
-(delegating the three-pass scan/render/register to `serveregisterstatic`), then
-configures CORS, the custom 404, and the `/static` mount, and finally transfers
-control to a blocking listener — `http.servetls` when TLS certs are present,
-otherwise `http.serveworkers`. `servegetjson` / `servepostjson` are standalone
-helpers for registering fixed-body JSON endpoints and are not called by
-`serverun`. Data flows from the router scan into per-route template renders whose
-output becomes the registered static body.
+`cli.tk` calls `servetlscheck`, `serveopenlogs`, then `serverun`. `serverun`
+registers every page route up front (`serveregisterstatic`: scan → render →
+register, with `serverenderfailed` for a failed render), checks and applies
+CORS, installs the custom 404, mounts `/static`, and hands control to
+`serverlisten`, which blocks in `http.serveworkerson` or
+`http.servetlsworkerson`. `servegetjson` / `servepostjson` are standalone
+helpers not called by `serverun`.
 
 ## Notes
 
-- **Canonical result form.** All `mt` match arms use the spec-canonical
-  `$ok`/`$err` variant names (toke-spec-prompt.md: "Variants are `$lowercase`").
-  The previous source used the non-canonical `Ok`/`Err`; this is the only
-  behavioural-equivalent change versus the reference (Track B 113.B.9).
-- **Live behaviour is e2e-tested.** A real listener cannot run inside a unit
-  test, so `serverun` (CORS enable, 404 install, `/static` mount, TLS vs worker
-  listener) is covered by `test/e2e/test_serve.sh`. The unit test in
-  `test/serve/test_serve.tk` exercises the pure, non-blocking surface:
-  `serveregisterstatic` over a synthesized fixture (static, dynamic, and API
-  passes), the api-prefix path rewrite (non-empty `apiprefix`), the
-  `handledpaths` dedup skip, and the `servegetjson`/`servepostjson` helpers.
-- **`void` return type.** `servegetjson`, `servepostjson`, and
-  `serveregisterstatic` declare `:void` (the spec's unit type, semantics.md
-  §predefined types), matching the `ooke.serve.tki` interface and the sibling
-  rebuilt modules. The compiler emits a `W1020` lint nudge for the `void`
-  keyword; this is a warning, not an error, and the construct is spec-valid.
-- **Http API consumed via the published stdlib only.** Registration uses
-  `http.getstatic`, `http.getstaticmime`, `http.postjson`, `http.postecho`,
-  `http.setcors`, `http.setnotfound`, `http.servedir`, `http.servetls`, and
-  `http.serveworkers` from `std.http`. No native symbol is touched and no
-  `extern` is declared, per ADR-0005.
+- **Canonical result form.** All `mt` match arms use `$ok`/`$err`.
+- **What a client sees on a template failure.** A page: 500 with the generic
+  `servetplerrorbody()`. The 404 template: the default 404. Neither carries a
+  template name, path or error; the log carries all three.
+- **`http.setnotfound` scope (toke).** The custom 404 body is used by toke's
+  static-route dispatcher only; a path that matches no route is answered by the
+  router's own `Not Found`. Reported with story 121.61; not an ooke change.
+- **Tests.** `test/serve/test_serve.tk` unit-tests `serveregisterstatic` (the
+  three passes, the api-prefix rewrite, the `handledpaths` skip, the rendered
+  count, and that a missing pages directory fails), `servecorscheck`, and `servegetjson`/`servepostjson`. Live behaviour
+  is covered by shell tests in `test/serve/`: `template_errors.sh` (500 on a
+  failed template, the error-level 404 log and the escaped fallback page),
+  `serve_logs_tls.sh`, `serve_tls_workers.sh`, `serve_host.sh`,
+  `static_mount.sh`, `serve_from_parent.sh`, and `test/e2e/test_serve.sh`.
+- **Http API consumed via the published stdlib only.** No native symbol is
+  touched and no `extern` is declared, per ADR-0005.
