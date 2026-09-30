@@ -505,8 +505,9 @@ test-install-compile: $(BIN)
 
 # test-run-cli — story 134.45: `ooke run` exits 0 for a program that exits 0,
 # with the program's own status when it fails, and non-zero on a compile
-# error; `ooke build --cli` writes the binary. ooke run spawns tkc, so
-# TOKE_ROOT is passed through.
+# error; `ooke build --cli` writes the binary; the program's stdout is
+# ooke run's stdout (121.67). ooke run spawns tkc, so TOKE_ROOT is passed
+# through.
 test-run-cli: $(BIN)
 	@TOKE_ROOT=$(TOKE_ROOT) test/run/run_cli.sh ./$(BIN)
 

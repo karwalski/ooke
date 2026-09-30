@@ -162,6 +162,13 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   the server, site, log, build or TLS. An absent table is now empty and its
   keys take their defaults. **Behaviour change** for an `ooke.toml` that
   relied on top-level keys: put them in their table. (121.67)
+- **`ooke run` passes the program's stdout through.** It was captured and
+  logged as a JSON info record on stderr -- `{"level":"info","msg":"line
+  one\nline two\n",…}` -- so `ooke run app | jq` or `> out.txt` got nothing.
+  The program's stdout is now written to ooke's stdout unchanged, once the
+  program exits (std.process captures it; it is not streamed). The program's
+  stderr is still logged as an info record. **Behaviour change** for anything
+  that read a program's output from `ooke run`'s stderr. (121.67)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

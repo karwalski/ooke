@@ -1,6 +1,6 @@
 ---
 source_file: "run.tk"
-source_hash: "9451a19c4edef28de048c07641867bece6e9552b5990bf02cadff35ab0439d30"
+source_hash: "653a6600a4c4d18b22b5a43dd54aab7953038996286a141c47bb94775ac97a6e"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -23,6 +23,7 @@ compile. Used by the ooke CLI for `ooke run` and `ooke build --cli`.
 - `std.path` (alias `path`) — join project dir with relative paths.
 - `std.toml` (alias `toml`) — parse `ooke.toml` and read typed `[package]` keys.
 - `std.process` (alias `process`) — spawn `tkc` / the built binary and capture exit code + stdout/stderr.
+- `std.io` (alias `io`) — write the program's stdout to ooke's stdout (121.67).
 
 ## Types
 
@@ -150,13 +151,18 @@ spawned.
 5. `ecode = process.wait(h)` — a plain `i32` status (story 134.45; it used
    to read `-1` for every child, so `ooke run` exited 255 even when the
    program exited 0).
-6. `sout = process.stdout(h)` matched `{$ok:v v; $err:e ""}`; if non-empty, log it.
+6. `sout = process.stdout(h)` matched `{$ok:v v; $err:e ""}`; if non-empty,
+   write it unchanged to ooke's stdout with `io.print` (121.67: it was logged
+   as a JSON info record on stderr, so the program's output could not be piped
+   or redirected).
 7. `serr = process.stderr(h)` matched `{$ok:v v; $err:e ""}`; if non-empty, log it.
 8. Return `ecode as i64`.
 
 **Error handling:** A spawn failure logs `"failed to spawn binary"` and
 returns `1`. stdout/stderr failures read as `""`. The child's output is
-captured and logged at info level after it exits, not streamed.
+captured after it exits, not streamed (std.process cannot hand the child
+ooke's descriptors): its stdout is then written to stdout verbatim, and its
+stderr is logged at info level.
 
 ### `run(projectdir: $str; passargs: @$str): i64`
 

@@ -5,6 +5,7 @@ i=file:std.file;
 i=path:std.path;
 i=toml:std.toml;
 i=process:std.process;
+i=io:std.io;
 
 t=$runerr{msg:$str};
 
@@ -73,9 +74,15 @@ f=runexec(binpath:$str;passargs:@$str):i64{
   (* Story 134.45: a plain i32, as in runcompile. It used to read -1 for
      every child, so ooke run exited 255 even when the program exited 0. *)
   let ecode=process.wait(h);
+  (* Story 121.67 (5): the program's stdout is ooke run's stdout, unchanged.
+     It was logged as a JSON info record on stderr, so `ooke run app | jq`
+     and `ooke run app > out.txt` got nothing, and every line of output came
+     back escaped inside a "msg" string. std.process captures the output
+     after the child exits (it cannot hand over the descriptor), so it is
+     written once the program has finished, not streamed. *)
   let sout=mt process.stdout(h) {$ok:v v;$err:e ""};
   if(str.len(sout)>0){
-    (log.info(sout;@()))
+    (io.print(sout))
   }el{};
   let serr=mt process.stderr(h) {$ok:v v;$err:e ""};
   if(str.len(serr)>0){

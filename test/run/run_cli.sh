@@ -14,6 +14,8 @@
 #   tkc       a program that does not compile makes ooke run exit non-zero
 #             with "tkc error" and never runs it
 #   build     `ooke build --cli` exits 0 and writes build/<name>
+#   stdout    (121.67 5) the program's stdout reaches ooke run's stdout
+#             byte for byte, not re-emitted as a JSON info record on stderr
 #   tkc-level, noentry   (121.66 h) a compile failure and a missing entry
 #             point are logged at error, not info
 #
@@ -56,6 +58,12 @@ f=main():i64{
 mkproj bad failer 'm=main;
 f=main():i64{
   <3
+};'
+mkproj pout outer 'm=main;
+i=io:std.io;
+f=main():i64{
+  (io.print("line-one 121.67\nline-two {\"k\":1}\n"));
+  <0
 };'
 mkproj cerr cerr 'm=main;
 f=main():i64{
@@ -104,6 +112,17 @@ rm -rf "$tmp/good/build"
 if [ "$rc" -eq 0 ] && [ -x "$tmp/good/build/hello" ] && grep -q 'built: good/build/hello' "$tmp/out"
 then ok "build: ooke build --cli exits 0 and writes build/hello"
 else bad "build: rc=$rc"; fi
+
+# 121.67 (5): stdout is passed through. It was captured and logged as
+# {"level":"info","msg":"line-one ...\n..."} on stderr.
+(cd "$tmp" && "$BIN" run pout) >"$tmp/stdout" 2>"$tmp/out"; rc=$?
+printf 'line-one 121.67\nline-two {"k":1}\n' >"$tmp/want"
+if [ "$rc" -eq 0 ] && cmp -s "$tmp/stdout" "$tmp/want"
+then ok "stdout: the program's stdout is ooke run's stdout, unchanged"
+else bad "stdout: rc=$rc, stdout was: $(head -c 120 "$tmp/stdout")"; fi
+if ! grep -q 'line-one' "$tmp/out"
+then ok "stdout: the program's stdout is not re-logged on stderr"
+else bad "stdout: the program's stdout was re-logged on stderr"; fi
 
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
