@@ -318,9 +318,18 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
           "body":body;
           "title":title
         );
-        let renderedhtml=mt tpl.tplrenderfile(buildresolve(projectdir;routes.get(j).templatepath);ctx;templatesdir) {$ok:h h;$err:e ""};
+        (* 121.59: a template error is a failed page, said as one. It used to
+           become "" and was reported only as "produced no output", which
+           reads like an empty template rather than a broken one. *)
+        let dtpath=buildresolve(projectdir;routes.get(j).templatepath);
+        let drender=tpl.tplrenderfile(dtpath;ctx;templatesdir);
+        let drenderfailed=mt drender {$ok:h false;$err:e true};
+        let renderedhtml=mt drender {$ok:h h;$err:e ""};
         let html=buildfinish(renderedhtml;templatesdir;config.buildinlinecss;config.buildminify);
-        if(str.len(html)==0&&str.len(slug)>0){
+        if(drenderfailed&&str.len(slug)>0){
+          (log.error(str.join("";@("build: route ";routes.get(j).pattern;" slug=";slug;" — template ";dtpath;" could not be rendered; the template's own error is logged above."));@()));
+          skippedcount=skippedcount+1
+        }el if(str.len(html)==0&&str.len(slug)>0){
           (log.error(str.join("";@("build: render produced no output for ";routes.get(j).templatepath;" slug=";slug));@()));
           skippedcount=skippedcount+1
         }el{};
@@ -351,7 +360,15 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
       "site.language":config.sitelanguage;
       "request.path":"(unknown)"
     );
-    let nfrendered=mt tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir) {$ok:h h;$err:e ""};
+    (* 121.59: a 404 template that fails to render fails the build. It used
+       to be skipped without a word, so the site shipped with no 404.html. *)
+    let nfrender=tpl.tplrenderfile(notfoundtpl;nfctx;templatesdir);
+    let nffailed=mt nfrender {$ok:h false;$err:e true};
+    if(nffailed){
+      (log.error(str.join("";@("build: the 404 page — template ";notfoundtpl;" could not be rendered; the template's own error is logged above."));@()));
+      skippedcount=skippedcount+1
+    }el{};
+    let nfrendered=mt nfrender {$ok:h h;$err:e ""};
     let nfhtml=buildfinish(nfrendered;templatesdir;config.buildinlinecss;config.buildminify);
     if(str.len(nfhtml)>0){
       let nfpath=str.concat(outdir;"404.html");

@@ -142,7 +142,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -378,7 +378,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk $(P
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -425,6 +425,12 @@ test-serve-tls-workers: $(BIN)
 # absent, 127.0.0.1. Reads the listening socket with lsof.
 test-serve-host: $(BIN)
 	@test/serve/serve_host.sh ./$(BIN)
+
+# test-tplerr — story 121.59: a template that fails to render answers 500
+# (generic body, detail only in the log) under serve, fails the build naming
+# the template, and a missing partial is an error rather than nothing.
+test-tplerr: $(BIN)
+	@test/serve/template_errors.sh ./$(BIN)
 
 # test-static-mount — story 121.25 (audit OOK-01): /static/* serves static/
 # and nothing else of the project -- not ooke.toml, not pages/, not via "..".

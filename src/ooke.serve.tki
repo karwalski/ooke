@@ -5,6 +5,9 @@
   "exports": [
     {"kind": "type", "name": "serveerr", "fields": [{"name": "msg", "type": "str"}]},
     {"kind": "func", "name": "servegetjson", "params": ["str", "str"], "return": "i64"},
+    {"kind": "func", "name": "servetplerrorbody", "params": [], "return": "str"},
+    {"kind": "func", "name": "servetplerror", "params": ["i64"], "return": "i64"},
+    {"kind": "func", "name": "serverenderfailed", "params": ["str", "str"], "return": "i64"},
     {"kind": "func", "name": "servepostjson", "params": ["str", "str"], "return": "i64"},
     {"kind": "func", "name": "serveregisterstatic", "params": ["str", "str", "str", "str", "str", "str", "str", "str", "[str]"], "return": "i64", "error": "serveerr"},
     {"kind": "func", "name": "servelogtarget", "params": ["str", "str"], "return": "str"},
