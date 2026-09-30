@@ -401,11 +401,24 @@ f=buildrun(projectdir:$str;config:$ookecfg):$buildreport!$builderr{
     let nfrendered=mt nfrender {$ok:h h;$err:e ""};
     let nfhtml=buildfinish(nfrendered;templatesdir;config.buildinlinecss;config.buildminify);
     if(str.len(nfhtml)>0){
+      (* 121.67 (2): a 404.html that cannot be written fails the build, as
+         a 404 template that cannot be rendered does (121.59). The write
+         result was dropped, and on a site with no other page the output
+         directory did not exist yet, so no 404.html was written and the
+         build still exited 0. The directory is made first. *)
       let nfpath=str.concat(outdir;"404.html");
-      let nfwrite=mt file.write(nfpath;nfhtml) {$ok:v true;$err:e false};
+      let nfmk=mt file.mkdir(outdir) {$ok:v true;$err:e false};
+      let nfwrite=if(nfmk){mt file.write(nfpath;nfhtml) {$ok:v true;$err:e false}}el{false};
       if(nfwrite){
         pagescount=pagescount+1
-      }el{}
+      }el{
+        if(!nfmk){
+          (log.error(str.join("";@("build: the 404 page — could not create the output directory ";outdir));@()))
+        }el{
+          (log.error(str.concat("build: the 404 page — could not write ";nfpath);@()))
+        };
+        skippedcount=skippedcount+1
+      }
     }el{}
   }el{};
 

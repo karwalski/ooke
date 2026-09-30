@@ -142,6 +142,12 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   `static/` is still copied, and the build ends with `assets not copied: <n>
   — build failed` and exits 1. `buildcopyassets` returns an `$assetreport`
   (`copied`, `failed`) and `$buildreport` gains `assetsfailed`. (121.67)
+- **`ooke build` fails, naming it, when `404.html` cannot be written.** The
+  write result was dropped, so the build exited 0 with no `404.html`. On a
+  site whose only output is the 404 page this was every build: the output
+  directory had not been made yet, so the write always failed. The directory
+  is now made first, and a failed mkdir or write is logged at error and
+  counted in `pages skipped`, failing the build. (121.67)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

@@ -1,6 +1,6 @@
 ---
 source_file: "build.tk"
-source_hash: "30d476d26faa28e4ed7ed0e3b8b0b62a3d95309aa11a5102155924eaadac0569"
+source_hash: "d3aa8af21c8f97f0e2d06c80a85dee1255894085a7bdf0768b853fff157b90dc"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -56,7 +56,7 @@ Summary of a completed build, returned by `buildrun`.
 | `assetscopy` | `i64` | Count of static asset files copied. |
 | `valerrors` | `i64` | Number of validation errors accumulated. |
 | `valwarnings` | `i64` | Number of validation warnings accumulated. |
-| `pagesskipped` | `i64` | Pages that failed: a dynamic page whose template failed or rendered empty, a write failure, or a failed 404 template. `cli.runbuild` fails the build when it is non-zero. |
+| `pagesskipped` | `i64` | Pages that failed: a dynamic page whose template failed or rendered empty, a write failure, or a failed 404 template or `404.html` write. `cli.runbuild` fails the build when it is non-zero. |
 | `assetsfailed` | `i64` | Static assets that were not copied (121.67). `cli.runbuild` fails the build when it is non-zero. |
 
 ### `$assetreport`
@@ -343,8 +343,11 @@ at exit 0).
    `site.*` and `"request.path":"(unknown)"`. A failed render logs at error
    naming the template and increments `skippedcount` (121.59: it used to be
    skipped silently, shipping no `404.html`). A non-empty result goes through
-   `buildfinish` and is written to `outdir + "404.html"`, incrementing
-   `pagescount` on success.
+   `buildfinish` and is written to `outdir + "404.html"`, after making
+   `outdir` (a site with no other page has not made it yet). Success
+   increments `pagescount`; a failed mkdir or write logs at error naming the
+   directory or `404.html` and increments `skippedcount` (121.67: the write
+   result was dropped, so the build exited 0 with no `404.html`).
 9. Return `$buildreport{pagesbuilt; assetscopy = assets.copied; valerrors;
    valwarnings; pagesskipped; assetsfailed = assets.failed}`.
 
