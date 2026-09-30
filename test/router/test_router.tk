@@ -2,6 +2,7 @@ m=test.router;
 i=router:ooke.router;
 i=str:std.str;
 i=file:std.file;
+i=chk:ookeassert;
 
 f=testderivepattern():bool{
   if(!(router.routederivepattern("pages/index.tk";"pages/")=="/")){<false};
@@ -192,6 +193,32 @@ f=testscanmissingdir():bool{
   <routes.len==0
 };
 
+(* Story 121.66 (b): isapi is pages/api/ only. The project sits under a
+   directory named api (the case reported -- never a defect, the listed paths
+   are relative to pages/); pages/docs/api/intro.tk is a page, not an API
+   route (the defect: "/api/" matched anywhere in the path). *)
+f=apiflag(routes:@$route;fp:$str):$str{
+  lp(let i=0;i<routes.len;i=i+1){
+    let r=routes.get(i);
+    if(r.filepath==fp){<if(r.isapi){"api"}el{"page"}}el{}
+  };
+  <"missing"
+};
+
+f=testscanisapi():bool{
+  let pages=str.concat(file.tempdir();"/ooke_router_121_66/api/proj/pages");
+  (file.ensuredir(str.concat(pages;"/api")));
+  (file.ensuredir(str.concat(pages;"/docs/api")));
+  (file.write(str.concat(pages;"/about.tk");""));
+  (file.write(str.concat(pages;"/api/h.tk");""));
+  (file.write(str.concat(pages;"/docs/api/intro.tk");""));
+  let routes=mt router.routerscan(pages) {$ok:v v;$err:e @($route)};
+  let a0=chk.eqstr(apiflag(routes;"about.tk");"page";"a page of a project under a directory named api");
+  let a1=chk.eqstr(apiflag(routes;"api/h.tk");"api";"pages/api/h.tk is an API route");
+  let a2=chk.eqstr(apiflag(routes;"docs/api/intro.tk");"page";"pages/docs/api/intro.tk is a page, not an API route");
+  <a0&&a1&&a2
+};
+
 f=main():i64{
   let r0=testderivepattern();
   let r1=testderivetemplate();
@@ -207,7 +234,8 @@ f=main():i64{
   let r11=testmatchtrailingslash();
   let r12=testmatchspecificity();
   let r13=testscanmissingdir();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13){
+  let r14=testscanisapi();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14){
     <0
   }el{
     <1

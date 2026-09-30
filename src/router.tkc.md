@@ -1,6 +1,6 @@
 ---
 source_file: "router.tk"
-source_hash: "784bc08ce7db16820231f3cf58902a1566b99d0d29af7d1973c9a7d3a55a6a94"
+source_hash: "a6d9f7723a34c54172d061d3f2ca26c09345adb505576f90e2e83b85499b725d"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -37,7 +37,7 @@ One file-system page, resolved to its routing metadata.
 | `templatepath` | `$str` | Derived `templates/<rel>.tkt` path, project-relative. |
 | `contenttype` | `$str` | Content-type namespace (parent directory chain), `""` for top-level pages. |
 | `isdynamic` | `bool` | True if `pattern` contains a `:`. |
-| `isapi` | `bool` | True if the file path contains `/api/` or starts with `api/`. |
+| `isapi` | `bool` | True if the file path (relative to `pages/`) starts with `api/`. |
 | `params` | `@$str` | Reserved; always constructed empty (`@()`). |
 
 ### `$routematch`
@@ -126,8 +126,10 @@ appended as `parts + "/" + seg`). Otherwise `""`.
 3. For each listed path whose `path.ext` is `.tk`: derive `pattern`; build a
    `$route` with `filepath` = the path, `templatepath`
    (`routederivetemplate`), `contenttype` (`routederivedtype`), `isdynamic` =
-   `pattern` contains `:`, `isapi` = path contains `/api/` or starts with
-   `api/`, and `params:@()`; append it.
+   `pattern` contains `:`, `isapi` = path starts with `api/` (story 121.66:
+   it also matched `/api/` anywhere, so `pages/docs/api/intro.tk` was taken
+   for an API route and never built or served as a page), and `params:@()`;
+   append it.
 4. Return the array.
 
 **Error handling:** A missing pages directory is this module's own
@@ -213,5 +215,6 @@ with the fewest `:` segments wins, so `/docs/about/:slug` beats
 - **String equality.** Static segments are compared with `str.eq`. (An earlier
   version compared length plus `str.indexof` to dodge a compiler bug in `=` on
   two dynamic strings; that workaround is gone.)
-- **`isapi` tests the listed path**, which begins with `pagesdir`; it is not
-  made relative first.
+- **`isapi` tests the listed path, which is relative to `pagesdir`** --
+  `file.listall` strips the directory -- so where the project lives (even
+  under a directory named `api`) does not matter; only `pages/api/` does.

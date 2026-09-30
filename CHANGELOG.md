@@ -130,6 +130,10 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   or a boolean (`maxlines = "5"`), not only to an integer; they are ignored
   either way. A float or array value is still not noticed -- std.toml cannot
   test for a key or read a float. (121.66)
+- **A page under a nested `api/` directory is a page.** A route was an API
+  route if its path held `/api/` anywhere, so `pages/docs/api/intro.tk` was
+  neither built nor served as a page, and the build said it was a handler
+  "under pages/api/". Only `pages/api/` makes API routes now. (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
