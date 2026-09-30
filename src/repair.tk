@@ -25,14 +25,28 @@ f=repairfile(filepath:$str;maxiters:i64):i64{
     (log.info("repair: failed to spawn tkc";@()));
     <1
   }el{};
-  (process.wait(h));
+  (* Story 121.66 (g). This discarded tkc's exit status and counted lines
+     on its stderr: a file tkc rejected without printing anything read as
+     "clean", a file with only warnings (tkc exit 0) read as broken, and the
+     count became ooke's exit status, so 256 diagnostics exited 0. tkc's
+     status now decides clean or not; the count is reported, and main.tk
+     turns "not clean" into exit 1. *)
+  let ecode=process.wait(h);
   let errout=mt process.stderr(h) {$ok:v v;$err:e ""};
-  if(str.len(errout)==0){
-    (log.info("repair: clean";@()));
+  if(ecode==0){
+    if(str.len(errout)>0){
+      let warncount=parsediags(errout);
+      (log.info(str.join("";@("repair: clean (";warncount as str;" warning(s))"));@()))
+    }el{
+      (log.info("repair: clean";@()))
+    };
     <0
-  }el{
-    let errcount=parsediags(errout);
-    (log.info(str.join("";@("repair: found ";errcount as str;" diagnostic(s)"));@()));
-    <errcount
-  }
+  }el{};
+  let errcount=parsediags(errout);
+  if(errcount==0){
+    (log.error(str.join("";@("repair: tkc exited ";ecode as str;" on ";filepath;" with no diagnostics"));@()));
+    <1
+  }el{};
+  (log.info(str.join("";@("repair: found ";errcount as str;" diagnostic(s)"));@()));
+  <errcount
 };

@@ -98,6 +98,12 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   error, so on a table without an `id` column every write of an existing slug
   added a duplicate row. The check is a `COUNT`, and its failure is returned
   as an error. Nothing in `ooke build` or `ooke serve` calls it. (121.66)
+- **`ooke repair <file>` exits by tkc's verdict.** It counted lines on
+  `tkc --check`'s stderr, ignored tkc's exit status, and returned the count as
+  its own exit status: 256 diagnostics exited 0, a tkc that failed without
+  printing read as clean (0), and a warning alone read as broken. It now
+  exits 0 when tkc accepts the file (warnings are reported, not counted) and
+  1 when it does not; a silent tkc failure is logged as an error. (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

@@ -1,6 +1,6 @@
 ---
 source_file: "repair.tk"
-source_hash: "068d40c8b6b08c380764544f37ceb0c7d7d90eeb3a4a793952d27784b0a280a1"
+source_hash: "04c62e17b5827f23dd5ab4b1e2e1cdf2c39a646810a0aeef86bbd511e4743645"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -75,8 +75,9 @@ count.
 | `filepath` | `$str` | Path of the toke source file to check. |
 | `maxiters` | `i64` | Reserved repair-iteration cap; not used (single pass). `main` passes `10`. |
 
-**Returns:** `i64` — `0` if the check wrote nothing to stderr; the number of
-non-empty stderr lines otherwise; `1` if `tkc` could not be spawned.
+**Returns:** `i64` — `0` if `tkc` exited 0 (warnings on stderr do not
+count); otherwise the number of non-empty stderr lines, or `1` if there were
+none; `1` if `tkc` could not be spawned.
 
 **Logic:**
 
@@ -84,17 +85,20 @@ non-empty stderr lines otherwise; `1` if `tkc` could not be spawned.
 2. `process.spawn(@("tkc"; "--check"; filepath))`, matched
    `{$ok:v v; $err:e 0}` into `h`.
 3. If `h == 0`: log `"repair: failed to spawn tkc"`, return `1`.
-4. `process.wait(h)` — its plain `i32` exit status is discarded (story 134.45
-   removed an `$ok`/`$err` match over this non-result value).
+4. `ecode = process.wait(h)` — a plain `i32` exit status, not a result
+   (134.45).
 5. Read stderr with `process.stderr(h)`, `{$ok:v v; $err:e ""}`.
-6. Empty stderr: log `"repair: clean"`, return `0`.
-7. Otherwise `errcount = parsediags(errout)`; log
-   `"repair: found <errcount> diagnostic(s)"` (built with `str.join` and
-   `errcount as str`); return `errcount`.
+6. `ecode == 0`: the file is clean. Log `"repair: clean"`, or
+   `"repair: clean (<n> warning(s))"` when stderr held lines; return `0`.
+7. Otherwise `errcount = parsediags(errout)`. If it is `0` (tkc failed and
+   printed nothing), log at error `"repair: tkc exited <ecode> on <file> with
+   no diagnostics"` and return `1`. Else log
+   `"repair: found <errcount> diagnostic(s)"` and return `errcount`.
 
-**Error handling:** Spawn failure returns `1`. A stderr-read failure is treated
-as empty stderr, so the clean path is taken. The exit status is not consulted:
-diagnostic presence is decided only by whether stderr is empty.
+**Error handling:** Spawn failure returns `1`. tkc's exit status decides clean
+or not (story 121.66: it used to be ignored, so a silent tkc failure read as
+clean and a warning as a diagnostic). A stderr-read failure is treated as
+empty stderr.
 
 ## Control Flow
 
@@ -109,5 +113,6 @@ diagnostic presence is decided only by whether stderr is empty.
   matched (134.45).
 - **`maxiters` is reserved** for a future re-check loop; behaviour is
   single-pass.
-- **The compiler is found as `tkc` on `$PATH`.** The count is returned as the
-  process exit code by `main`, so it is truncated modulo 256 by the OS.
+- **The compiler is found as `tkc` on `$PATH`.** `main` does not return the
+  count as the exit status (it was truncated modulo 256, so 256 diagnostics
+  exited 0 -- 121.66); any count above 0 exits 1.

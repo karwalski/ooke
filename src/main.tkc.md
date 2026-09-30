@@ -1,6 +1,6 @@
 ---
 source_file: "main.tk"
-source_hash: "53bd563a9945866f359067d25eb5d135b2a6cd07b446352f54f87d5699ad9660"
+source_hash: "de344fcf9c21fcc6f03a7973fb3a9a75a0bee8421f25735655484f2ce9447255"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -96,7 +96,7 @@ command's exit code (0 success, non-zero failure).
 | `compile [path]` | see below; path default `"."` |
 | `gen spec <container> <type>` | `cli.cligenspec(container; type)`; fewer than 5 args → usage (containers: stack, queue, set), exit 1 |
 | `gen <type> <name>` | `cli.cligen(type; name)`; fewer than 4 args → usage, exit 1 |
-| `repair <file>` | `repair.repairfile(file; 10)`; no file → usage, exit 1 |
+| `repair <file>` | `repair.repairfile(file; 10)`; exit 1 if it returns > 0 (not clean), else 0 (121.66); no file → usage, exit 1 |
 | anything else | log `unknown command: <cmd>`, usage, exit 1 |
 
 **`compile`:**
