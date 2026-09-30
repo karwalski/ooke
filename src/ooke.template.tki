@@ -45,6 +45,7 @@
     {"kind": "func", "name": "tplnamepath", "params": ["str", "str", "str"], "return": "str", "error": "tplerr"},
     {"kind": "func", "name": "tplrenderctx", "params": ["[token]", "[str:str]", "str", "[block]", "hc", "i64"], "return": "rout", "error": "tplerr"},
     {"kind": "func", "name": "tplrender", "params": ["[token]", "[str:str]", "str", "[block]"], "return": "str", "error": "tplerr"},
+    {"kind": "func", "name": "tplreadsource", "params": ["str"], "return": "str", "error": "tplerr"},
     {"kind": "func", "name": "tplrenderfile", "params": ["str", "[str:str]", "str"], "return": "str", "error": "tplerr"},
     {"kind": "func", "name": "tplcachenew", "params": [], "return": "tplcache"},
     {"kind": "func", "name": "tplcacheget", "params": ["tplcache", "str"], "return": "[token]", "error": "tplerr"},

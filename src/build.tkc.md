@@ -1,8 +1,8 @@
 ---
 source_file: "build.tk"
-source_hash: "00851b2daa2ede5d1bbeaea5ac7bc92cc889e82c5d3e82db60c075a92d64f184"
-compiler_version: "0.3.9"
-generated_at: "2026-06-16T00:00:00Z"
+source_hash: "3ec8d64d65e6c76334776e7c5307ddc4d668f092318529b6b568f98b6c8dc5a1"
+compiler_version: "3.0.0"
+generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
 ---
 
@@ -11,20 +11,28 @@ format_version: "1.0"
 **Name:** `ooke.build`
 
 Static-site build for an ooke project. It scans the file-system routes, renders
-every static page and every dynamic page (one output per content item),
+every static page and every single-`:slug` dynamic page (one output per content
+item), skips API routes (request handlers, served only by `ooke serve`),
 validates dynamic content against its TOML model, copies the `static/` asset
-tree into the output, and emits a `404.html` when an error template exists. It
+tree into the output, and emits a `404.html` when an error template exists.
+Template and project paths resolve against the project directory, not the
+working directory (134.25). Every failure is logged where it happens, naming
+the route and the template (134.24, 121.59), because the `$builderr` payload
+cannot be read by the caller (RT005, toke 127.78). It
 also provides three pure HTML post-processing helpers: output-path derivation,
 CSS inlining, and whitespace/comment minification.
 
 **Imports:**
 - `std.file` (alias `file`) — read, write, mkdir, copy, isdir, exists, listall.
-- `std.str` (alias `str`) — concat, slice, indexof, len, replace, trimprefix.
+- `std.log` (alias `log`) — error/warn/info lines naming what failed.
+- `std.str` (alias `str`) — concat, join, slice, indexof, len, replace,
+  startswith, trimprefix, trimsuffix.
 - `std.path` (alias `path`) — join, dir.
 - `ooke.config` (alias `cfg`) — provides the `$ookecfg` config record type.
-- `ooke.router` (alias `router`) — `routerscan` returns the `@$route` list.
+- `ooke.router` (alias `router`) — `routerscan` returns the `@$route` list;
+  `routecountdynamic` counts a pattern's dynamic segments.
 - `ooke.template` (alias `tpl`) — `tplrenderfile` renders a `.tkt` template.
-- `ooke.store` (alias `store`) — `storeall` loads a content collection.
+- `ooke.store` (alias `store`) — `storeallflat` loads a content collection.
 - `ooke.validate` (alias `validate`) — model loading, content validation,
   result merge/empty/log; provides the `$modeldef`/`$fielddef` types.
 
@@ -48,8 +56,22 @@ Summary of a completed build, returned by `buildrun`.
 | `assetscopy` | `i64` | Count of static asset files copied. |
 | `valerrors` | `i64` | Number of validation errors accumulated. |
 | `valwarnings` | `i64` | Number of validation warnings accumulated. |
+| `pagesskipped` | `i64` | Pages that failed: a dynamic page whose template failed or rendered empty, a write failure, or a failed 404 template. `cli.runbuild` fails the build when it is non-zero. |
 
 ## Functions
+
+### `buildisstaticpage(r: $route): bool`
+
+`!r.isdynamic && !r.isapi`. Story 134.24: `routerscan` has always set `isapi`
+for anything under `pages/api/`, and serve has always read it; the build did
+not, so every API route was rendered as a page, found no
+`templates/api/<name>.tkt`, and aborted the build (including on `ooke new`'s
+own output). Named so it can be asserted directly.
+
+### `buildisdynamicpage(r: $route): bool`
+
+`r.isdynamic && !r.isapi` — `pages/api/[id].tk` is a handler with a path
+parameter, not a content-backed section (134.24).
 
 ### `buildresolve(projectdir: $str; p: $str): $str`
 
@@ -112,7 +134,7 @@ whitespace around it.
 `$ookecfg` and read by nothing — `buildminify` and `buildinlinecss` were
 defined, documented and unit-tested, but never called on the build path.
 
-### `buildpage(templatepath: $str; pattern: $str; sitename: $str; siteurl: $str; sitelanguage: $str; buildoutput: $str; templatesdir: $str; doinlinecss: bool; dominify: bool): void!$builderr`
+### `buildpage(templatepath: $str; pattern: $str; sitename: $str; siteurl: $str; sitelanguage: $str; buildoutput: $str; templatesdir: $str; doinlinecss: bool; dominify: bool): i64!$builderr`
 
 **Purpose:** Render one static page from its template and write it to disk.
 
@@ -120,30 +142,35 @@ defined, documented and unit-tested, but never called on the build path.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `templatepath` | `$str` | Path to the page template. |
+| `templatepath` | `$str` | Path to the page template (already resolved against the project). |
 | `pattern` | `$str` | Route pattern for the page. |
 | `sitename` | `$str` | `site.name` context value. |
 | `siteurl` | `$str` | `site.url` context value. |
 | `sitelanguage` | `$str` | `site.language` context value. |
 | `buildoutput` | `$str` | Build output directory. |
-| `templatesdir` | `$str` | Templates root for template resolution. |
+| `templatesdir` | `$str` | Templates root for layouts and partials. |
 | `doinlinecss` | `bool` | `[build].inlinecss`, passed to `buildfinish`. |
 | `dominify` | `bool` | `[build].minify`, passed to `buildfinish`. |
 
-**Returns:** `void!$builderr`.
+**Returns:** `0`, or `$builderr`.
 
 **Logic:**
 
-1. Build a context map `@(...)` with keys `"site.name"`, `"site.url"`,
-   `"site.language"` bound to the matching parameters.
-2. Render the template with `tpl.tplrenderfile(templatepath; ctx; templatesdir)`,
-   propagating failure as `$builderr` via `!$builderr`.
-3. Compute the output path with `buildoutputpath(pattern; buildoutput)`.
-4. Take its parent directory with `path.dir`, create it with `file.mkdir`
-   (propagating error), then `file.write` the rendered HTML (propagating error).
+1. Build a context map with `"site.name"`, `"site.url"`, `"site.language"`.
+2. If `templatepath` does not exist: log at error `build: route <pattern> has
+   no template…`, explaining that `pages/a/b.tk` needs `templates/a/b.tkt` and
+   naming the expected path; return `$builderr`.
+3. Render with `tpl.tplrenderfile(templatepath; ctx; templatesdir)`. On
+   failure log `build: route <pattern> — <templatepath> exists but could not be
+   rendered; the template's own error is logged above.` and return `$builderr`.
+4. `buildfinish` the output; compute `buildoutputpath(pattern; buildoutput)`.
+5. `file.mkdir` its parent; on failure log and return `$builderr` naming the
+   directory. `file.write` the page; on failure log and return `$builderr`
+   naming the file. Return `0`.
 
-**Error handling:** Each fallible step (`tplrenderfile`, `mkdir`, `write`)
-propagates as `$builderr` through the `!$builderr` operator.
+**Error handling:** Every failure is logged at error level where it happens
+and returned as `$builderr` (story 134.24: a bare `!$builderr` carried a message
+nothing printed, so the operator saw only "build failed").
 
 ### `buildinlinecssonce(html: $str; templatesdir: $str): $str`
 
@@ -253,55 +280,64 @@ file does not abort the whole copy.
 **Logic:**
 
 1. Derive `pagesdir`, `contentdir`, `templatesdir`, `modelsdir` by joining
-   `projectdir` with `"pages"`, `"content"`, `"templates"`, `"models"`.
-2. `routes = router.routerscan(pagesdir)` (propagating `$builderr`).
-3. `pagescount` is a mutable `0`; `allval` is a mutable `$valresult` initialised
-   to `validate.validateempty()`.
-4. **Static pass:** loop `i` over routes; for each non-dynamic route
-   (`!routes.get(i).isdynamic`), call `buildpage(...)` (propagating `$builderr`,
-   and passing `config.buildinlinecss` / `config.buildminify`) and increment
-   `pagescount`.
-5. **Dynamic pass:** loop `j` over routes; for each dynamic route
-   (`routes.get(j).isdynamic`):
-   a. `ctype = routes.get(j).contenttype`.
-   b. Load the collection `col = store.storeallflat(contentdir; ctype)`
-      (matched to empty `@()` on error).
-   c. Load `model = validate.validateloadmodel(modelsdir; ctype)`, matched on
-      error to an empty `$modeldef{name:""; fields:@($fielddef)}`. Set
-      `hasmodel = model.fields.len > 0`.
-   d. Loop `k` over `col`: read `slug`, `body`, `title` from `col.get(k)`. If
-      `hasmodel`, build `fpath = ctype + "/" + slug + ".md"`, validate
-      `validate.validatecontent(model; col.get(k).meta; fpath)` into `vr`, and
-      merge `allval = validate.validatemerge(allval; vr)`. Build a context map
-      with `site.*`, `slug`, `body`, `title`. Render
-      `tpl.tplrenderfile(routes.get(j).templatepath; ctx; templatesdir)` (matched
-      to `""` on error), then pass it through `buildfinish` with
-      `config.buildinlinecss` / `config.buildminify`. If the resulting HTML is
-      non-empty: substitute `:slug`
-      with `slug` in the route pattern via `str.replace`, compute the output path
-      with `buildoutputpath`, mkdir its parent, `file.write` (error matched to a
-      bool), and increment `pagescount` on success.
-6. Log validation with `validate.validatelogresult(allval)` (statement call).
-7. `assetscount = buildcopyassets(projectdir; config.buildoutput)`, matched to
-   `0` on error.
-8. **404 pass:** `notfoundtpl = path.join(templatesdir; "errors/404.tkt")`. If
-   `file.exists(notfoundtpl)`, build a context including
-   `"request.path":"(unknown)"`, render it (matched to `""`), and if non-empty
-   write it to `config.buildoutput + "404.html"`, incrementing `pagescount` on
-   success.
-9. Return `$buildreport{pagesbuilt:pagescount; assetscopy:assetscount;
-   valerrors:allval.errors.len; valwarnings:allval.warnings.len}`.
+   `projectdir` with `"pages"`, `"content"`, `"templates"`, `"models"`;
+   `outdir = buildresolve(projectdir; config.buildoutput)` (134.25).
+2. `router.routerscan(pagesdir)`; on failure log `build: could not scan the
+   pages directory: <pagesdir>` and return `$builderr`.
+3. `pagescount`, `skippedcount`, `apicount` start at 0; `allval` at
+   `validate.validateempty()`.
+4. **Static pass:** for each route, count it in `apicount` if `isapi`; if
+   `buildisstaticpage`, `buildpage(buildresolve(projectdir; templatepath);
+   pattern; …; outdir; templatesdir; config.buildinlinecss;
+   config.buildminify)!$builderr` and increment `pagescount`. If `apicount > 0`,
+   log at info that those routes are request handlers served by `ooke serve`
+   and not rendered into the static build.
+5. **Dynamic pass:** for each route, `isdyn2 = buildisdynamicpage(route)` and
+   `dyncount = router.routecountdynamic(pattern)`.
+   - `dyncount > 1 && isdyn2`: warn that the route cannot be built statically
+     (the builder resolves exactly one `:slug` backed by a literal content
+     directory); it is served dynamically only.
+   - `isdyn2 && dyncount == 1`: load `col = store.storeallflat(contentdir;
+     contenttype)` (empty on error) and `model = validate.validateloadmodel(
+     modelsdir; contenttype)` (an empty `$modeldef` on error;
+     `hasmodel = model.fields.len > 0`). For each item:
+     a. An empty `slug` warns `not published` (a `.json` item must carry a
+        `slug` key); the item is not written, so it cannot overwrite the
+        section index.
+     b. If `hasmodel`, validate it (`validatecontent(model; meta;
+        "<ctype>/<slug>.md")`) and merge into `allval`.
+     c. Render `tpl.tplrenderfile(buildresolve(projectdir; templatepath); ctx;
+        templatesdir)` with `site.*`, `slug`, `body`, `title`, then
+        `buildfinish`.
+     d. Render failed (and slug non-empty): log at error naming the route, slug
+        and template (121.59), `skippedcount += 1`. Else empty output: log
+        `build: render produced no output for <templatepath> slug=<slug>`,
+        `skippedcount += 1`.
+     e. Non-empty output and slug: substitute `:slug` in the pattern, write to
+        `buildoutputpath(…; outdir)` (mkdir the parent first); success
+        increments `pagescount`, failure logs and increments `skippedcount`.
+6. `validate.validatelogresult(allval)`.
+7. `assetscount = buildcopyassets(projectdir; outdir)` (0 on error).
+8. **404 pass:** if `templates/errors/404.tkt` exists, render it with
+   `site.*` and `"request.path":"(unknown)"`. A failed render logs at error
+   naming the template and increments `skippedcount` (121.59: it used to be
+   skipped silently, shipping no `404.html`). A non-empty result goes through
+   `buildfinish` and is written to `outdir + "404.html"`, incrementing
+   `pagescount` on success.
+9. Return `$buildreport{pagesbuilt; assetscopy; valerrors; valwarnings;
+   pagesskipped}`.
 
-**Error handling:** `routerscan`, each static `buildpage`, propagate `$builderr`
-via `!$builderr`. All dynamic-pass steps, asset copy, and the 404 pass are total
-(matched to defaults) so a single content/template/write failure degrades that
-one page rather than aborting the build.
+**Error handling:** A failed route scan and any failed static page return
+`$builderr` (each logged first). Dynamic pages and the 404 page are counted in
+`pagesskipped` instead, so the build reports every failed page and
+`cli.runbuild` then fails it; asset copy failures are absorbed.
 
 ## Control Flow
 
 `buildrun` is the orchestrating entry point. It runs two route loops (static
 then dynamic), a validation log, an asset copy, and an optional 404 emission,
-accumulating `pagescount` and a merged `$valresult` across them. The pure
+accumulating `pagescount`, `skippedcount` and a merged `$valresult` across
+them. The pure
 helpers `buildoutputpath`, `buildinlinecss(once)`, and `buildminify` are
 standalone: `buildoutputpath` is called by both `buildpage` and the dynamic
 pass; `buildinlinecss` and `buildminify` are fixed-point loops that repeatedly
@@ -313,14 +349,15 @@ apply a single-step transform until the string stops changing.
   `$ok`/`$err` variant names (toke-spec-prompt.md: "Variants are `$lowercase`").
   The previous source used non-canonical `Ok`/`Err`; both compile, but `$ok`/
   `$err` is the spec form (Track B 113.B.9).
-- **Dropped the unused `std.log` import** the reference module carried; no `log.`
-  call exists in this module (validation logging goes through
-  `validate.validatelogresult`).
-- **loke parity.** Signatures and observable behaviour match the reference: page
-  counts, asset counts, and validation totals in `$buildreport` are computed
-  identically, and per-item failures degrade gracefully rather than aborting.
+- **Failures are logged at the point of failure.** `std.log` is imported for
+  this (134.24): the `$builderr` payload cannot be read by `cli.runbuild`
+  (RT005, toke 127.78), so the route, template and reason are logged here.
+- **A failed page fails the build.** A static page returns `$builderr`; a
+  dynamic or 404 page is counted in `pagesskipped`, which `cli.runbuild` treats
+  as failure (121.59).
 - **Unit-testable surface.** `buildoutputpath`, `buildminify`, and the
-  no-stylesheet / inline / missing-file paths of `buildinlinecss` are pure (or
+  no-stylesheet / inline / missing-file paths of `buildinlinecss`,
+  `buildresolve`, `buildisstaticpage` and `buildisdynamicpage` are pure (or
   filesystem-local) and are covered directly. `buildpage`/`buildrun`/
   `buildcopyassets` need a project directory on disk and are exercised end-to-end
   rather than as unit tests.

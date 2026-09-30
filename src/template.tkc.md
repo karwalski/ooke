@@ -1,6 +1,6 @@
 ---
 source_file: "template.tk"
-source_hash: "445e9672b333a7579b9d7dd69b83a1a95de0cc0d3e4aeb493014387edbea1d47"
+source_hash: "abf254c28ac4a38bf0ac894e90268c8ee694985c6030fe948ff54b4db6cdd508"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -390,11 +390,17 @@ and propagated with `!$tplerr`.
 `tplrenderctx(…; hcnew(); 0)!`; if it rendered an island, append
 `<script src="/static/ooke-islands.js" defer></script>` once.
 
+#### `tplreadsource(templatepath: $str): $str!$tplerr`
+
+The source of a template file. A missing file ("template: no template file:
+<path>", 134.24) or a failed read ("template: template file could not be read:
+<path>", 121.59) is logged at error level and returned as `$tplerr`. The one
+reader for `tplrenderfile`, `tplcacheget` and `tplrenderfilecached` (121.63).
+A directory is not a failed read: std.file reads it as an empty string.
+
 #### `tplrenderfile(templatepath: $str; ctx: @($str:$str); templatesdir: $str): $str!$tplerr`
 
-A missing file ("template: no template file: <path>", 134.24) or a failed read
-("template: template file could not be read: <path>", 121.59) is logged and
-returned as `$tplerr`. Otherwise lex and `tplrender(…; @())!`.
+`tplreadsource(templatepath)!`, lex, and `tplrender(…; @())!`.
 
 ### Cache
 
@@ -404,19 +410,21 @@ returned as `$tplerr`. Otherwise lex and `tplrender(…; @())!`.
 
 #### `tplcacheget(cache: $tplcache; path: $str): @$token!$tplerr`
 
-The cached tokens for `path`, or read (`!`) and lex (`!`) it on a miss. The
+The cached tokens for `path`, or `tplreadsource(path)!` and lex (`!`) it on a
+miss, so a missing or unreadable file is logged as in `tplrenderfile`. The
 cache is not updated.
 
 #### `tplrenderfilecached(templatepath: $str; ctx: @($str:$str); templatesdir: $str; cache: $tplcache): $renderresult!$tplerr`
 
-Tokens from the cache, or read and lex on a miss; store them under
-`templatepath`; render with `tplrender(…; @())!`; return the output and the new
-cache. Unlike `tplrenderfile`, a missing or unreadable file here propagates
-`file.read`'s error without a log line.
+Tokens from the cache, or `tplreadsource(templatepath)!` and lex on a miss;
+store them under `templatepath`; render with `tplrender(…; @())!`; return the
+output and the new cache. A missing or unreadable file is logged exactly as in
+`tplrenderfile` (121.63; before, `file.read`'s error propagated with no log
+line).
 
 ## Control Flow
 
-A library; no entry point. `tplrenderfile` (or `tplrenderfilecached`): read →
+A library; no entry point. `tplrenderfile` (or `tplrenderfilecached`): `tplreadsource` →
 `tpllex` → `tplrender` → `tplrenderctx`. `tplrenderctx` is recursive: `yield`
 and `partial` re-enter it with the current tracker state, so their values are
 escaped for where they land; `layout` re-enters it from the template's start

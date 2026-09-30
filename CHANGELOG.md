@@ -65,6 +65,26 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
 - `src/serve.tkc.md` and `src/template.tkc.md` describe the current code
   (host binding, `[log]`/`[tls]`/CORS checks, the 500 path; the context
   tracker, escapers and name confinement). (121.61)
+- **The API fallback body is valid JSON whatever the page is called.** An
+  API page with no handler answers `{"status":"ok","endpoint":"<path>"}`; the
+  path, taken from a file name under `pages/api/`, went in as written, so a
+  page named `a"b\c` answered `{"status":"ok","endpoint":"/api/a"b\c"}`, which
+  is not JSON (and a name could add keys). The path is now encoded with
+  `std.json`'s `json.enc`. A plain name's body is unchanged. (121.63)
+- **The cached render path logs a missing or unreadable template**, as
+  `tplrenderfile` has since 121.59. `tplrenderfilecached` and `tplcacheget`
+  returned the error with no log line; all three now read through one
+  function, `tplreadsource`, which logs `template: no template file: <path>`
+  or `template: template file could not be read: <path>`. Neither is used by
+  `ooke build` or `ooke serve` today. (121.63)
+- The companions of `build`, `cli`, `config`, `main`, `repair`, `router`,
+  `run`, `store` and `validate` (`src/*.tkc.md`) describe the current code;
+  each had drifted from its source. (121.63)
+- **`make test` checks the companions.** `scripts/check_companions.sh`
+  (`make test-companions`) fails, listing each stale one, when a
+  `src/*.tkc.md` `source_hash` does not match its source, or names a source
+  that does not exist. Companions of generated sources (`src/_*.tk`) are
+  skipped. (121.63)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

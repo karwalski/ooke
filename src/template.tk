@@ -879,11 +879,13 @@ f=tplrender(
   <r.text
 };
 
-f=tplrenderfile(
-  templatepath:$str;
-  ctx:@($str:$str);
-  templatesdir:$str
-):$str!$tplerr{
+(* 121.63: the one place a template file is read for tplrenderfile and the
+   cached path (tplrenderfilecached, tplcacheget). Those two read the file
+   with `file.read(p)!$tplerr` and logged nothing, the gap 121.59 closed for
+   tplrenderfile: a missing or unreadable template reached a caller as a bare
+   $tplerr that nobody reported. They now fail and log exactly as
+   tplrenderfile does, because they all call this. *)
+f=tplreadsource(templatepath:$str):$str!$tplerr{
   if(!file.exists(templatepath)){
     (* 134.24: see the layout case above — an unlogged $tplerr reaches nobody. *)
     let mt0=str.concat("template: no template file: ";templatepath);
@@ -898,7 +900,15 @@ f=tplrenderfile(
     (log.error(mr;@()));
     <$tplerr{msg:mr}
   }el{};
-  let src=mt srcr {$ok:s s;$err:e ""};
+  <mt srcr {$ok:s s;$err:e ""}
+};
+
+f=tplrenderfile(
+  templatepath:$str;
+  ctx:@($str:$str);
+  templatesdir:$str
+):$str!$tplerr{
+  let src=tplreadsource(templatepath)!$tplerr;
   let tokens=tpllex(src)!$tplerr;
   <tplrender(tokens;ctx;templatesdir;@())!$tplerr
 };
@@ -916,7 +926,7 @@ f=tplcacheget(
   if(hit){
     <mt r {$ok:toks toks;$err:e @()}
   }el{
-    let src=file.read(path)!$tplerr;
+    let src=tplreadsource(path)!$tplerr;
     <tpllex(src)!$tplerr
   }
 };
@@ -933,7 +943,7 @@ f=tplrenderfilecached(
   if(hit){
     tokens=mt r {$ok:toks toks;$err:e @()}
   }el{
-    let src=file.read(templatepath)!$tplerr;
+    let src=tplreadsource(templatepath)!$tplerr;
     tokens=tpllex(src)!$tplerr
   };
   let newentries=cache.entries.set(templatepath;tokens);
