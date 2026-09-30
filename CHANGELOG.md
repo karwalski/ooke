@@ -54,6 +54,17 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   partial read failure is now logged. An empty partial file still renders as
   nothing. **Behaviour change:** a site that referenced a partial it does not
   have now fails `build` and answers 500 under `serve`. (121.59)
+- **A `templates/errors/404.tkt` that fails to render is logged as an error
+  under `serve`**, naming the template; it was an info line. The client still
+  gets the default 404. A 404 template that renders to nothing is a warning.
+  (121.61)
+- **The empty-template fallback page escapes its path.** A page whose
+  template renders to nothing is served as `<p>` + its path; the path went in
+  as written, so a page file named `<script>x</script>` served a live script
+  element. It is HTML-escaped now. (121.61)
+- `src/serve.tkc.md` and `src/template.tkc.md` describe the current code
+  (host binding, `[log]`/`[tls]`/CORS checks, the 500 path; the context
+  tracker, escapers and name confinement). (121.61)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
