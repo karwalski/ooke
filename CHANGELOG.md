@@ -134,6 +134,41 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   route if its path held `/api/` anywhere, so `pages/docs/api/intro.tk` was
   neither built nor served as a page, and the build said it was a handler
   "under pages/api/". Only `pages/api/` makes API routes now. (121.66)
+- **`ooke build` fails, naming the file, when a static asset cannot be
+  copied.** Both the mkdir and the copy of each `static/` file were matched
+  to a bool and dropped: the asset was missing from the site, `assets copied`
+  was one lower, and the build exited 0. Each failure is now logged at error
+  naming the asset (or the directory it could not create), the rest of
+  `static/` is still copied, and the build ends with `assets not copied: <n>
+  — build failed` and exits 1. `buildcopyassets` returns an `$assetreport`
+  (`copied`, `failed`) and `$buildreport` gains `assetsfailed`. (121.67)
+- **`ooke build` fails, naming it, when `404.html` cannot be written.** The
+  write result was dropped, so the build exited 0 with no `404.html`. On a
+  site whose only output is the 404 page this was every build: the output
+  directory had not been made yet, so the write always failed. The directory
+  is now made first, and a failed mkdir or write is logged at error and
+  counted in `pages skipped`, failing the build. (121.67)
+- `store.storesqlcreate` always makes the `title` and `type` columns that
+  `storewrite` writes and `storeallsql` reads. It made them only when the
+  model declared them, so on any other model every `storewrite` failed with
+  `no such column: title`. A model field named `id`, `slug`, `title`, `type`
+  or `body` (in any case) is no longer declared a second time, which SQLite
+  refused. Nothing in `ooke build` or `ooke serve` calls it. (121.67)
+- **A key outside its table is not read as that table's.** Every
+  `ooke.toml` table ooke reads (`[site]`, `[build]`, `[server]`, `[log]`,
+  `[paths]`, `[tls]`) fell back to the root table when it was absent, so a
+  top-level `maxlines = 5` made `ooke serve` warn about a `[log]` rotation
+  key, and a top-level `port`, `name`, `access`, `output` or `cert` configured
+  the server, site, log, build or TLS. An absent table is now empty and its
+  keys take their defaults. **Behaviour change** for an `ooke.toml` that
+  relied on top-level keys: put them in their table. (121.67)
+- **`ooke run` passes the program's stdout through.** It was captured and
+  logged as a JSON info record on stderr -- `{"level":"info","msg":"line
+  one\nline two\n",…}` -- so `ooke run app | jq` or `> out.txt` got nothing.
+  The program's stdout is now written to ooke's stdout unchanged, once the
+  program exits (std.process captures it; it is not streamed). The program's
+  stderr is still logged as an info record. **Behaviour change** for anything
+  that read a program's output from `ooke run`'s stderr. (121.67)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

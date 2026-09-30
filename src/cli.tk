@@ -373,7 +373,7 @@ f=runbuild(projectdir:$str):i64{
     <clireportcfgerr(cfgpath)
   }el{};
   let cfg=mt config.configload(cfgpath) {$ok:v v;$err:e cfgdefault()};
-  let report=mt build.buildrun(projectdir;cfg) {$ok:v v;$err:e $buildreport{pagesbuilt:0-1;assetscopy:0;valerrors:0;valwarnings:0;pagesskipped:0}};
+  let report=mt build.buildrun(projectdir;cfg) {$ok:v v;$err:e $buildreport{pagesbuilt:0-1;assetscopy:0;valerrors:0;valwarnings:0;pagesskipped:0;assetsfailed:0}};
   (* Story 134.24, second defect. This discarded the $builderr it was handed and
      logged the word "build failed" — no route, no template, no reason — which
      is why 134.24 took a four-build bisect to find. The payload's own `e.msg`
@@ -395,6 +395,12 @@ f=runbuild(projectdir:$str):i64{
   }el{};
   if(report.pagesskipped>0){
     (log.error(str.join("";@("pages skipped: ";report.pagesskipped as str;" — build failed"));@()));
+    <1
+  }el{};
+  (* 121.67 (1): an asset that was not copied fails the build, as a page
+     that was not written does. Each one is named in an error above. *)
+  if(report.assetsfailed>0){
+    (log.error(str.join("";@("assets not copied: ";report.assetsfailed as str;" — build failed"));@()));
     <1
   }el{};
   <0

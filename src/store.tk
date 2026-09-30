@@ -112,7 +112,13 @@ f=storeident(name:$str):$str!$storeerr{
 f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str!$storeerr{
   let sql=mut."CREATE TABLE IF NOT EXISTS ";
   sql=str.concat(sql;storeident(modelname)!$storeerr);
-  sql=str.concat(sql;"(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,body TEXT");
+  (* Story 121.67 (3): title and type are always columns. storewrite writes
+     them and storeallsql reads them, but they were made only when the model
+     happened to declare them, so on any other model every storewrite failed
+     with "no such column: title". A field with the name of a column made
+     here (id, slug, body, title, type -- SQLite names are case-insensitive)
+     is skipped rather than declared twice, which SQLite refuses. *)
+  sql=str.concat(sql;"(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,title TEXT,type TEXT,body TEXT");
   let ks=fields.keys();
   lp(let i=0;i<ks.len;i=i+1){
     let k=ks.get(i);
@@ -121,7 +127,11 @@ f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str!$storeerr{
     if(str.eq(ft;"bool")){coltype="INTEGER"}el{};
     if(str.eq(ft;"int")){coltype="INTEGER"}el{};
     let col=storeident(k)!$storeerr;
-    sql=str.join("";@(sql;",";col;" ";coltype))
+    let lc=str.lower(col);
+    let builtin=lc=="id"||lc=="slug"||lc=="title"||lc=="type"||lc=="body";
+    if(!builtin){
+      sql=str.join("";@(sql;",";col;" ";coltype))
+    }el{}
   };
   sql=str.concat(sql;")");
   <sql

@@ -1,6 +1,6 @@
 ---
 source_file: "store.tk"
-source_hash: "6a79c45f1d25a30dd7659f20817cba9f54b145310c613e57a5c538911aeb7ae3"
+source_hash: "b7f77c151b11c2da19b69e9d1a9b3bbbf659cd750627af590375582fd256f0d7"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -196,7 +196,7 @@ byte (including every non-ASCII byte).
 | `fields` | `@($str:$str)` | Field-name → field-type map (model schema). |
 
 **Returns:** `$str!$storeerr` — a
-`CREATE TABLE IF NOT EXISTS <modelname>(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,body TEXT,<col> <type>...)`
+`CREATE TABLE IF NOT EXISTS <modelname>(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,title TEXT,type TEXT,body TEXT,<col> <type>...)`
 statement, or `$storeerr` when the table name or a field name is not an
 identifier.
 
@@ -204,10 +204,16 @@ identifier.
 
 1. Start with `"CREATE TABLE IF NOT EXISTS "` and append
    `storeident(modelname)!$storeerr`.
-2. Append `"(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,body TEXT"`.
+2. Append `"(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,title TEXT,type TEXT,body TEXT"`.
+   `title` and `type` are always made, because `storewrite` writes them and
+   `storeallsql` reads them (121.67: they were made only when the model
+   declared them, so `storewrite` failed on every other model).
 3. For each key `k` of `fields.keys()` (map order): `ft=fields.get(k)`; the
    column type is `INTEGER` when `ft` is `"bool"` or `"int"`, else `TEXT`;
-   append `"," + storeident(k)!$storeerr + " " + coltype`.
+   `col=storeident(k)!$storeerr`. If `str.lower(col)` is `id`, `slug`,
+   `title`, `type` or `body` -- a column step 2 made -- skip it (SQLite
+   refuses a duplicate column, and its names are case-insensitive);
+   otherwise append `"," + col + " " + coltype`.
 4. Append `")"` and return.
 
 **Error handling:** Only `storeident` fails the function, for the table name

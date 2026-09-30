@@ -235,6 +235,36 @@ f=teststorewrite():bool{
   <a0&&a1&&a2&&a3&&a4&&a5&&a6
 };
 
+(* Story 121.67 (3): storesqlcreate always makes the title and type columns
+   storewrite and storeallsql use. It made (id, slug, body, ...fields), so on
+   a model with no title/type field every storewrite failed ("no such
+   column") and storeallsql could not read the table. A model that does
+   declare them -- in any case -- must not get them twice (control). *)
+f=teststoresqlcreatecolumns():bool{
+  let opened=mt db.open(":memory:") {$ok:v true;$err:e false};
+  if(!chk.istrue(opened;"db.open :memory: (121.67)")){<false};
+  let c1=$content{slug:"n1";type:"note";title:"Hello";meta:@($str:$str);body:"b"};
+  let ddl=mt store.storesqlcreate("notes";@("author":"str")) {$ok:v v;$err:e ""};
+  let mk=mt db.exec(ddl;@()) {$ok:v true;$err:e false};
+  let a0=chk.istrue(mk;"storesqlcreate DDL for a model without title/type runs");
+  let w=mt store.storewrite("notes";c1) {$ok:v v;$err:e false};
+  let a1=chk.istrue(w;"storewrite on a storesqlcreate table with no title/type field");
+  let all=mt store.storeallsql("notes") {$ok:v v;$err:e @($content)};
+  let a2=chk.equint(all.len;1;"storeallsql reads the row back");
+  let t=if(all.len==1){all.get(0).title}el{"NONE"};
+  let ty=if(all.len==1){all.get(0).type}el{"NONE"};
+  let a3=chk.eqstr(t;"Hello";"storeallsql title");
+  let a4=chk.eqstr(ty;"note";"storeallsql type");
+  (* control: title/type declared by the model (Type in another case) *)
+  let ddl2=mt store.storesqlcreate("docs";@("title":"str";"Type":"str";"author":"str")) {$ok:v v;$err:e ""};
+  let mk2=mt db.exec(ddl2;@()) {$ok:v true;$err:e false};
+  let a5=chk.istrue(mk2;"storesqlcreate with title/Type fields has no duplicate column");
+  let w2=mt store.storewrite("docs";c1) {$ok:v v;$err:e false};
+  let a6=chk.istrue(w2;"storewrite on a table whose model declares title/type");
+  (db.close());
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6
+};
+
 f=main():i64{
   let r0=testdefault();
   let r1=testparsefront();
@@ -254,5 +284,6 @@ f=main():i64{
   let r15=testparsefrontcolons();
   let r16=testparsefrontnocolon();
   let r17=teststorewrite();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17){<0}el{<1}
+  let r18=teststoresqlcreatecolumns();
+  if(r18&&r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17){<0}el{<1}
 };
