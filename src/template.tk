@@ -253,6 +253,33 @@ f=tplislandparse(content:$str):@($str:$str){
   }
 };
 
+f=tplnameok(name:$str):bool{
+  (* 121.57: a partial or layout name is a name inside the templates
+     directory, not a path.  `partials/header` is a name; `../x`, `/etc/x`,
+     `a/../../x`, `a\x`, `a//b`, `./a` and the empty name are not, because
+     each either leaves the directory or is not the one spelling of a file
+     in it.  Mirrors toke's layout() rule (121.41), which also forbids '/'
+     outright; ooke keeps '/' as the separator for nested template names. *)
+  if(str.len(name)==0){<false};
+  if(str.contains(name;"\\")){<false};
+  if(str.startswith(name;"/")){<false};
+  let segs=str.split(name;"/");
+  lp(let i=0;i<segs.len;i=i+1){
+    let sg=segs.get(i);
+    if(str.len(sg)==0||sg=="."||sg==".."){<false}
+  };
+  <true
+};
+
+f=tplnamepath(templatesdir:$str;kind:$str;name:$str):$str!$tplerr{
+  if(!tplnameok(name)){
+    let m=str.join("";@("template: refused ";kind;" name \"";name;"\": a ";kind;" is named relative to the templates directory (e.g. partials/header), without .., a leading /, a backslash or empty segments"));
+    (log.error(m;@()));
+    <$tplerr{msg:m}
+  }el{};
+  <path.join(templatesdir;str.concat(name;".tkt"))
+};
+
 f=tplrender(
   tokens:@$token;
   ctx:@($str:$str);
@@ -334,7 +361,7 @@ f=tplrender(
               }el{}
             }el{
               if(dname=="partial"){
-                let partialpath=path.join(templatesdir;str.concat(darg;".tkt"));
+                let partialpath=tplnamepath(templatesdir;"partial";darg)!$tplerr;
                 let psrcr=file.read(partialpath);
                 let partialsrc=mt psrcr {$ok:s s;$err:e ""};
                 if(str.len(partialsrc)>0){
@@ -373,7 +400,7 @@ f=tplrender(
   let islandscript="<script src=\"/static/ooke-islands.js\" defer></script>";
 
   if(str.len(layoutname)>0){
-    let layoutpath=path.join(templatesdir;str.concat(layoutname;".tkt"));
+    let layoutpath=tplnamepath(templatesdir;"layout";layoutname)!$tplerr;
     if(!file.exists(layoutpath)){
       (* 134.24: log where the message exists. A caller cannot read `e.msg` off
          this payload (RT005, toke 127.78, open), so an unlogged $tplerr is a

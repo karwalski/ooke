@@ -17,6 +17,8 @@
     {"kind": "func", "name": "tpldirectivearg", "params": ["str"], "return": "str"},
     {"kind": "func", "name": "tplfindblock", "params": ["[block]", "str"], "return": "str"},
     {"kind": "func", "name": "tplislandparse", "params": ["str"], "return": "[str:str]"},
+    {"kind": "func", "name": "tplnameok", "params": ["str"], "return": "bool"},
+    {"kind": "func", "name": "tplnamepath", "params": ["str", "str", "str"], "return": "str", "error": "tplerr"},
     {"kind": "func", "name": "tplrender", "params": ["[token]", "[str:str]", "str", "[block]"], "return": "str", "error": "tplerr"},
     {"kind": "func", "name": "tplrenderfile", "params": ["str", "[str:str]", "str"], "return": "str", "error": "tplerr"},
     {"kind": "func", "name": "tplcachenew", "params": [], "return": "tplcache"},

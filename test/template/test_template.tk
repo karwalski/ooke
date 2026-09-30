@@ -275,6 +275,65 @@ f=testpartial():bool{
 };
 
 
+(* 121.57: a partial or layout name resolves only inside the templates
+ * directory.  The fixture puts secret.tkt one level ABOVE templates/, so a
+ * name that escapes can read it; the nested partials/header.tkt is the
+ * legitimate control that must keep working. *)
+f=trvsetup():bool{
+  let root="/tmp/test_ooke_12157";
+  (mt file.mkdir(root) {$ok:v 0;$err:e 0});
+  (mt file.mkdir("/tmp/test_ooke_12157/templates") {$ok:v 0;$err:e 0});
+  (mt file.mkdir("/tmp/test_ooke_12157/templates/partials") {$ok:v 0;$err:e 0});
+  let w0=file.write("/tmp/test_ooke_12157/secret.tkt";"TOPSECRET");
+  let a0=mt w0 {$ok:v true;$err:e failret("could not write secret.tkt")};
+  let w1=file.write("/tmp/test_ooke_12157/templates/partials/header.tkt";"<header>NESTEDOK</header>");
+  let a1=mt w1 {$ok:v true;$err:e failret("could not write partials/header.tkt")};
+  <a0&&a1
+};
+
+
+f=trvrender(src:$str):$str{
+  let toks=mt tpl.tpllex(src) {$ok:t t;$err:e @()};
+  let out=tpl.tplrender(toks;@($str:$str);"/tmp/test_ooke_12157/templates";@());
+  <mt out {$ok:s s;$err:e "<<REFUSED>>"}
+};
+
+
+f=trvrefused(src:$str;what:$str):bool{
+  let r=trvrender(src);
+  let refused=r=="<<REFUSED>>";
+  let leaked=str.contains(r;"TOPSECRET");
+  let a0=chk.istrue(refused;str.concat(what;" is refused with an error"));
+  let a1=chk.isfalse(leaked;str.concat(what;" does not read a file outside templates/"));
+  <a0&&a1
+};
+
+
+f=testpartialtraversal():bool{
+  let a0=trvsetup();
+  let a1=trvrefused("a{! partial(\"../secret\") !}b";"partial(\"../secret\")");
+  let a2=trvrefused("a{! partial(\"/tmp/test_ooke_12157/secret\") !}b";"partial with an absolute path");
+  let a3=trvrefused("a{! partial(\"partials/../../secret\") !}b";"partial with a .. segment mid-name");
+  let a4=trvrefused("a{! partial(\"\") !}b";"partial with an empty name");
+  <a0&&a1&&a2&&a3&&a4
+};
+
+
+f=testlayouttraversal():bool{
+  let a0=trvsetup();
+  let a1=trvrefused("{! layout(\"../secret\") !}x";"layout(\"../secret\")");
+  let a2=trvrefused("{! layout(\"/tmp/test_ooke_12157/secret\") !}x";"layout with an absolute path");
+  <a0&&a1&&a2
+};
+
+
+f=testpartialnestedname():bool{
+  let a0=trvsetup();
+  let r=trvrender("a{! partial(\"partials/header\") !}b");
+  let a1=chk.eqstr(r;"a<header>NESTEDOK</header>b";"a nested partial name inside templates/ still renders");
+  <a0&&a1
+};
+
 
 f=main():i64{
   let r0=testrawpassthrough();
@@ -296,7 +355,10 @@ f=main():i64{
   let r16=testfilterraw();
   let r17=testfilteruppertescapes();
   let r18=testcacheservesstored();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18){
+  let r19=testpartialtraversal();
+  let r20=testlayouttraversal();
+  let r21=testpartialnestedname();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21){
     <0
   }el{
     <1
