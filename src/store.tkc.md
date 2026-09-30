@@ -1,6 +1,6 @@
 ---
 source_file: "store.tk"
-source_hash: "bcc8c9f68012f92bbf8af50654edff90bfe4994a6d61c989476d9a9004299db7"
+source_hash: "67e504cde17e6f5b7dcbd5fd7687fdb99db6a12b32c9712bb1f8daeb8c35a612"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -96,11 +96,15 @@ function never raises `$storeerr`; `str.slice` failures fall back to `""`.
    the body. Each slice is matched `{$ok:v v;$err:e ""}`.
 5. Split `fmraw` on `"\n"`. Initialise a mutable `meta` map, mutable
    `slug=""`, `ctype="page"`, `ctitle=""`.
-6. For each line (index `0` to `lines.len-1`): trim it, split on `":"`. The
-   guard is the original reference predicate `if(!kv.len<2)`. When it holds,
-   trim `kv.get(0)` as `k` and `kv.get(1)` as `v`; if `k` equals `"slug"` /
-   `"type"` / `"title"` assign the corresponding mutable; in all cases
-   `meta=meta.set(k;v)`.
+6. For each line (index `0` to `lines.len-1`): trim it and split it on
+   `":"`. A line with fewer than two pieces (no `":"` at all -- e.g. a blank
+   line) is skipped. Otherwise `k` is the trimmed first piece and `v` the
+   trimmed remainder: the other pieces re-joined with `":"`, so a value may
+   itself hold colons (`url: https://x.io`, `time: 12:30`). If `k` equals
+   `"slug"` / `"type"` / `"title"` assign the corresponding mutable; in all
+   cases `meta=meta.set(k;v)`. (Story 121.66: the guard was `!kv.len<2`,
+   i.e. `(!kv.len)<2`, always true, so a blank line read past the split and
+   died with RT003; and only the second piece was kept, truncating values.)
 7. Return `$content{slug;type:ctype;title:ctitle;meta;body:bodyraw}`.
 
 **Error handling:** Slice failures are absorbed to `""`. The `!$storeerr`

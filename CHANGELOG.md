@@ -85,6 +85,14 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   `src/*.tkc.md` `source_hash` does not match its source, or names a source
   that does not exist. Companions of generated sources (`src/_*.tk`) are
   skipped. (121.63)
+- **A content file's front matter keeps values that contain `:`, and a blank
+  line in it no longer kills the build.** Each line was split on every `:`
+  and only the second piece kept, so `url: https://x.io` read `https`,
+  `time: 12:30` read `12` and `title: Part 1: Intro` read `Part 1`. A line
+  with no `:` -- a blank line, or a stray word -- read past the end of the
+  split and the process died with RT003 (`ooke build` and `ooke serve` both
+  parse content through it). The key is now what precedes the first `:` and
+  the value everything after it; a line with no `:` is skipped. (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
