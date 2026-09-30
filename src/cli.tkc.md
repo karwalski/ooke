@@ -1,6 +1,6 @@
 ---
 source_file: "cli.tk"
-source_hash: "75257b656cf33ac7abf7fc734c11c3a2b372b9622ca461483ed9ef4d2826569f"
+source_hash: "4907ba313b3fd258e8e366d87d142d6261791d0645f0019ba0c22c56fe3f46b0"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -220,10 +220,12 @@ traps RT005 (toke 127.78, open).
    raised (134.24 — the payload's `e.msg` cannot be read, RT005); return 1.
 4. Log `pages built` and `assets copied`; log validation errors and warnings
    when non-zero.
-5. `pagesskipped > 0`: log `pages skipped: <n> — build failed` at error and
-   return 1.
+5. `pagesskipped > 0`: log `pages skipped: <n> — build failed` at error.
 6. `assetsfailed > 0`: log `assets not copied: <n> — build failed` at error
-   and return 1 (121.67). Otherwise return 0.
+   (121.67).
+7. Return 1 if either count is non-zero, otherwise 0. Both summaries are
+   printed when both apply (121.69 (3): step 5 used to return first, so a
+   build that lost pages and assets never said `assets not copied`).
 
 ## Control Flow
 

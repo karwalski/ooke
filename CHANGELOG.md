@@ -183,6 +183,10 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   nothing added (a last line with no newline gets none), after its stdout
   and once the program exits. **Behaviour change** for anything that parsed
   the wrapped record. (121.69)
+- `ooke build` prints both `pages skipped: <n>` and `assets not copied: <n>`
+  when a build lost both. It returned after the first, so the asset summary
+  was missing (the assets were still named in their own errors, and the build
+  still failed). (121.69)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
