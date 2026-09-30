@@ -148,6 +148,12 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   directory had not been made yet, so the write always failed. The directory
   is now made first, and a failed mkdir or write is logged at error and
   counted in `pages skipped`, failing the build. (121.67)
+- `store.storesqlcreate` always makes the `title` and `type` columns that
+  `storewrite` writes and `storeallsql` reads. It made them only when the
+  model declared them, so on any other model every `storewrite` failed with
+  `no such column: title`. A model field named `id`, `slug`, `title`, `type`
+  or `body` (in any case) is no longer declared a second time, which SQLite
+  refused. Nothing in `ooke build` or `ooke serve` calls it. (121.67)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
