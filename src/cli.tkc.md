@@ -1,6 +1,6 @@
 ---
 source_file: "cli.tk"
-source_hash: "6b4a5fddd1f09acafe31e7dfd95fdbc613e414f1d53662edbd870ca6b1519fca"
+source_hash: "d855dce3e51ac9cf23ac6a1f6ededc18de27b18c6b3ddb9cad97a13496e75574"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -80,12 +80,19 @@ file hard-codes a version again.
 
 ### Scaffolding
 
+#### `climkdir(p: $str): bool` and `cliwrite(p: $str; content: $str): bool`
+
+`file.mkdir(p)` (which is `mkdir -p`) or `file.write(p;content)`, as `true`
+on success. On failure each logs, at error, `could not create directory <p>`
+or `could not write <p>` and returns `false`. Every scaffolding step below
+goes through one of them and stops with 1 on `false` (story 121.66: every
+result was discarded and "Created" was logged regardless).
+
 #### `clinew(name: $str): i64`
 
 Scaffold a new project at `name`:
 
-1. `file.mkdir` `name` and its `pages/`, `templates/`, `content/`, `static/`
-   (failures are ignored).
+1. `climkdir` `name` and its `pages/`, `templates/`, `content/`, `static/`.
 2. Write `ooke.toml`: `[site]` (name, empty url, `en`), `[build]`
    (`build/`, minify and inlinecss on), `[server]` (`host = "127.0.0.1"`,
    port 3000, workers 0), `[paths]` (empty apiprefix), `[log]`
@@ -100,7 +107,8 @@ Scaffold a new project at `name`:
    built).
 5. Log `Created project: <name>` and return 0.
 
-Every write result is discarded; the function always returns 0.
+Each directory and file goes through `climkdir`/`cliwrite`; the first failure
+returns 1 (logged, naming the path) with no "Created" line.
 
 #### `cligen(gentype: $str; genname: $str): i64`
 
@@ -113,8 +121,10 @@ Scaffold one component, relative to the working directory:
 | `api` | `pages/api/<name>.tk` = `m=pages.api.<name>;` (mkdir `pages/api/`), then logs a hint on wiring a handler |
 | `island` | `islands/<name>.tk` = `m=islands.<name>;` (mkdir `islands/`) |
 
-Each logs `Created <kind>: <path>` and returns 0; an unknown type logs
-`unknown gen type: <type>` and returns 1. Write failures are discarded.
+Each logs `Created <kind>: <path>` and returns 0 once its `climkdir` and
+`cliwrite` succeed; a failed one returns 1 (logged, naming the path) with no
+"Created" line -- e.g. `ooke gen page x` with no `pages/`. An unknown type
+logs `unknown gen type: <type>` and returns 1.
 
 ### Type-specialised containers (`ooke gen spec`)
 
@@ -142,7 +152,8 @@ As `specstack` over `std.set` (`st`): `new`, `add(s;val):t`,
 #### `cligenspec(container: $str; typename: $str): i64`
 
 `name = container + typename`; write `<name>.tk` in the working directory from
-`specstack` / `specqueue` / `specset` for `stack` / `queue` / `set`, log
+`specstack` / `specqueue` / `specset` for `stack` / `queue` / `set` with
+`cliwrite` (a failed write returns 1, no "Created"), log
 `Created specialised: <file>`, return 0. Any other container logs
 `unknown container: <c>, expected: stack, queue, set` and returns 1.
 

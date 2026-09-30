@@ -107,18 +107,35 @@ f=cliprintversion():i64{
   <0
 };
 
+(* Story 121.66 (k). clinew, cligen and cligenspec discarded every mkdir and
+   write result and then logged "Created ..." and exited 0 -- `ooke gen page x`
+   outside a project, or `ooke new` in a directory it cannot write, reported
+   success and wrote nothing. Each step now goes through one of these, which
+   log the path that failed; the caller stops and returns 1. *)
+f=climkdir(p:$str):bool{
+  let ok=mt file.mkdir(p) {$ok:v true;$err:e false};
+  if(!ok){(log.error(str.concat("could not create directory ";p);@()))}el{};
+  <ok
+};
+
+f=cliwrite(p:$str;content:$str):bool{
+  let ok=mt file.write(p;content) {$ok:v true;$err:e false};
+  if(!ok){(log.error(str.concat("could not write ";p);@()))}el{};
+  <ok
+};
+
 f=clinew(name:$str):i64{
-  (mt file.mkdir(name) {$ok:v v;$err:e false});
-  (mt file.mkdir(path.join(name;"pages")) {$ok:v v;$err:e false});
-  (mt file.mkdir(path.join(name;"templates")) {$ok:v v;$err:e false});
-  (mt file.mkdir(path.join(name;"content")) {$ok:v v;$err:e false});
-  (mt file.mkdir(path.join(name;"static")) {$ok:v v;$err:e false});
+  if(!climkdir(name)){<1}el{};
+  if(!climkdir(path.join(name;"pages"))){<1}el{};
+  if(!climkdir(path.join(name;"templates"))){<1}el{};
+  if(!climkdir(path.join(name;"content"))){<1}el{};
+  if(!climkdir(path.join(name;"static"))){<1}el{};
   (* 134.35: the [requires] block is generated from ooke.toml (src/_floor.tk),
      not restated here. It had drifted to a floor ooke no longer builds on. *)
   let tomlcontent=str.join("";@("[site]\nname = \"";name;"\"\nurl = \"\"\nlanguage = \"en\"\n\n[build]\noutput = \"build/\"\nminify = true\ninlinecss = true\n\n[server]\nhost = \"127.0.0.1\"\nport = 3000\nworkers = 0\n\n[paths]\napiprefix = \"\"\n\n[log]\naccess = \"-\"\naccessformat = \"combined\"\n\n";floor.floortoml()));
-  (mt file.write(path.join(name;"ooke.toml");tomlcontent) {$ok:v v;$err:e false});
+  if(!cliwrite(path.join(name;"ooke.toml");tomlcontent)){<1}el{};
   let indexcontent="m=pages.index;\n";
-  (mt file.write(path.join(path.join(name;"pages");"index.tk");indexcontent) {$ok:v v;$err:e false});
+  if(!cliwrite(path.join(path.join(name;"pages");"index.tk");indexcontent)){<1}el{};
   (* Story 134.24. The scaffold wrote ONE template, templates/base.tkt, and the
      route it also scaffolds — pages/index.tk, i.e. "/" — derives
      templates/index.tkt. `ooke new` therefore produced a project that could not
@@ -132,9 +149,9 @@ f=clinew(name:$str):i64{
      The Coin Gold identity is unchanged — only the seam between shell and page
      is new. Re-theme by editing either file. *)
   let basecontent="<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>{! yield(\"title\") !}</title>\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700;800&display=swap\">\n<style>\n:root{--bg:#14110B;--surface:#1F1A11;--line:#2A2317;--text:#F5EFE2;--muted:#9A9082;--gold:#F0C04A;--on-gold:#14110B}\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:var(--bg);color:var(--text);font-family:\"Space Grotesk\",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}\n.wrap{max-width:640px;margin:0 auto;padding:80px 24px}\n.lockup{display:flex;align-items:center;gap:14px;margin-bottom:36px}\n.coin{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 34% 32%,#F6D277 0%,#F0C04A 48%,#C68A1A 100%);box-shadow:0 0 18px rgba(240,192,74,.45)}\n.wordmark{font-family:\"JetBrains Mono\",monospace;font-weight:800;font-size:38px;letter-spacing:-2px}\nh1{font-size:30px;font-weight:700;letter-spacing:-1px;margin-bottom:12px}\np{color:var(--muted);margin-bottom:16px}\n.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px;margin:28px 0}\n.eyebrow{font-family:\"JetBrains Mono\",monospace;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}\n.btn{display:inline-block;background:var(--gold);color:var(--on-gold);font-weight:600;text-decoration:none;padding:11px 20px;border-radius:8px;font-size:14px}\na.link{color:var(--gold);text-decoration:none}\npre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:16px;overflow-x:auto;font-family:\"JetBrains Mono\",monospace;font-size:13px;color:#d8d0c0;margin:16px 0}\n.kw{color:var(--gold)}\nfooter{border-top:1px solid var(--line);margin-top:40px;padding-top:20px;color:var(--muted);font-size:13px}\nfooter a{color:var(--muted);text-decoration:none}\n</style>\n</head>\n<body>\n<div class=\"wrap\">\n{! yield(\"content\") !}\n<footer>Built with toke on ooke &middot; <a href=\"https://tokelang.dev\">tokelang.dev</a> &middot; Write less. Mean more.</footer>\n</div>\n</body>\n</html>\n";
-  (mt file.write(path.join(path.join(name;"templates");"base.tkt");basecontent) {$ok:v v;$err:e false});
+  if(!cliwrite(path.join(path.join(name;"templates");"base.tkt");basecontent)){<1}el{};
   let hometemplate="{! layout(\"base\") !}\n{! block(\"title\") !}{= site.name =}{! end !}\n{! block(\"content\") !}\n<div class=\"lockup\"><div class=\"coin\"></div><span class=\"wordmark\">ooke</span></div>\n<div class=\"eyebrow\">Admit one</div>\n<h1>ooke is running.</h1>\n<p>A single native binary serving this page &mdash; no runtime, no dependencies. Built with <a class=\"link\" href=\"https://tokelang.dev\">toke</a>, a language built for AI.</p>\n<div class=\"card\">\n<div class=\"eyebrow\">Get started</div>\n<p style=\"margin-bottom:12px\">This page is <code>templates/index.tkt</code>, rendered into <code>templates/base.tkt</code>. Edit either to make it yours, or add a page:</p>\n<pre><span class=\"kw\">m</span>=pages.about;</pre>\n<p style=\"margin-bottom:12px\">A page at <code>pages/about.tk</code> is served at <code>/about</code> and renders <code>templates/about.tkt</code>, so add that file too.</p>\n<a class=\"btn\" href=\"https://github.com/karwalski/ooke\">ooke on GitHub</a>\n</div>\n{! end !}\n";
-  (mt file.write(path.join(path.join(name;"templates");"index.tkt");hometemplate) {$ok:v v;$err:e false});
+  if(!cliwrite(path.join(path.join(name;"templates");"index.tkt");hometemplate)){<1}el{};
   (log.info(str.concat("Created project: ";name);@()));
   <0
 };
@@ -143,32 +160,32 @@ f=cligen(gentype:$str;genname:$str):i64{
   if(str.eq(gentype;"page")){
     let pagepath=path.join("pages";str.concat(genname;".tk"));
     let pagecontent=str.join("";@("m=pages.";genname;";\n"));
-    let pw=mt file.write(pagepath;pagecontent) {$ok:v v;$err:e false};
+    if(!cliwrite(pagepath;pagecontent)){<1}el{};
     (log.info(str.concat("Created page: ";pagepath);@()));
     <0
   }el{
     if(str.eq(gentype;"type")){
-      let dm=mt file.mkdir("models") {$ok:v v;$err:e false};
+      if(!climkdir("models")){<1}el{};
       let typepath=path.join("models";str.concat(genname;".toml"));
       let typecontent=str.join("";@("name = \"";genname;"\"\n\n[fields]\nlist = \"title, slug\"\n\n[fields.title]\ntype = \"str\"\nrequired = true\n\n[fields.slug]\ntype = \"str\"\nrequired = true\n"));
-      let tw=mt file.write(typepath;typecontent) {$ok:v v;$err:e false};
+      if(!cliwrite(typepath;typecontent)){<1}el{};
       (log.info(str.concat("Created type: ";typepath);@()));
       <0
     }el{
       if(str.eq(gentype;"api")){
-        let da=mt file.mkdir(path.join("pages";"api")) {$ok:v v;$err:e false};
+        if(!climkdir(path.join("pages";"api"))){<1}el{};
         let apipath=path.join(path.join("pages";"api");str.concat(genname;".tk"));
         let apicontent=str.join("";@("m=pages.api.";genname;";\n"));
-        let aw=mt file.write(apipath;apicontent) {$ok:v v;$err:e false};
+        if(!cliwrite(apipath;apicontent)){<1}el{};
         (log.info(str.concat("Created api: ";apipath);@()));
         (log.info("Wire handler: add src/api<name>.tk with apiget/apipost/apiinit, import in main.tk, add to Makefile";@()));
         <0
       }el{
         if(str.eq(gentype;"island")){
-          let di=mt file.mkdir("islands") {$ok:v v;$err:e false};
+          if(!climkdir("islands")){<1}el{};
           let islandpath=path.join("islands";str.concat(genname;".tk"));
           let islandcontent=str.join("";@("m=islands.";genname;";\n"));
-          let iw=mt file.write(islandpath;islandcontent) {$ok:v v;$err:e false};
+          if(!cliwrite(islandpath;islandcontent)){<1}el{};
           (log.info(str.concat("Created island: ";islandpath);@()));
           <0
         }el{
@@ -240,19 +257,19 @@ f=cligenspec(container:$str;typename:$str):i64{
   let filename=str.concat(name;".tk");
   if(str.eq(container;"stack")){
     let content=specstack(typename;name);
-    let w=mt file.write(filename;content) {$ok:v v;$err:e false};
+    if(!cliwrite(filename;content)){<1}el{};
     (log.info(str.concat("Created specialised: ";filename);@()));
     <0
   }el{
     if(str.eq(container;"queue")){
       let content=specqueue(typename;name);
-      let w=mt file.write(filename;content) {$ok:v v;$err:e false};
+      if(!cliwrite(filename;content)){<1}el{};
       (log.info(str.concat("Created specialised: ";filename);@()));
       <0
     }el{
       if(str.eq(container;"set")){
         let content=specset(typename;name);
-        let w=mt file.write(filename;content) {$ok:v v;$err:e false};
+        if(!cliwrite(filename;content)){<1}el{};
         (log.info(str.concat("Created specialised: ";filename);@()));
         <0
       }el{

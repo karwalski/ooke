@@ -115,6 +115,12 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   The printed text is unchanged. (121.66)
 - `ooke gen --help` lists all four types `ooke gen` makes -- `page`, `type`,
   `api`, `island`; it listed two. (121.66)
+- **`ooke new` and `ooke gen` fail when they cannot write.** They discarded
+  every mkdir and write result, then logged `Created …` and exited 0:
+  `ooke gen page x` outside a project, or either command in a directory it
+  cannot write, reported success and wrote nothing. The first failure now
+  logs `could not write <path>` (or `could not create directory <path>`) at
+  error and exits 1. (121.66)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
