@@ -297,9 +297,10 @@ layout/partial file or its lex/render fails.
        `mt vargot {$ok:v v;$err:e ""}`, append per `inblock`.
      - `yield`: `blockcontent=tplfindblock(blocks;darg)`; if non-empty append to
        `buf`.
-     - `partial`: `partialpath=path.join(templatesdir; darg+".tkt")`; bind
-       `psrcr=file.read(partialpath)`, take `partialsrc` via
-       `mt psrcr {$ok:s s;$err:e ""}`; if non-empty, lex it (`!$tplerr`),
+     - `partial`: `partialpath=tplnamepath(templatesdir;"partial";darg)`
+       (`!$tplerr`); if the file does not exist, or `file.read` fails, log and
+       return `$tplerr` (121.59: a missing partial is an error, as a missing
+       layout is); take `partialsrc` from the read; if non-empty, lex it (`!$tplerr`),
        recursively `tplrender(...;@())` (`!$tplerr`), append per `inblock`.
      - `island`: `iparse=tplislandparse(tok.content)`; bind
        `inameg=iparse.get("name")` / `ihydrateg=iparse.get("hydrate")` and read

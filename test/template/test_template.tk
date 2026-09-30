@@ -422,6 +422,21 @@ f=testpartialselfinclude():bool{
 };
 
 
+(* 121.59: a missing partial is an error, as a missing layout already was.
+ * It used to render as nothing, with no error and no log.  An EMPTY partial
+ * file is not missing and still renders as nothing (the negative control). *)
+f=testpartialmissing():bool{
+  let a0=trvsetup();
+  let w0=file.write("/tmp/test_ooke_12157/templates/partials/empty.tkt";"");
+  let a1=mt w0 {$ok:v true;$err:e failret("could not write partials/empty.tkt")};
+  let a2=chk.eqstr(trvrender("a{! partial(\"nosuch\") !}b");"<<REFUSED>>";"a missing partial is an error, not an empty string");
+  let a3=chk.eqstr(trvrender("a{! partial(\"partials/nosuch\") !}b");"<<REFUSED>>";"a missing nested partial is an error");
+  let a4=chk.eqstr(trvrender("a{! partial(\"partials/empty\") !}b");"ab";"an empty partial file still renders as nothing");
+  let a5=chk.eqstr(trvrender("{! layout(\"nosuch\") !}x");"<<REFUSED>>";"a missing layout is an error (unchanged)");
+  <a0&&a1&&a2&&a3&&a4&&a5
+};
+
+
 f=main():i64{
   let r0=testrawpassthrough();
   let r1=testexprsimple();
@@ -451,7 +466,8 @@ f=main():i64{
   let r25=testctxattr();
   let r26=testctxcomposed();
   let r27=testpartialselfinclude();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21&&r22&&r23&&r24&&r25&&r26&&r27){
+  let r28=testpartialmissing();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21&&r22&&r23&&r24&&r25&&r26&&r27&&r28){
     <0
   }el{
     <1
