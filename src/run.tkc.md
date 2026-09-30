@@ -1,6 +1,6 @@
 ---
 source_file: "run.tk"
-source_hash: "c925d8f098a5c79fbd3da72981c7dde27eac8fa1535d44b8f4ca5bf9e97fe8ee"
+source_hash: "9451a19c4edef28de048c07641867bece6e9552b5990bf02cadff35ab0439d30"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -115,7 +115,8 @@ on any failure. No path in the current source returns `$runerr`.
 12. Return `outbin`.
 
 **Error handling:** Every failure (missing entry, spawn failure, non-zero `tkc`
-exit, no output binary) is logged at info level and returned as `""`; callers
+exit, no output binary) is logged at error level (121.66; it was info) and
+returned as `""`; callers
 treat empty as failure. A `process.stderr` failure reads as `""`.
 
 **Story 134.45:** `process.wait` was matched with `$ok`/`$err` arms; it
@@ -222,6 +223,9 @@ runexec`.
   and `runexec`.
 - **`tkc` from `PATH`.** `runcompile` spawns `"tkc"` by name; the compiler
   must be on `PATH`. Its output is `build/<name>` under the project.
-- **Failures are logged at info level.** A missing entry point, a failed
-  spawn and a `tkc` error are all `log.info` lines; the non-zero exit status
-  of `run`/`build` is what marks the failure.
+- **Failures are logged at error level** (story 121.66; they were `log.info`).
+  A missing entry point, a failed spawn, a `tkc` error, a missing output
+  binary and the "compilation failed" lines are `log.error`; progress lines
+  (`compiling`, `running`, `built`) and a successful compile's `tkc:` output
+  stay info. The non-zero exit status of `run`/`build` still marks the
+  failure.
