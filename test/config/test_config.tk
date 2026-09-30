@@ -108,6 +108,36 @@ f=testadmin():bool{
   <a0&&a1&&a2&&a3&&a4
 };
 
+(* Story 121.67 (4): a key outside its table is not read as that table's.
+   An absent [log] (or [site], [server], ...) fell back to the ROOT table,
+   so a top-level `maxlines = 5` was reported as a [log] rotation key and a
+   top-level `port`/`access`/`name` configured the server, the log and the
+   site. Control: the same keys inside their tables are still read. *)
+f=testrootnotsection():bool{
+  let w0=mt file.write("/tmp/test_ooke_rootrot.toml";"maxlines = 5\nmaxagedays = 3\n\n[site]\nname = \"x\"\n") {$ok:v true;$err:e false};
+  let w1=mt file.write("/tmp/test_ooke_rootkeys.toml";"name = \"rootname\"\nport = 9\naccess = \"root.log\"\noutput = \"rootout/\"\ncert = \"root.pem\"\n") {$ok:v true;$err:e false};
+  let w2=mt file.write("/tmp/test_ooke_inkeys.toml";"[site]\nname = \"inname\"\n[server]\nport = 9\n[log]\naccess = \"in.log\"\nmaxlines = 5\n") {$ok:v true;$err:e false};
+  if(!(w0&&w1&&w2)){<false};
+  let rot=mt config.configlogunsupported("/tmp/test_ooke_rootrot.toml") {$ok:v v;$err:e "ERR"};
+  let a0=chk.eqstr(rot;"";"a top-level maxlines/maxagedays is not a [log] key");
+  let r=config.configload("/tmp/test_ooke_rootkeys.toml");
+  let cfg=mt r {$ok:v v;$err:e 0};
+  let a1=chk.eqstr(cfg.sitename;"my-site";"a top-level name is not [site] name");
+  let a2=chk.equint(cfg.serverport as u64;3000;"a top-level port is not [server] port");
+  let a3=chk.eqstr(cfg.logaccess;"-";"a top-level access is not [log] access");
+  let a4=chk.eqstr(cfg.buildoutput;"build/";"a top-level output is not [build] output");
+  let a5=chk.eqstr(cfg.tlscert;"";"a top-level cert is not [tls] cert");
+  (* control: inside their tables *)
+  let inrot=mt config.configlogunsupported("/tmp/test_ooke_inkeys.toml") {$ok:v v;$err:e "ERR"};
+  let a6=chk.eqstr(inrot;"maxlines";"[log] maxlines is still named");
+  let r2=config.configload("/tmp/test_ooke_inkeys.toml");
+  let cfg2=mt r2 {$ok:v v;$err:e 0};
+  let a7=chk.eqstr(cfg2.sitename;"inname";"[site] name is read");
+  let a8=chk.equint(cfg2.serverport as u64;9;"[server] port is read");
+  let a9=chk.eqstr(cfg2.logaccess;"in.log";"[log] access is read");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a9
+};
+
 f=main():i64{
   let r0=testloadvalid();
   let r1=testmissingfile();
@@ -115,7 +145,8 @@ f=main():i64{
   let r3=testlogtls();
   let r4=testlogunsupported();
   let r5=testadmin();
-  if(r0&&r1&&r2&&r3&&r4&&r5){
+  let r6=testrootnotsection();
+  if(r6&&r0&&r1&&r2&&r3&&r4&&r5){
     <0
   }el{
     <1

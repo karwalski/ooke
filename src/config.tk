@@ -27,16 +27,26 @@ t=$ookecfg{
 
 t=$configerr{msg:$str};
 
+(* Story 121.67 (4): a table that is absent is empty. Every section read here
+   fell back to the ROOT table, so without [log] a top-level `maxlines = 5`
+   was reported as a [log] rotation key, and without [site], [server], [build]
+   or [tls] a top-level `name`, `port`, `output` or `cert` configured them. A
+   key belongs to the table it is written in. *)
+f=configsection(tab:$tomlval;name:$str):$tomlval{
+  let empty=mt toml.load("") {$ok:v v;$err:e tab};
+  <mt toml.section(tab;name) {$ok:v v;$err:e empty}
+};
+
 f=configload(path:$str):$ookecfg!$configerr{
   let src=file.read(path)!$configerr;
   let tab=toml.load(src)!$configerr;
 
-  let site=mt toml.section(tab;"site") {$ok:v v;$err:e tab};
-  let build=mt toml.section(tab;"build") {$ok:v v;$err:e tab};
-  let server=mt toml.section(tab;"server") {$ok:v v;$err:e tab};
-  let log=mt toml.section(tab;"log") {$ok:v v;$err:e tab};
-  let paths=mt toml.section(tab;"paths") {$ok:v v;$err:e tab};
-  let tls=mt toml.section(tab;"tls") {$ok:v v;$err:e tab};
+  let site=configsection(tab;"site");
+  let build=configsection(tab;"build");
+  let server=configsection(tab;"server");
+  let log=configsection(tab;"log");
+  let paths=configsection(tab;"paths");
+  let tls=configsection(tab;"tls");
 
   let sitename=mt toml.str(site;"name") {$ok:v v;$err:e "my-site"};
   let siteurl=mt toml.str(site;"url") {$ok:v v;$err:e ""};
@@ -118,7 +128,7 @@ f=configload(path:$str):$ookecfg!$configerr{
 f=configlogunsupported(path:$str):$str!$configerr{
   let src=file.read(path)!$configerr;
   let tab=toml.load(src)!$configerr;
-  let log=mt toml.section(tab;"log") {$ok:v v;$err:e tab};
+  let log=configsection(tab;"log");
   (* Story 121.66 (m): a key is "set" whatever its type. Only an integer was
      looked for, so `maxlines = "5"` -- rotation still asked for -- was
      ignored without the warning. std.toml has no key-presence test and no
@@ -149,7 +159,7 @@ f=configlogunsupported(path:$str):$str!$configerr{
 f=configadmin(path:$str):$str!$configerr{
   let src=file.read(path)!$configerr;
   let tab=toml.load(src)!$configerr;
-  let server=mt toml.section(tab;"server") {$ok:v v;$err:e tab};
+  let server=configsection(tab;"server");
   let hasserver=mt toml.section(tab;"server") {$ok:v true;$err:e false};
   if(!hasserver){<""}el{};
   let b=mt toml.bool(server;"admin") {$ok:v (if(v){"true"}el{"false"});$err:e ""};

@@ -1,6 +1,6 @@
 ---
 source_file: "config.tk"
-source_hash: "991939f0a00c3ca9b58c1a855687eb56977d05ce41d53f0c3e20e959a3a30a51"
+source_hash: "fa140ea58fc6ba84dca131d75f4143c3e3efa5c2111d9ab251d7d1f7a495a3e6"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -61,6 +61,16 @@ Error type for `configload`, `configlogunsupported` and `configadmin`.
 
 ## Functions
 
+### `configsection(tab: $tomlval; name: $str): $tomlval`
+
+**Purpose:** The table `name` of `tab`, or an empty table when there is none
+(story 121.67).
+
+**Logic:** `empty = toml.load("")` (matched to `tab` should it ever fail);
+return `toml.section(tab; name)`, matched `{$ok:v v; $err:e empty}`.
+
+**Error handling:** Total.
+
 ### `configload(path: $str): $ookecfg!$configerr`
 
 **Purpose:** Read and parse `ooke.toml` at `path` into a fully-populated
@@ -81,10 +91,11 @@ file cannot be read or the TOML cannot be parsed.
    via the `!$configerr` operator.
 2. Parse the source with `toml.load`; propagate parse failure as `$configerr`.
 3. Look up the six sections `site`, `build`, `server`, `log`, `paths`,
-   `tls` with `toml.section`. Each lookup is matched `{$ok:v v; $err:e tab}` — a
-   missing section falls back to the **root table** `tab` (not an empty table),
-   so a key lookup against a missing section degrades to a top-level lookup
-   rather than always hitting the default.
+   `tls` with `configsection`: a missing section is an **empty table**, so a
+   key lookup against it hits the default. (121.67: it fell back to the root
+   table, so a top-level `name`, `port`, `access`, `output` or `cert` --
+   written outside any table -- configured the site, server, log, build or
+   TLS as if it were inside the missing one.)
 4. Read each individual key with the typed accessor (`toml.str`/`toml.bool`/
    `toml.i64`) against its section, matched `{$ok:v v; $err:e <default>}` so a
    missing or wrong-typed key yields the documented default (listed in the
@@ -93,7 +104,7 @@ file cannot be read or the TOML cannot be parsed.
 
 **Error handling:** Only `file.read` and `toml.load` raise `$configerr` (via
 `!`). All section/key lookups are total — they never raise; they fall back to a
-default value (keys) or the root table (sections).
+default value (keys) or an empty table (sections).
 
 ### `configlogunsupported(path: $str): $str!$configerr`
 
@@ -104,7 +115,9 @@ first), so `maxlines` and `maxagedays` are not wired; serve names them and
 ignores them, as an old `[store]` table is ignored (134.34).
 
 **Logic:** Read (`!$configerr`) and parse (`!$configerr`) the file; take the
-`log` section (falling back to the root table). A key counts as present when
+`log` section with `configsection` (an empty table when `[log]` is absent:
+121.67, it was the root table, so a top-level `maxlines` was named as a
+`[log]` key). A key counts as present when
 `toml.i64`, `toml.str` or `toml.bool` on it succeeds (story 121.66: only
 `toml.i64` was tried, so `maxlines = "5"` went unreported). Return
 `"maxlines, maxagedays"`, `"maxlines"`, `"maxagedays"` or `""`.

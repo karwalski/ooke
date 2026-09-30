@@ -154,6 +154,14 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   `no such column: title`. A model field named `id`, `slug`, `title`, `type`
   or `body` (in any case) is no longer declared a second time, which SQLite
   refused. Nothing in `ooke build` or `ooke serve` calls it. (121.67)
+- **A key outside its table is not read as that table's.** Every
+  `ooke.toml` table ooke reads (`[site]`, `[build]`, `[server]`, `[log]`,
+  `[paths]`, `[tls]`) fell back to the root table when it was absent, so a
+  top-level `maxlines = 5` made `ooke serve` warn about a `[log]` rotation
+  key, and a top-level `port`, `name`, `access`, `output` or `cert` configured
+  the server, site, log, build or TLS. An absent table is now empty and its
+  keys take their defaults. **Behaviour change** for an `ooke.toml` that
+  relied on top-level keys: put them in their table. (121.67)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
