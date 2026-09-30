@@ -1,8 +1,8 @@
 ---
 source_file: "store.tk"
-source_hash: "fef9271e2768bda3336229a7f53327a3ba8a4756b9a002796f701fde8e71060d"
-compiler_version: "0.3.9"
-generated_at: "2026-06-15T00:00:00Z"
+source_hash: "bcc8c9f68012f92bbf8af50654edff90bfe4994a6d61c989476d9a9004299db7"
+compiler_version: "3.0.0"
+generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
 ---
 
@@ -13,14 +13,16 @@ format_version: "1.0"
 The ooke content store. Parses Markdown-with-front-matter and JSON content
 files into a flat `$content` record, builds SQLite DDL, and reads/writes
 content from either a flat-file backend (one file per item) or a SQLite
-backend. It is the persistence layer loke and the build/serve pipelines read
-content through.
+backend. The build and serve pipelines read content through `storeallflat`.
+Table and column names spliced into SQL are checked as identifiers first
+(story 121.25).
 
 **Imports:**
-- `std.file` (alias `file`) — read content files and list directories.
+- `std.file` (alias `file`) — read content files, test for and list directories.
 - `std.str` (alias `str`) — string slicing, splitting, trimming, prefix/suffix
-  tests, indexof, concatenation.
-- `std.path` (alias `path`) — join content-directory and content-type segments.
+  tests, indexof, contains, eq, concatenation and join.
+- `std.path` (alias `path`) — join content-directory and content-type
+  segments; `path.stem` for the slug fallback.
 - `std.json` (alias `json`) — decode JSON content and read typed keys.
 - `std.db` (alias `db`) — SQLite query/exec; also brings the `row.*` typed
   column accessors into scope.
@@ -149,7 +151,36 @@ JSON cannot be decoded.
 
 **Logic:** `mt storeparsejson(src) {$ok:c c;$err:e storedefault()}`.
 
-### `storesqlcreate(modelname: $str; fields: @($str:$str)): $str`
+
+### `storeident(name: $str): $str!$storeerr`
+
+**Purpose:** Check that `name` is a SQL identifier before it is spliced into
+SQL text (story 121.25, audit OOK-04). SQLite cannot bind an identifier, so
+table and column names go into the statement as text, and nothing checked
+them: `storesqlcreate("posts(id);DROP TABLE users;--";...)` returned exactly
+that text inside a CREATE. The names come from `models/*.toml` and the content
+directory today, not from a request, so this is defence in depth.
+
+**Parameters:** `name: $str` — the proposed table or column name.
+
+**Returns:** `$str!$storeerr` — `name` unchanged when it matches
+`[A-Za-z_][A-Za-z0-9_]*` (the rule ADR-0011 gives the planned std `db.ident`,
+which does not exist yet — toke 124.5); otherwise `$storeerr`.
+
+**Logic:**
+
+1. If `str.len(name)==0`, return `$storeerr{msg:"empty SQL identifier"}`.
+2. For each byte position `i`, slice one character `c` (a failed slice reads
+   `""`). It is alphabetic when it is one byte long and in
+   `A-Za-z_`; a digit when it is one byte long and in `0-9`. If it is neither
+   alphabetic nor (`i>0` and a digit), return
+   `$storeerr{msg:"not a SQL identifier (want [A-Za-z_][A-Za-z0-9_]*): \"<name>\""}`.
+3. Return `name`.
+
+**Error handling:** Returns `$storeerr` for an empty name or any disallowed
+byte (including every non-ASCII byte).
+
+### `storesqlcreate(modelname: $str; fields: @($str:$str)): $str!$storeerr`
 
 **Purpose:** Build the SQLite `CREATE TABLE` DDL for a content type.
 
@@ -160,21 +191,23 @@ JSON cannot be decoded.
 | `modelname` | `$str` | Table name. |
 | `fields` | `@($str:$str)` | Field-name → field-type map (model schema). |
 
-**Returns:** `$str` — a `CREATE TABLE IF NOT EXISTS <modelname>(...)` statement
-with the base columns `id INTEGER PRIMARY KEY`, `slug TEXT UNIQUE`,
-`body TEXT`.
+**Returns:** `$str!$storeerr` — a
+`CREATE TABLE IF NOT EXISTS <modelname>(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,body TEXT,<col> <type>...)`
+statement, or `$storeerr` when the table name or a field name is not an
+identifier.
 
-**Logic:** Concatenate `"CREATE TABLE IF NOT EXISTS "`, `modelname`, and the
-base column list `"(id INTEGER PRIMARY KEY;slug TEXT UNIQUE;body TEXT)"`.
+**Logic:**
 
-**Error handling:** None.
+1. Start with `"CREATE TABLE IF NOT EXISTS "` and append
+   `storeident(modelname)!$storeerr`.
+2. Append `"(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,body TEXT"`.
+3. For each key `k` of `fields.keys()` (map order): `ft=fields.get(k)`; the
+   column type is `INTEGER` when `ft` is `"bool"` or `"int"`, else `TEXT`;
+   append `"," + storeident(k)!$storeerr + " " + coltype`.
+4. Append `")"` and return.
 
-**Workaround (Track B — see Notes):** The reference also appended one column
-per `fields` entry (`bool`/`int` → `INTEGER`, else `TEXT`) by iterating
-`fields.keys`. Map key enumeration (`map.keys`) is not implemented in the
-current compiler/stdlib, so that loop crashes. This build emits only the base
-columns; `fields` is accepted (signature preserved) but unused until the gap is
-closed.
+**Error handling:** Only `storeident` fails the function, for the table name
+or any field name.
 
 ### `storeallsql(contenttype: $str): @$content!$storeerr`
 
@@ -183,22 +216,22 @@ closed.
 **Parameters:** `contenttype: $str` — the table name to select from.
 
 **Returns:** `@$content!$storeerr` — array of content rows, or `$storeerr` on a
-DB error.
+bad table name or a DB error.
 
 **Logic:**
 
-1. Build `"SELECT id,slug,title,type,body FROM " + contenttype` via
-   `str.concat`.
-2. `db.many(sql;@())!$storeerr` — run the query (empty parameter array),
-   propagating DB errors.
-3. For each returned `Row` (index `0` to `rows.len-1`): read `slug`, `type`,
-   `title`, `body` with `row.str(r;key)`, each matched `{$ok:s s;$err:e
-   <default>}` (defaults `""`, `"page"`, `""`, `""`). Build a fresh `meta` map,
-   recording `slug`/`type`/`title` when non-empty. Append
-   `$content{slug;type:ctype;title:ctitle;meta;body}` to the results.
+1. Build `"SELECT id,slug,title,type,body FROM " + storeident(contenttype)!$storeerr`.
+2. `db.many(sql;@())!$storeerr` — run the query (no parameters) on the
+   database the caller has opened.
+3. For each returned row: read `slug`, `type`, `title`, `body` with
+   `row.str(r;key)`, each matched `{$ok:s s;$err:e <default>}` (defaults `""`,
+   `"page"`, `""`, `""`). Build a fresh `meta` map recording
+   `slug`/`type`/`title` when non-empty. Append
+   `$content{slug;type:ctype;title:ctitle;meta;body}`.
 4. Return the results array.
 
-**Error handling:** `db.many` raises `$storeerr`; per-column reads are total.
+**Error handling:** `storeident` and `db.many` raise `$storeerr`; per-column
+reads are total.
 
 ### `storewrite(contenttype: $str; content: $content): bool!$storeerr`
 
@@ -212,21 +245,24 @@ the same slug exists, otherwise INSERT.
 | `contenttype` | `$str` | Target table name. |
 | `content` | `$content` | The content to persist. |
 
-**Returns:** `bool!$storeerr` — `true` on success, `$storeerr` on DB error.
+**Returns:** `bool!$storeerr` — `true` on success, `$storeerr` on a bad table
+name or a DB error.
 
 **Logic:**
 
-1. Build `"SELECT id FROM " + contenttype + " WHERE slug=?"` (two `str.concat`
+1. `table = storeident(contenttype)!$storeerr`.
+2. Build `"SELECT id FROM " + table + " WHERE slug=?"` (two `str.concat`
    steps; the second rebinds `check`).
-2. Run `db.one(check;@(content.slug))` and match it `{$ok:r true;$err:e false}`
+3. Run `db.one(check;@(content.slug))`, matched `{$ok:r true;$err:e false}`
    into `found` — a returned row means the slug exists.
-3. If `found`: build `"UPDATE <ct> SET title=?,type=?,body=? WHERE slug=?"`,
-   run `db.exec(sql;@(title;type;body;slug))!$storeerr`, return `true`.
-4. Else: build `"INSERT INTO <ct>(slug,title,type,body) VALUES(?,?,?,?)"`, run
-   `db.exec(sql;@(slug;title;type;body))!$storeerr`, return `true`.
+4. If `found`: `db.exec("UPDATE <table> SET title=?,type=?,body=? WHERE slug=?";
+   @(title;type;body;slug))!$storeerr`, return `true`.
+5. Else: `db.exec("INSERT INTO <table>(slug,title,type,body) VALUES(?,?,?,?)";
+   @(slug;title;type;body))!$storeerr`, return `true`.
 
-**Error handling:** `db.exec` raises `$storeerr`. The existence probe absorbs
-the not-found error into `found=false`.
+**Error handling:** `storeident` and `db.exec` raise `$storeerr`. The
+existence probe absorbs every error (not only not-found) into `found=false`.
+Values are bound as parameters; only the table name is spliced.
 
 ### `storeallflat(contentdir: $str; contenttype: $str): @$content!$storeerr`
 
@@ -241,23 +277,26 @@ every `.md`/`.json` file under `<contentdir>/<contenttype>`.
 | `contenttype` | `$str` | Sub-directory (content type) to list. |
 
 **Returns:** `@$content!$storeerr` — parsed content, or `$storeerr` if the
-directory listing fails.
+directory is missing or cannot be listed.
 
 **Logic:**
 
 1. `dir = path.join(contentdir;contenttype)`.
-2. `file.listall(dir)!$storeerr` — list files, propagating listing failure.
-3. For each file (index `0` to `files.len-1`):
-   - If it ends with `".md"`: read `path.join(dir;fpath)` matched
-     `{$ok:s s;$err:e ""}`; if the source length `>0`, append
-     `storetryparse(src)`.
-   - Else if it ends with `".json"`: read it the same way; if non-empty,
-     append `storetryparsejson(src)`.
+2. If `!file.isdir(dir)`, return `$storeerr{msg:"no content dir: <dir>"}`
+   (story 134.8: a failed stdlib call under `!` returned a null array that
+   crashed the caller on `.len`, so the missing directory is checked first).
+3. `files = file.listall(dir)!$storeerr`.
+4. For each file path `fpath`:
+   - Ending `".md"`: read `path.join(dir;fpath)` matched `{$ok:s s;$err:e ""}`;
+     if non-empty, `parsed = storetryparse(src)`, and append it with its slug
+     replaced by `path.stem(fpath)` when the front matter gave none.
+   - Else ending `".json"`: read it the same way; if non-empty, append
+     `storetryparsejson(src)` (no slug fallback).
    - Otherwise skip.
-4. Return the results array.
+5. Return the results array.
 
-**Error handling:** Only `file.listall` raises `$storeerr`; individual file
-reads absorb errors to `""` (skipped).
+**Error handling:** A missing directory and a failed listing raise
+`$storeerr`; an unreadable or empty file is skipped.
 
 ### `storeall(contentdir: $str; contenttype: $str; backend: $str): @$content!$storeerr`
 
@@ -289,20 +328,18 @@ otherwise return `storeallflat(contentdir;contenttype)!$storeerr`.
 | `col` | `@$content` | Content collection to search. |
 | `slug` | `$str` | Slug to match. |
 
-**Returns:** `$content!$storeerr` — the matching content, or a `$storeerr` when
-none matches.
+**Returns:** `$content!$storeerr` — the first match, or
+`$storeerr{msg:"no content with slug: <slug>"}`.
 
-**Logic:** Loop `i` from `0` to `col.len-1`; for each `item=col.get(i)`, if
-`item.slug = slug` short-return `item`. If the loop completes with no match,
-evaluate `(file.listall("")!$storeerr)` — listing the empty path fails, so the
-`!` operator returns the `$storeerr` "not found" result.
+**Logic:** Loop over `col`; return the first `item` with `item.slug==slug`.
+After the loop, return the not-found error.
 
-**Error handling:** The not-found path deliberately produces a `$storeerr` by
-propagating a guaranteed `file.listall("")` failure (the reference's idiom).
+**Error handling:** Not-found is an explicit `$storeerr` (story 127.127; see
+Notes).
 
 ### `storefind(col: @$content; key: $str; val: $str): $content!$storeerr`
 
-**Purpose:** Intended to find the first content whose `meta[key]` equals `val`.
+**Purpose:** Find the first content whose `meta[key]` equals `val`.
 
 **Parameters:**
 
@@ -312,18 +349,14 @@ propagating a guaranteed `file.listall("")` failure (the reference's idiom).
 | `key` | `$str` | Meta key to compare. |
 | `val` | `$str` | Required value. |
 
-**Returns:** `$content!$storeerr` — in this build it always returns the
-not-found `$storeerr`.
+**Returns:** `$content!$storeerr` — the first match, or
+`$storeerr{msg:"no content with <key> = <val>"}`.
 
-**Logic:** Evaluate `(file.listall("")!$storeerr)` directly, propagating the
-guaranteed failure as the not-found `$storeerr`.
+**Logic:** Loop over `col`; for each `item`, `mv = item.meta.get(key)` (the
+raw value, not a result) and return `item` when `str.eq(mv;val)`. After the
+loop, return the not-found error.
 
-**Workaround (Track B — see Notes):** The reference looped over `col` and read
-`item.meta.get(key)` to compare against `val`. Reading a map stored in a struct
-field is a compiler bug: the field access is mis-typed as array indexing
-(`tk_array_get_w` / "cannot index into 'map'"), which crashes at runtime. Until
-that is fixed, `storefind` cannot read `$content.meta`, so it returns the
-not-found error rather than crashing. The signature is preserved for callers.
+**Error handling:** Not-found is an explicit `$storeerr` (story 127.127).
 
 ## Control Flow
 
@@ -343,31 +376,20 @@ wrappers.
 
 ## Notes
 
-- **Canonical result form.** All match arms use the spec-canonical `$ok`/`$err`
-  variant names. The previous source mixed non-canonical `Ok`/`Err` with
-  `$ok`/`$err`; this rebuild is uniformly `$ok`/`$err`.
-- **Map values returned by `map.get` are raw, not results.** For a map *local*
-  or *parameter*, `m.get(k)` lowers to `tk_map_get` and yields the stored value
-  directly (no `$ok`/`$err` wrapper). The reference matched these with
-  `mt ...{$ok..;$err..}`, which mis-reads the raw value as a tagged union and
-  crashes. `storesqlcreate` no longer does this.
-- **Track B — `map.keys` not implemented.** The compiler emits no accessor for
-  map key enumeration (the `tk_map_keys_w` glue exists but is never wired), so
-  iterating `fields.keys` crashes. `storesqlcreate` therefore emits only the
-  base columns. (Track B: expose `map.keys`.)
-- **Track B — struct-field map reads are broken.** Accessing a map that lives
-  in a struct field via `.get` is mis-compiled as array indexing
-  (type error "cannot index into 'map'" / `tk_array_get_w` at runtime,
-  segfault). This blocks any read of `$content.meta`, so `storefind` is reduced
-  to the not-found path. (Track B: treat struct-field maps as maps in `.get`.)
-  Building/storing non-empty `meta` is unaffected; only reading it back out of
-  a `$content` is broken.
+- **Canonical result form.** All match arms use `$ok`/`$err`.
+- **Map values returned by `map.get` are raw, not results.** `m.get(k)` yields
+  the stored value directly; `storesqlcreate` and `storefind` use it as such.
+  (An earlier build matched it with `$ok`/`$err` arms and crashed.)
+- **Identifiers are checked, values are bound** (story 121.25). Every table
+  and column name reaching SQL text passes `storeident`; every value goes
+  through a `?` parameter.
 - **Not-found is an explicit `$storeerr`.** `storeslug`/`storefind` used to
   force the error by propagating `file.listall("")`, on the assumption that it
   always fails. It does not always fail, and then the function fell off its end
   and returned a null `$content` (story 127.127; toke now rejects the shape as
-  E4071). Both now return `<$storeerr{msg:...}` naming what was not found.
-- **Build harness.** ooke `.tki` interface files are gitignored, so a fresh
-  worktree has none and cross-module imports fail until each `src/*.tk` is run
-  through `tkc --emit-interface --out <mod>` (matching `scripts/testmod.sh`'s
-  module-compile step). Regenerate them before linking.
+  E4071).
+- **Earlier workarounds are gone.** Previous revisions of this companion
+  described `storesqlcreate` emitting only the base columns (no `map.keys`)
+  and `storefind` always returning not-found (struct-field map reads
+  mis-compiled). The current source iterates `fields.keys()` and reads
+  `item.meta.get(key)` directly.

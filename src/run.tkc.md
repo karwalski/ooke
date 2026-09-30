@@ -1,8 +1,8 @@
 ---
 source_file: "run.tk"
-source_hash: "a886a39874c19e9bb8b7639486bdddbff8b9a94d7d41b334e0a83f18007152f8"
-compiler_version: "0.3.9"
-generated_at: "2026-06-15T00:00:00Z"
+source_hash: "c925d8f098a5c79fbd3da72981c7dde27eac8fa1535d44b8f4ca5bf9e97fe8ee"
+compiler_version: "3.0.0"
+generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
 ---
 
@@ -11,10 +11,10 @@ format_version: "1.0"
 **Name:** `ooke.run`
 
 The ooke CLI compile-and-run driver. Reads a project's `ooke.toml` `[package]`
-section to discover the entry point and binary name, shells out to `tkc` to
-compile the entry point into `build/<name>`, then executes the produced binary
+section to discover the entry point and binary name, spawns `tkc` to compile
+the entry point into `build/<name>`, then executes the produced binary
 (forwarding caller arguments) or, in build mode, stops after a successful
-compile. Used by the ooke CLI for `ooke run` and `ooke build`.
+compile. Used by the ooke CLI for `ooke run` and `ooke build --cli`.
 
 **Imports:**
 - `std.str` (alias `str`) — string concatenation and length.
@@ -28,7 +28,9 @@ compile. Used by the ooke CLI for `ooke run` and `ooke build`.
 
 ### `$runerr`
 
-Error type for the fallible functions (`loadclicfg`, `runcompile`).
+Error type for the fallible functions (`loadclicfg`, `runcompile`). In the
+current source only `loadclicfg` produces one (a failed read or parse);
+`runcompile` reports every failure by returning `""`.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -78,7 +80,7 @@ default.
 ### `runcompile(projectdir: $str; cfg: $clicfg): $str!$runerr`
 
 **Purpose:** Compile the project's entry point with `tkc` and return the path of
-the produced binary, or an empty string when compilation yields no binary.
+the produced binary, or an empty string when there is no binary.
 
 **Parameters:**
 
@@ -88,33 +90,38 @@ the produced binary, or an empty string when compilation yields no binary.
 | `cfg` | `$clicfg` | Resolved CLI config (entry + binary name). |
 
 **Returns:** `$str!$runerr` — the output binary path on success; an empty `$str`
-when compilation does not produce a binary; `$runerr` only on the missing-entry
-raise (see *Error handling* and *Notes* for the observed short-circuit caveat).
+on any failure. No path in the current source returns `$runerr`.
 
 **Logic:**
 
 1. `entrypath = path.join(projectdir; cfg.entry)`.
-2. If `!file.exists(entrypath)`, raise `$runerr{msg:"entry point not found: <entrypath>"}`
-   (`if(...){ !$runerr{...} }el{};`).
+2. If `!file.exists(entrypath)`, log `"entry point not found: <entrypath>"`
+   and return `""`.
 3. `outbin = path.join(projectdir; str.concat("build/"; cfg.name))`.
 4. `builddir = path.join(projectdir; "build")`; create it with `file.mkdir`,
-   matched `{$ok:v v; $err:e false}` (the result is bound but ignored).
+   matched `{$ok:v v; $err:e false}` (result discarded).
 5. Log `"compiling <entrypath> -> <outbin>"`.
-6. Spawn `tkc <entrypath> --out <outbin>` via `process.spawn(@("tkc";entrypath;"--out";outbin))`,
-   matched `{$ok:v v; $err:e 0}` to a handle `h`. If `h = 0`, raise
-   `$runerr{msg:"failed to spawn tkc"}`.
-7. `ecode = process.wait(h)` matched `{$ok:v v; $err:e 0-1}` (`-1` on wait error).
+6. Spawn `tkc <entrypath> --out <outbin>` via
+   `process.spawn(@("tkc";entrypath;"--out";outbin))`, matched
+   `{$ok:v v; $err:e 0}` to a handle `h`. If `h==0`, log
+   `"failed to spawn tkc"` and return `""`.
+7. `ecode = process.wait(h)` — a plain `i32` exit status, not a result
+   (story 134.45).
 8. `errout = process.stderr(h)` matched `{$ok:v v; $err:e ""}`.
-9. If `ecode != 0` (`!(ecode=0)`), log `"tkc error: <errout>"` and return `""`.
-10. Else if `str.len(errout) > 0`, log `"tkc: <errout>"`.
+9. If `!(ecode==0)`, log `"tkc error: <errout>"` and return `""`.
+10. If `str.len(errout) > 0`, log `"tkc: <errout>"`.
 11. If `!file.exists(outbin)`, log `"compilation produced no output binary"` and
     return `""`.
 12. Return `outbin`.
 
-**Error handling:** Missing entry and spawn failure are reported via `!$runerr`.
-Compilation failure (nonzero `tkc` exit, or no output binary) is reported by
-returning an empty `$str` (callers treat empty as failure). `process.wait` /
-`process.stderr` failures fall back to `-1` / `""`.
+**Error handling:** Every failure (missing entry, spawn failure, non-zero `tkc`
+exit, no output binary) is logged at info level and returned as `""`; callers
+treat empty as failure. A `process.stderr` failure reads as `""`.
+
+**Story 134.45:** `process.wait` was matched with `$ok`/`$err` arms; it
+compiled and always took the `$err` arm (toke 127.202), so every compile,
+successful or not, reported "tkc error" and `ooke run` / `build --cli` never
+ran anything. The status is now compared directly.
 
 ### `runexec(binpath: $str; passargs: @$str): i64`
 
@@ -139,13 +146,16 @@ spawned.
 3. Log `"running <binpath>"`.
 4. Spawn `cmdparts` via `process.spawn`, matched `{$ok:v v; $err:e 0}` to handle
    `h`. If `h = 0`, log `"failed to spawn binary"` and return `1`.
-5. `ecode = process.wait(h)` matched `{$ok:v v; $err:e 0-1}`.
+5. `ecode = process.wait(h)` — a plain `i32` status (story 134.45; it used
+   to read `-1` for every child, so `ooke run` exited 255 even when the
+   program exited 0).
 6. `sout = process.stdout(h)` matched `{$ok:v v; $err:e ""}`; if non-empty, log it.
 7. `serr = process.stderr(h)` matched `{$ok:v v; $err:e ""}`; if non-empty, log it.
 8. Return `ecode as i64`.
 
-**Error handling:** A spawn failure returns `1`. wait/stdout/stderr failures
-fall back to `-1` / `""`.
+**Error handling:** A spawn failure logs `"failed to spawn binary"` and
+returns `1`. stdout/stderr failures read as `""`. The child's output is
+captured and logged at info level after it exits, not streamed.
 
 ### `run(projectdir: $str; passargs: @$str): i64`
 
@@ -207,23 +217,11 @@ runexec`.
 
 ## Notes
 
-- **Canonical result form.** Match arms use the spec-canonical `$ok`/`$err`
-  variant names (toke-spec-prompt.md: "Variants are `$lowercase`"). The previous
-  source used the non-canonical `Ok`/`Err`; both compile, but `$ok`/`$err` is the
-  spec form (Track B 113.B.9).
-- **Dropped the unused `std.args` import** the reference module carried; it was
-  never referenced.
-- **`!err` raise does not short-circuit (compiler bug).** The entry-not-found
-  `if(...){ !$runerr{...} }el{};` in `runcompile` raises an error, but execution
-  continues through the rest of the function; a later ordinary `<""` return then
-  determines the result. Observed effect: `runcompile` on a missing entry returns
-  `$ok ""` (empty binpath), not `$runerr`. This matches the reference's observable
-  behaviour — callers (`run`/`build`) treat an empty binpath as failure (`rc=1`),
-  so the contract is unchanged. The test for `runcompile` therefore asserts
-  "no binary produced" (`$ok` with empty string OR `$err`) rather than `$err`
-  alone. Filed as a Track B compiler bug; behaviour kept faithful to the
-  reference, not worked around.
-- **`tkc` spawn args.** `process.spawn(@("tkc";...))` was observed to pass
-  corrupted argv to the shell in the test harness (`sh: <garbage>: command not
-  found`); the compile still fails cleanly (nonzero exit / no binary) so the
-  observable outcome is unaffected. Noted as a Track B follow-up.
+- **Canonical result form.** Match arms use `$ok`/`$err`.
+- **Exit status is compared, not matched** (story 134.45): see `runcompile`
+  and `runexec`.
+- **`tkc` from `PATH`.** `runcompile` spawns `"tkc"` by name; the compiler
+  must be on `PATH`. Its output is `build/<name>` under the project.
+- **Failures are logged at info level.** A missing entry point, a failed
+  spawn and a `tkc` error are all `log.info` lines; the non-zero exit status
+  of `run`/`build` is what marks the failure.

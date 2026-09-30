@@ -1,8 +1,8 @@
 ---
 source_file: "validate.tk"
-source_hash: "e6f07051a454eca9fe0f3b65635ec245b00ff4c76395125aa591b0d7407b7b36"
-compiler_version: "0.3.9"
-generated_at: "2026-06-15T00:00:00Z"
+source_hash: "fb66ed9e5b6a12f0d2ad0063854e88a7257cf5245c8bf124d43e5af9b73406d7"
+compiler_version: "3.0.0"
+generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
 ---
 
@@ -17,7 +17,7 @@ checks), and provides helpers to merge and log the resulting error/warning
 sets.
 
 **Imports:**
-- `std.file` (alias `file`) — read the model TOML file from disk.
+- `std.file` (alias `file`) — test for and read the model TOML file.
 - `std.str` (alias `str`) — string concatenation, splitting, trimming, length,
   and integer parsing (`str.toint`) for type checks.
 - `std.path` (alias `path`) — join the models directory with the type filename.
@@ -71,7 +71,7 @@ Error type for `validateloadmodel`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `msg` | `$str` | Failure description (file read or TOML parse failure). |
+| `msg` | `$str` | Failure description (no model file, read or TOML parse failure, missing `[fields]`/`list`). |
 
 ## Functions
 
@@ -88,13 +88,18 @@ Error type for `validateloadmodel`.
 | `typename` | `$str` | The content type / model file stem. |
 
 **Returns:** `$modeldef!$validateerr` — the parsed model, or `$validateerr` if
-the file cannot be read or the TOML cannot be parsed.
+the model file does not exist, cannot be read or parsed, or has no
+`[fields]` section with a `list` key.
 
 **Logic:**
 
 1. Build `tomlpath` by joining `modelspath` with `str.concat(typename, ".toml")`
    via `path.join`.
-2. Read the file with `file.read`, propagating failure as `$validateerr` via
+2. If `!file.exists(tomlpath)`, return
+   `$validateerr{msg:"no model file: <tomlpath>"}` — checked explicitly
+   rather than relying on `file.read`'s error under `!` (story 134.8: a
+   failed stdlib call under `!` could yield a null value instead of an error).
+   Read the file with `file.read`, propagating failure as `$validateerr` via
    `!$validateerr`.
 3. Parse the source with `toml.load`, propagating failure as `$validateerr`.
 4. Read the top-level `name` key with `toml.str(tab, "name")`, matched
@@ -120,8 +125,9 @@ the file cannot be read or the TOML cannot be parsed.
       - Otherwise (empty name) do nothing.
 10. Return `$modeldef{name:modelname; fields:fields}`.
 
-**Error handling:** Only `file.read`, `toml.load`, `toml.section(fields)`, and
-`toml.str(list)` raise `$validateerr` (via `!`). The name and per-field
+**Error handling:** A missing model file returns `$validateerr` explicitly;
+`file.read`, `toml.load`, `toml.section(fields)`, and `toml.str(list)` raise
+`$validateerr` (via `!`). The name and per-field
 lookups are total (they fall back to defaults).
 
 ### `validatecontent(model: $modeldef; meta: @($str:$str); filepath: $str): $valresult`
@@ -141,7 +147,8 @@ empty here).
 
 **Logic:**
 
-1. Initialise mutable empty arrays `errors` and `warnings` of `$valerror`.
+1. Initialise a mutable empty `errors` array and an immutable empty
+   `warnings` array of `$valerror`.
 2. Loop `i` from `0` to `model.fields.len` (exclusive), incrementing by `1`:
    a. Bind `fd = model.fields.get(i)`.
    b. Look up the field value: `val = mt meta.get(fd.name) {$ok:v v; $err:e ""}`
@@ -163,7 +170,7 @@ empty here).
 **Error handling:** Total — never raises. All problems are recorded as
 `$valerror` entries in the returned result.
 
-### `validatelogresult(result: $valresult): void`
+### `validatelogresult(result: $valresult): i64`
 
 **Purpose:** Emit every error and warning in `result` to the log.
 
@@ -173,7 +180,7 @@ empty here).
 |------|------|-------------|
 | `result` | `$valresult` | The result whose entries are logged. |
 
-**Returns:** `void`.
+**Returns:** `i64` — always `0`.
 
 **Logic:**
 
@@ -185,8 +192,9 @@ empty here).
    result.warnings.get(j)` and call `log.info` with
    `"[validate] WARN " ++ w.filepath ++ ": " ++ w.msg` and an empty context
    `@()`.
+3. Return `0`.
 
-**Error handling:** None.
+**Error handling:** None. Both errors and warnings are logged at info level.
 
 ### `validatemerge(a: $valresult; b: $valresult): $valresult`
 
@@ -233,26 +241,24 @@ produce a `$valresult`; multiple results are combined with `validatemerge`
 (seeded from `validateempty`); finally `validatelogresult` reports the
 accumulated errors/warnings.
 
-`validateloadmodel` is the only fallible function (file/TOML failures via `!`).
+`validateloadmodel` is the only fallible function (a missing model file, and
+file/TOML failures via `!`).
 The remaining functions are total. The only loops are: the field-parsing loop
 in `validateloadmodel`, the per-field validation loop in `validatecontent`, and
 the two append loops each in `validatelogresult` and `validatemerge`.
 
 ## Notes
 
-- **Behavioural parity.** This module is behaviourally faithful to the previous
-  `toke-ooke` reference (loke depends on it); signatures and observable
-  behaviour are unchanged.
-- **Canonical result form.** Match arms use the spec-canonical `$ok`/`$err`
-  variant names (toke-spec-prompt.md: "Variants are `$lowercase`"). The previous
-  source used the non-canonical `Ok`/`Err`; both compile, but `$ok`/`$err` is
-  the spec form (Track B 113.B.9).
-- **`void` return on `validatelogresult`.** Kept to match the published
-  `ooke.validate.tki` interface contract. `tkc` emits a lexer warning
-  (`W1020`) suggesting `i64`; this is advisory only and does not affect
-  compilation or the interface.
+- **Canonical result form.** Match arms use `$ok`/`$err`.
+- **`i64` return on `validatelogresult`.** It returned `void` in an earlier
+  revision; it now returns `0` (story 134.2, which made every .tk file checkable
+  under current tkc), and `src/ooke.validate.tki` records `i64`.
+- **Missing model file is checked first** (story 134.8), so `ooke build`
+  fails loudly on it instead of carrying a null value forward.
 - **Type checks are minimal by design.** Only `int` and `bool` field types are
-  range/format-checked; `str` and any other declared type are accepted as long
-  as required fields are present. Warnings are never produced by
-  `validatecontent` today; the `warnings` slot exists for future use and for
-  `validatemerge` symmetry.
+  format-checked; `str` and any other declared type are accepted as long as
+  required fields are present. `validatecontent` never produces warnings; the
+  `warnings` slot exists for `validatemerge` symmetry.
+- **`meta.get` is matched as a result.** `validatecontent` reads
+  `mt meta.get(fd.name) {$ok:v v;$err:e ""}`, whereas `ooke.store` treats
+  `map.get` as returning the raw value. Recorded, not changed here.
