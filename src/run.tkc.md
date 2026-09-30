@@ -1,6 +1,6 @@
 ---
 source_file: "run.tk"
-source_hash: "d98a0c6a620a952850ff2b9eff8e88ae085c8dc1e2f040bbc8e3e705f7ce5571"
+source_hash: "24d5c7a51c2fd834ef623b4a213878a8446ff2186831c93efe74f92a4514a943"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -24,6 +24,7 @@ compile. Used by the ooke CLI for `ooke run` and `ooke build --cli`.
 - `std.toml` (alias `toml`) — parse `ooke.toml` and read typed `[package]` keys.
 - `std.process` (alias `process`) — spawn `tkc` / the built binary and capture exit code + stdout/stderr.
 - `std.io` (alias `io`) — write the program's stdout to ooke's stdout (121.67).
+- `std.os` (alias `os`) — write the program's stderr raw to ooke's stderr descriptor (121.69).
 - `ooke.config` (alias `config`) — `configsection`, so a missing `[package]` is an empty table (121.69).
 
 ## Types
@@ -157,14 +158,28 @@ spawned.
    write it unchanged to ooke's stdout with `io.print` (121.67: it was logged
    as a JSON info record on stderr, so the program's output could not be piped
    or redirected).
-7. `serr = process.stderr(h)` matched `{$ok:v v; $err:e ""}`; if non-empty, log it.
+7. `serr = process.stderr(h)` matched `{$ok:v v; $err:e ""}`; write it
+   unchanged to ooke's stderr with `runwriteraw(os.stderrfd(); serr)`
+   (121.69 (2): it was logged as one JSON info record, so the program's own
+   JSON log lines came back escaped inside ooke's `msg`).
 8. Return `ecode as i64`.
 
 **Error handling:** A spawn failure logs `"failed to spawn binary"` and
 returns `1`. stdout/stderr failures read as `""`. The child's output is
 captured after it exits, not streamed (std.process cannot hand the child
-ooke's descriptors): its stdout is then written to stdout verbatim, and its
-stderr is logged at info level.
+ooke's descriptors): its stdout is then written to stdout verbatim, then
+its stderr to stderr verbatim. `os.write` is used because std.io has no
+stderr write without an added newline (`io.eprintln` appends one).
+
+### `runwriteraw(fd: i64; s: $str): bool`
+
+**Purpose:** Write all of `s` to descriptor `fd`, adding nothing.
+
+**Logic:** While `s` has bytes left, `n = os.write(fd; rest)` (one `write(2)`,
+returning the bytes written or 0 on error). `n <= 0` returns `false`;
+otherwise `rest` becomes `str.slice(rest; n; str.len(rest))`, so a short
+write is continued where it stopped. Returns `true` once everything is
+written (at once for an empty `s`).
 
 ### `run(projectdir: $str; passargs: @$str): i64`
 

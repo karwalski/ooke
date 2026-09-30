@@ -176,6 +176,13 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   the defaults `app` and `src/main.tk` apply. **Behaviour change** for an
   `ooke.toml` that set them at the top level: put them under `[package]`.
   (121.69)
+- **`ooke run` passes the program's stderr through.** It was logged as one
+  JSON info record, so a program's own JSON log lines arrived escaped inside
+  ooke's `msg` -- `{"level":"info","msg":"{\"level\":\"info\",…}\n",…}`.
+  The program's stderr is now written to ooke's stderr byte for byte, with
+  nothing added (a last line with no newline gets none), after its stdout
+  and once the program exits. **Behaviour change** for anything that parsed
+  the wrapped record. (121.69)
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 

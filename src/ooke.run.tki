@@ -8,6 +8,7 @@
     {"kind": "func", "name": "loadclicfg", "params": ["str"], "return": "clicfg", "error": "runerr"},
     {"kind": "func", "name": "runcompile", "params": ["str", "clicfg"], "return": "str", "error": "runerr"},
     {"kind": "func", "name": "runexec", "params": ["str", "[str]"], "return": "i64"},
+    {"kind": "func", "name": "runwriteraw", "params": ["i64", "str"], "return": "bool"},
     {"kind": "func", "name": "run", "params": ["str", "[str]"], "return": "i64"},
     {"kind": "func", "name": "build", "params": ["str"], "return": "i64"}
   ]
