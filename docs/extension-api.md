@@ -222,7 +222,7 @@ Place reusable fragments in `templates/partials/`. Include them with `{!partial(
 | Filter | Effect |
 |--------|--------|
 | `md` | Render markdown to HTML |
-| `escape` | HTML-escape special characters |
+| `escape` | Escape for the context (the default) |
 | `upper` | Uppercase |
 | `lower` | Lowercase |
 | `trim` | Strip leading/trailing whitespace |
