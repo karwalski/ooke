@@ -17,6 +17,28 @@ f=servegetjson(pattern:$str;json:$str):i64{
   <0
 };
 
+(* Story 121.59. What a client gets for a page whose template failed to
+   render. It is deliberately generic: the template's name, path and error are
+   in the server log (template.tk logs where the error is raised, and
+   serverenderfailed logs the route), never in a response anyone can read. *)
+f=servetplerrorbody():$str{
+  <"500 Internal Server Error"
+};
+
+f=servetplerror(req:i64):i64{
+  <http.reserr(servetplerrorbody())
+};
+
+(* Story 121.59. serve used to turn a failed render into "" and then either
+   serve an empty-template fallback page or skip the route, so the user got a
+   200 (or a 404) and the only trace was a log line. The route now answers 500
+   with a generic body, and the log says which route and template failed. *)
+f=serverenderfailed(route:$str;tpath:$str):i64{
+  (log.error(str.join("";@("serve: ";route;" — template ";tpath;" could not be rendered; answering 500. The template's own error is logged above."));@()));
+  (http.get(route;&servetplerror));
+  <0
+};
+
 f=servepostjson(pattern:$str;json:$str):i64{
   (http.postjson(pattern;json));
   (log.info(str.concat("static json POST: ";pattern);@()));
@@ -76,8 +98,12 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
           "site.language":sitelanguage
         );
         let tpath=build.buildresolve(projectdir;r.templatepath);
-        let html=mt tpl.tplrenderfile(tpath;ctx;templatesdir) {$ok:h h;$err:e ""};
-        if(str.len(html)>0){
+        let render=tpl.tplrenderfile(tpath;ctx;templatesdir);
+        let renderfailed=mt render {$ok:h false;$err:e true};
+        let html=mt render {$ok:h h;$err:e ""};
+        if(renderfailed){
+          (serverenderfailed(webpath;tpath))
+        }el if(str.len(html)>0){
           (log.info(str.concat("reg static: ";webpath);@()));
           (http.getstatic(webpath;html));
           rendered=rendered+1
@@ -115,8 +141,13 @@ f=serveregisterstatic(projectdir:$str;pagesdir:$str;contentdir:$str;templatesdir
           "body":body;
           "title":title
         );
-        let html2=mt tpl.tplrenderfile(build.buildresolve(projectdir;routes.get(j).templatepath);ctx2;templatesdir) {$ok:h h;$err:e ""};
-        if(str.len(html2)>0){
+        let tpath2=build.buildresolve(projectdir;routes.get(j).templatepath);
+        let render2=tpl.tplrenderfile(tpath2;ctx2;templatesdir);
+        let renderfailed2=mt render2 {$ok:h false;$err:e true};
+        let html2=mt render2 {$ok:h h;$err:e ""};
+        if(renderfailed2){
+          (serverenderfailed(str.replace(routes.get(j).pattern;":slug";slug);tpath2))
+        }el if(str.len(html2)>0){
           let fullurl=str.replace(routes.get(j).pattern;":slug";slug);
           (log.info(str.concat("reg dyn: ";fullurl);@()));
           (http.getstatic(fullurl;html2));

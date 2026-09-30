@@ -128,7 +128,11 @@ tests could assert nothing but success.)
    d. Otherwise build a context map `@("site.name":sitename; "site.url":siteurl;
       "site.language":sitelanguage)` and render the route's `templatepath`, resolved as
       `tpath = build.buildresolve(projectdir; templatepath)`, with
-      `tpl.tplrenderfile(tpath; ctx; templatesdir)`, matched `{$ok:h h; $err:e ""}`.
+      `tpl.tplrenderfile(tpath; ctx; templatesdir)`.
+      - If the render fails (`$err`), call `serverenderfailed(webpath; tpath)`:
+        it logs the route and template and registers `servetplerror` for the
+        path, which answers 500 with the generic body `servetplerrorbody()`
+        ("500 Internal Server Error") and no template detail (121.59).
       - If the rendered `html` is non-empty: log `"reg static: " + webpath` and
         register it via `http.getstatic(webpath; html)`.
       - If empty and `webpath` starts with `"/api/"`: build a default JSON body
@@ -145,6 +149,7 @@ tests could assert nothing but success.)
    b. Loop `k` over the collection. For each item read `slug`, `body`, `title`,
       build a context map adding `slug`/`body`/`title` to the site fields, and
       render the route's `templatepath`, resolved the same way.
+      - If the render fails, `serverenderfailed(fullurl; tpath2)` (500, as above).
       - If the rendered `html2` is non-empty: compute `fullurl` by replacing
         `":slug"` in the route pattern with the item's `slug`, log
         `"reg dyn: " + fullurl`, and register via `http.getstatic(fullurl; html2)`.
