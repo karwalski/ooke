@@ -128,4 +128,7 @@ alongside the toke stdlib objects. `make print-build-vars` prints the exact
 compiler, source lists and flags the ooke binary itself is built with — consume
 that rather than copying the lists, which is precisely how ooke's own test
 runner drifted out of linkability and reported twelve failures as skips
-(story 134.5).
+(story 134.5). The source lists and link flags are toke's own,
+from `tkc --emit-deps` (story 121.76); add your program with
+`make print-build-vars DEPS_EXTRA_TK=/abs/your.tk DEPS_EXTRA_INC="-I /abs/dir"`
+so the std modules it imports are in the list too.

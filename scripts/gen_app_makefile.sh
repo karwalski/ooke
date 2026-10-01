@@ -113,6 +113,7 @@ CAPS
 # Step 4: Generate Makefile.serve
 PAGE_LL=""
 PAGE_INC=""
+APP_INC=""                 # PAGE_INC made absolute, for tkc --emit-deps (121.76)
 PAGE_TKI_RULES=""
 for tkfile in $PAGE_HANDLERS; do
   rel=${tkfile#$PROJECT/}
@@ -122,6 +123,7 @@ for tkfile in $PAGE_HANDLERS; do
   PAGE_LL="$PAGE_LL build/ooke/$modname"
   dir=$(dirname "$rel")
   case " $PAGE_INC " in *" -I $dir "*) ;; *) PAGE_INC="$PAGE_INC -I $dir" ;; esac
+  case " $APP_INC " in *" -I $PROJECT/$dir "*) ;; *) APP_INC="$APP_INC -I $PROJECT/$dir" ;; esac
   PAGE_TKI_RULES="${PAGE_TKI_RULES}
 build/ooke/${modname}: ${rel} \$(OOKE_LL) | build/ooke
 	\$(TKC) --emit-interface --emit-llvm -I \$(OOKE_DIR)/src --out build/ooke/${modname} ${rel}
@@ -140,11 +142,17 @@ OOKE_DIR  := $OOKE_DIR
 BIN := build/$APP_NAME
 
 # From \`make -C \$(OOKE_DIR) print-build-vars\` at generation time.
-STDLIB_SRCS := $STDLIB_SRCS
-VENDOR_SRCS := $VENDOR_SRCS
 CFLAGS      := $CFLAGS
 LDFLAGS     := $LDFLAGS
-LIBS        := $LIBS
+
+# The toke stdlib C sources and link flags are not listed here (story 121.76):
+# the link rule asks ooke's Makefile for them, which asks \`tkc --emit-deps\`
+# over ooke's modules plus this app's own sources, so std modules the pages
+# import are linked and a toke-side file split needs no change here.
+APP_TK  := $PROJECT/_serve_main.tk $PROJECT/_handlers.tk$PAGE_HANDLERS
+# tkc arguments for that: the page directories (absolute), and the registry's
+# raised import cap (138.7), without which --emit-deps refuses _handlers.tk.
+APP_INC := ${HANDLERS_MAXIMP}$APP_INC
 
 # ooke's modules, without its handler registry (the app's _handlers.tk replaces it)
 OOKE_LL := $APP_OOKE_LL
@@ -173,12 +181,17 @@ build/ooke/handlers: _handlers.tk \$(PAGE_LL) | build/ooke
 build/main.ll: _serve_main.tk _serve.tkc.toml build/ooke/handlers \$(OOKE_LL) | build/ooke
 	\$(TKC) --config=_serve.tkc.toml --emit-llvm -I \$(OOKE_DIR)/src --out build/main.ll _serve_main.tk
 
-# Final binary
+# Final binary. STDLIB_SRCS, VENDOR_SRCS and LIBS come from tkc --emit-deps,
+# asked now that every page interface exists (story 121.76).
 \$(BIN): build/main.ll build/ooke/handlers \$(PAGE_LL) \$(OOKE_LL)
+	@vars=\$\$(\$(MAKE) -s --no-print-directory -C \$(OOKE_DIR) TOKE_ROOT=\$(TOKE_ROOT) TKC=\$(TKC) \\
+	    print-build-vars DEPS_EXTRA_TK="\$(APP_TK)" DEPS_EXTRA_INC="\$(APP_INC)") || exit 1; \\
+	eval "\$\$vars"; \\
+	echo "clang ... -o \$@ (stdlib C sources and \$\$LIBS from tkc --emit-deps)"; \\
 	clang \$(CFLAGS) \$(LDFLAGS) \\
 	  -x ir build/main.ll build/ooke/handlers \$(PAGE_LL) \$(OOKE_LL) \\
-	  -x c \$(STDLIB_SRCS) \$(VENDOR_SRCS) \\
-	  -o \$@ \$(LIBS)
+	  -x c \$\$STDLIB_SRCS \$\$VENDOR_SRCS \\
+	  -o \$@ \$\$LIBS
 
 clean:
 	rm -rf build/

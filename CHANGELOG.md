@@ -38,6 +38,15 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
 
 ### Fixed
 
+- **A toke-side stdlib file split no longer breaks ooke's link.** The Makefile
+  linked a hand-kept list of toke's stdlib C files, so when toke 121.70 moved
+  `os.write`'s wrapper into a new `os_glue.c`, ooke stopped linking against
+  toke main until the file was added by hand. The ooke binary, the unit tests
+  (`test/run_tests.sh`, which also named std.test's C files by hand) and an
+  `ooke compile` app now take their stdlib and vendor C sources and link flags
+  from `tkc --emit-deps` over the modules they link (`scripts/emit_deps.sh`),
+  as toke-website does; `-framework` pairs stay paired and are Darwin-only.
+  `make print-build-vars` prints the derived lists. (121.76)
 - **`{! partial("…") !}` and `{! layout("…") !}` cannot leave `templates/`.**
   A name was joined straight into the path, so `partial("../secret")` rendered
   `templates/../secret.tkt` into the page. A name with a `..`, `.` or empty
