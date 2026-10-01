@@ -27,92 +27,29 @@ TOKE_VENDOR := $(TOKE_ROOT)/stdlib/vendor
 BIN := ooke-toke
 SRC := src
 
-# ── Stdlib C sources required by ooke ─────────────────────────────────────
-# Implementation files (core logic)
-STDLIB_SRCS := \
-  $(TOKE_STDLIB)/str.c \
-  $(TOKE_STDLIB)/file.c \
-  $(TOKE_STDLIB)/env.c \
-  $(TOKE_STDLIB)/log.c \
-  $(TOKE_STDLIB)/http.c \
-  $(TOKE_STDLIB)/router.c \
-  $(TOKE_STDLIB)/ws.c \
-  $(TOKE_STDLIB)/encoding.c \
-  $(TOKE_STDLIB)/tk_runtime.c \
-  $(TOKE_STDLIB)/args.c \
-  $(TOKE_STDLIB)/path.c \
-  $(TOKE_STDLIB)/md.c \
-  $(TOKE_STDLIB)/toml.c \
-  $(TOKE_STDLIB)/http2.c \
-  $(TOKE_STDLIB)/acme.c \
-  $(TOKE_STDLIB)/proxy.c \
-  $(TOKE_STDLIB)/cache.c \
-  $(TOKE_STDLIB)/content.c \
-  $(TOKE_STDLIB)/metrics.c \
-  $(TOKE_STDLIB)/server_ops.c \
-  $(TOKE_STDLIB)/ws_server.c \
-  $(TOKE_STDLIB)/hooks.c \
-  $(TOKE_STDLIB)/tk_time.c \
-  $(TOKE_STDLIB)/crypto.c \
-  $(TOKE_STDLIB)/math.c \
-  $(TOKE_STDLIB)/net.c \
-  $(TOKE_STDLIB)/sys.c \
-  $(TOKE_STDLIB)/mem.c \
-  $(TOKE_STDLIB)/os.c \
-  $(TOKE_STDLIB)/db.c \
-  $(TOKE_STDLIB)/json.c \
-  $(TOKE_STDLIB)/process.c \
-  $(TOKE_STDLIB)/task.c \
-  $(TOKE_STDLIB)/collections.c \
-  $(TOKE_STDLIB)/toon.c \
-  $(TOKE_STDLIB)/yaml.c \
-  $(TOKE_STDLIB)/i18n.c \
-  $(TOKE_STDLIB)/auth.c \
-  $(TOKE_STDLIB)/encrypt.c \
-  $(TOKE_STDLIB)/canvas.c \
-  $(TOKE_STDLIB)/chart.c \
-  $(TOKE_STDLIB)/html.c \
-  $(TOKE_STDLIB)/svg.c \
-  $(TOKE_STDLIB)/image.c \
-  $(TOKE_STDLIB)/dashboard.c \
-  $(TOKE_STDLIB)/dataframe.c \
-  $(TOKE_STDLIB)/csv.c \
-  $(TOKE_STDLIB)/analytics.c \
-  $(TOKE_STDLIB)/ml.c \
-  $(TOKE_STDLIB)/llm.c \
-  $(TOKE_STDLIB)/llm_tool.c \
-  $(TOKE_STDLIB)/sse.c \
-  $(TOKE_STDLIB)/template.c \
-  $(TOKE_STDLIB)/capabilities.c
-
-# Glue files (i64-ABI wrappers)
-STDLIB_SRCS += \
-  $(TOKE_STDLIB)/str_glue.c \
-  $(TOKE_STDLIB)/file_glue.c \
-  $(TOKE_STDLIB)/json_glue.c \
-  $(TOKE_STDLIB)/time_glue.c \
-  $(TOKE_STDLIB)/crypto_glue.c \
-  $(TOKE_STDLIB)/encoding_glue.c \
-  $(TOKE_STDLIB)/math_glue.c \
-  $(TOKE_STDLIB)/db_glue.c \
-  $(TOKE_STDLIB)/path_glue.c \
-  $(TOKE_STDLIB)/args_glue.c \
-  $(TOKE_STDLIB)/toml_glue.c \
-  $(TOKE_STDLIB)/md_glue.c \
-  $(TOKE_STDLIB)/log_glue.c \
-  $(TOKE_STDLIB)/env_glue.c \
-  $(TOKE_STDLIB)/process_glue.c \
-  $(TOKE_STDLIB)/collections_glue.c \
-  $(TOKE_STDLIB)/io_glue.c \
-  $(TOKE_STDLIB)/os_glue.c \
-  $(TOKE_STDLIB)/tk_web_glue.c
-
-# ── Vendor C sources ───────────────────────────────────────────────────────
-CMARK_SRCS := $(filter-out $(TOKE_VENDOR)/cmark/src/main.c, \
-                $(wildcard $(TOKE_VENDOR)/cmark/src/*.c))
-TOML_SRCS  := $(TOKE_VENDOR)/tomlc99/toml.c
-
-VENDOR_SRCS := $(CMARK_SRCS) $(TOML_SRCS)
+# ── Stdlib C sources and link flags: asked of tkc (story 121.76) ────────
+# There is no list of toke's C files here.  There used to be one, kept by hand,
+# and toke owns that list, not ooke: when toke 121.70 moved os.write's wrapper
+# into a new file (os_glue.c) ooke stopped linking against toke main
+# (`Undefined symbols: _tk_os_write_w`) until someone added the file.  The
+# authoritative list is toke's module manifest (src/stdlib_deps.c, toke
+# 127.99), which `tkc --emit-deps <program>` prints; toke-website builds from
+# it too (132.105).  scripts/emit_deps.sh runs it over every module linked
+# into the binary -- DEPS_TK below -- and prints the union, which the link
+# rule and print-build-vars split into STDLIB_SRCS, VENDOR_SRCS and LIBS.  A
+# toke-side split, move or new file is picked up with no change here.
+#
+# The set is computed when it is used (the link recipe, print-build-vars),
+# not when the Makefile is read, so `make clean` never runs the compiler and
+# the generated sources (_handlers.tk, _floor.tk) are scanned once they exist.
+#
+# DEPS_EXTRA_TK (absolute paths) adds programs that link against ooke -- the
+# tests (test/run_tests.sh) and an app's pages (scripts/gen_app_makefile.sh)
+# -- so their std imports are linked too; DEPS_EXTRA_INC adds the tkc
+# arguments they need to resolve their imports (-I DIR, --max-imports=N).
+DEPS_EXTRA_TK  ?=
+DEPS_EXTRA_INC ?=
+EMIT_DEPS := sh $(CURDIR)/scripts/emit_deps.sh
 
 # ── Compiler / linker flags ────────────────────────────────────────────────
 UNAME := $(shell uname -s)
@@ -121,7 +58,10 @@ CFLAGS := -std=c99 -D_GNU_SOURCE -O1 -iquote $(TOKE_STDLIB) \
           -I$(TOKE_VENDOR)/tomlc99 \
           -Wno-pedantic -DTK_HAVE_OPENSSL
 LDFLAGS :=
-LIBS := -lssl -lcrypto -lz -lm -lsqlite3
+# LIBS is not set here: the link flags come from tkc --emit-deps with the
+# sources (DERIVE_DEPS below).  `-framework X` arrives as a pair and is kept
+# one; tkc emits frameworks only when it was built for Darwin, and they are
+# dropped anywhere else as a second guard, so a Linux link never sees one.
 
 ifeq ($(UNAME), Darwin)
   CFLAGS  += -I/opt/homebrew/include
@@ -295,11 +235,38 @@ $(IFACE_DIR)/cli.tki $(IFACE_DIR)/cli: \
 $(MAIN_LL): $(SRC)/main.tk $(OOKE_TKI) | $(IFACE_DIR)
 	cd $(SRC) && $(TKC) --emit-llvm --out main.ll main.tk
 
+# ── What tkc --emit-deps is asked about (story 121.76) ──────────────────
+# Every toke source linked into $(BIN): main.tk, each module in ALL_MODS and
+# the handler pages built above, plus DEPS_EXTRA_TK.  Two are generated:
+# _floor.tk (imports nothing) is scanned once it exists -- $(wildcard) drops it
+# on a fresh clone -- and _handlers.tk is not scanned at all.  Its imports are
+# std.http, which serve.tk imports too, and the pages, which are scanned
+# directly; asking about it would need every page's interface built first, so
+# print-build-vars could not answer before a build.  The -I list is the one
+# the build rules use, made absolute: src/ holds the tracked ooke.<mod>.tki
+# interfaces, so every module resolves before anything is compiled.
+mod_src  = $(SRC)/$(if $(filter floor,$(1)),_$(1),$(1)).tk
+DEPS_TK  = $(abspath $(wildcard $(SRC)/main.tk \
+             $(foreach m,$(filter-out handlers,$(ALL_MODS)),$(call mod_src,$(m))) \
+             $(foreach r,$(EXTRA_PAGE_ROWS),$(call page_field,$(r),1)))) $(DEPS_EXTRA_TK)
+DEPS_INC = -I $(CURDIR)/$(SRC) $(foreach d,$(PAGE_DIRS),-I $(abspath $(d))) $(DEPS_EXTRA_INC)
+
+# One shell fragment that sets $srcs, $vendor and $libs (space-separated) or
+# fails the recipe, naming the source tkc could not resolve.
+DERIVE_DEPS = deps=$$($(EMIT_DEPS) "$(TKC)" "$(abspath $(TOKE_STDLIB))" $(DEPS_INC) -- $(DEPS_TK)) || exit 1; \
+	srcs=$$(printf '%s\n' $$deps | sed -n 's/^src://p' | tr '\n' ' '); \
+	vendor=$$(printf '%s\n' $$deps | sed -n 's/^vendor://p' | tr '\n' ' '); \
+	libs=$$(printf '%s\n' $$deps | sed -n 's/^lib://p' \
+	  $(if $(filter Darwin,$(UNAME)),,| grep -v '^-framework@') | tr '@\n' '  '); \
+	[ -n "$$srcs" ] || { echo "ERROR: tkc --emit-deps listed no stdlib C sources" >&2; exit 1; }
+
 # ── Final binary ─────────────────────────────────────────────────────────
 $(BIN): $(MAIN_LL) $(OOKE_LL) $(PAGE_LL)
+	@$(DERIVE_DEPS); \
+	echo "clang ... $(MAIN_LL) $(OOKE_LL) $(PAGE_LL) + $$(echo $$srcs | wc -w | tr -d ' ') stdlib + $$(echo $$vendor | wc -w | tr -d ' ') vendor C sources from tkc --emit-deps -o $@ $$libs"; \
 	clang $(CFLAGS) $(LDFLAGS) -x ir $(MAIN_LL) $(OOKE_LL) $(PAGE_LL) \
-	  -x c $(STDLIB_SRCS) $(VENDOR_SRCS) \
-	  -o $@ $(LIBS)
+	  -x c $$srcs $$vendor \
+	  -o $@ $$libs
 
 interfaces: $(OOKE_TKI)
 
@@ -550,15 +517,29 @@ test-run: test-support-check $(BIN)
 # against ooke (story 134.5). test/run_tests.sh consumes this rather than
 # keeping its own copy of the stdlib list, which is how the suite drifted out
 # of linkability and went unnoticed (defects D6, D24).
+# Story 121.76: STDLIB_SRCS, VENDOR_SRCS and LIBS are now derived by
+# DERIVE_DEPS (tkc --emit-deps), exactly as the link rule derives them; pass
+# DEPS_EXTRA_TK / DEPS_EXTRA_INC to include a program that links against ooke.
 print-build-vars:
-	@echo 'TKC="$(TKC)"'
-	@echo 'TOKE_STDLIB="$(TOKE_STDLIB)"'
-	@echo 'STDLIB_SRCS="$(STDLIB_SRCS)"'
-	@echo 'VENDOR_SRCS="$(VENDOR_SRCS)"'
-	@echo 'OOKE_LL="$(OOKE_LL)"'
-	@echo 'CFLAGS="$(CFLAGS)"'
-	@echo 'LDFLAGS="$(LDFLAGS)"'
-	@echo 'LIBS="$(LIBS)"'
+	@$(DERIVE_DEPS); \
+	echo 'TKC="$(TKC)"'; \
+	echo 'TOKE_STDLIB="$(TOKE_STDLIB)"'; \
+	echo "STDLIB_SRCS=\"$$srcs\""; \
+	echo "VENDOR_SRCS=\"$$vendor\""; \
+	echo 'OOKE_LL="$(OOKE_LL)"'; \
+	echo 'CFLAGS="$(CFLAGS)"'; \
+	echo 'LDFLAGS="$(LDFLAGS)"'; \
+	echo "LIBS=\"$$libs\""
+
+# check-toke-candidate — story 121.76: build ooke, link and run its unit tests
+# and build an `ooke compile` app against a candidate toke tree (a toke branch
+# about to merge), in a temporary worktree of HEAD.  Not part of `make test`:
+# it needs a second toke.  See docs/RELEASING.md.
+#     make check-toke-candidate TOKE_CANDIDATE=/path/to/toke
+.PHONY: check-toke-candidate
+check-toke-candidate:
+	@test -n "$(TOKE_CANDIDATE)" || { echo "usage: make check-toke-candidate TOKE_CANDIDATE=/path/to/toke" >&2; exit 2; }
+	@sh scripts/check_toke_candidate.sh "$(TOKE_CANDIDATE)"
 
 # $(SRC)/_handlers.tk is generated from pages/ and is NOT tracked (story
 # 134.22, see .gitignore), so removing it here is correct: `make` regenerates it.

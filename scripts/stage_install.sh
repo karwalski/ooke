@@ -18,6 +18,8 @@
 #   Makefile                      for `make print-build-vars`
 #   scripts/gen_app_makefile.sh   run by `ooke compile`
 #   scripts/gen_handlers.sh       run by gen_app_makefile.sh
+#   scripts/emit_deps.sh          run by the Makefile: the stdlib C sources
+#                                 and link flags, from tkc --emit-deps (121.76)
 #   src/*.tk, src/*.tki           module sources and interfaces (tkc writes
 #                                 each as src/ooke.<mod>.tki)
 #   src/ooke/                     compiled modules (LLVM IR)
@@ -44,7 +46,7 @@ mkdir -p "$dest/scripts" "$dest/src/ooke"
 cp ooke-toke "$dest/ooke"
 chmod +x "$dest/ooke"
 cp Makefile "$dest/"
-cp scripts/gen_app_makefile.sh scripts/gen_handlers.sh "$dest/scripts/"
+cp scripts/gen_app_makefile.sh scripts/gen_handlers.sh scripts/emit_deps.sh "$dest/scripts/"
 chmod +x "$dest/scripts/"*.sh
 cp src/*.tk src/*.tki "$dest/src/"
 for m in $mods; do cp "$m" "$dest/src/ooke/"; done

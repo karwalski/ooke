@@ -12,7 +12,8 @@
 #   1. NOTHING about the build is restated here. The compiler, the stdlib and
 #      vendor source lists, the flags and the ooke module IR all come from
 #      `make print-build-vars`, so the suite cannot silently drift from the
-#      binary it is meant to test (defect D24).
+#      binary it is meant to test (defect D24). The source lists are toke's
+#      own, from `tkc --emit-deps` (story 121.76).
 #   2. A test that will not compile or will not link is a FAILURE, not a skip.
 #      The exit status is the number of tests that did not pass.
 #
@@ -34,11 +35,7 @@ vars=$(make -s --no-print-directory print-build-vars) || {
 }
 eval "$vars"
 
-: "${TKC:?}" "${CFLAGS:?}" "${LIBS:?}" "${STDLIB_SRCS:?}" "${VENDOR_SRCS:?}" "${OOKE_LL:?}"
-
-# std.test is a dependency of the TESTS, not of ooke, so it is named here and
-# nowhere else. Everything above comes from the Makefile.
-TEST_ONLY_SRCS="$TOKE_STDLIB/tk_test.c $TOKE_STDLIB/test_glue.c"
+: "${TKC:?}" "${CFLAGS:?}" "${OOKE_LL:?}"
 
 # ── 1. ooke module IR ───────────────────────────────────────────────────────
 # The tests import ooke.* and link against the same IR the binary links.
@@ -58,6 +55,21 @@ if ! make -s --no-print-directory build/ookeassert; then
   exit 2
 fi
 
+# ── 1c. the C the tests link, asked of tkc (story 121.76) ───────────────────
+# The tests import std.test and others ooke does not, so the stdlib set is
+# derived again with every test program added (DEPS_EXTRA_TK), now that the
+# interfaces they import (ooke.*, ookeassert) exist. This replaces a hand-named
+# list of std.test's C files -- the same hand-list a toke file split breaks.
+test_srcs=""
+for f in "$ROOT"/test/*/test_*.tk; do test_srcs="$test_srcs $f"; done
+vars=$(make -s --no-print-directory print-build-vars \
+         DEPS_EXTRA_TK="$test_srcs" DEPS_EXTRA_INC="-I $ASSERT_INC") || {
+  echo "error: 'make print-build-vars' could not derive the tests' stdlib sources" >&2
+  exit 2
+}
+eval "$vars"
+: "${STDLIB_SRCS:?}" "${LIBS:?}"
+
 # ── 2. stdlib + vendor archive, built once and reused by every test ─────────
 # Linking ~80 C files per test made the suite too slow to run, which is part of
 # why it never was. Compile each translation unit once, cache it in build/,
@@ -65,7 +77,7 @@ fi
 mkdir -p "$OBJ_DIR" "$BIN_DIR"
 objs=()
 stale=()
-for src in $STDLIB_SRCS $VENDOR_SRCS $TEST_ONLY_SRCS; do
+for src in $STDLIB_SRCS $VENDOR_SRCS; do
   obj="$OBJ_DIR/$(echo "${src#$ROOT/}" | tr '/' '_' | sed 's/\.c$/.o/')"
   objs+=("$obj")
   if [ ! -f "$obj" ] || [ "$src" -nt "$obj" ]; then

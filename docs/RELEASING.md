@@ -19,6 +19,24 @@ tracked files. That is deliberate — the two defects that most recently escaped
 review (ooke `test/support`, 134.21; toke `stdlib/vendor`, 127.85) were both
 files present in a working tree and absent from a clone.
 
+## Building against a candidate toke (story 121.76)
+
+ooke links toke's stdlib C files, and the list of them is toke's: the Makefile
+asks `tkc --emit-deps` (toke's module manifest, `src/stdlib_deps.c`) instead of
+keeping a copy, so a toke change that adds, moves or splits a stdlib C file
+needs no edit here. To confirm that before such a toke change merges -- or
+before tagging against a new toke -- build ooke against the candidate tree:
+
+    make -C /path/to/candidate-toke                         # build its compiler
+    make check-toke-candidate TOKE_CANDIDATE=/path/to/candidate-toke
+
+It checks out ooke's HEAD into a temporary worktree (this checkout's build is
+untouched), builds the binary, links and runs the unit tests, and builds an
+`ooke compile` app -- the three link paths. It skips the floor gate, since a
+candidate branch need not contain `mintokecommit` yet. A toke merge that
+touches `src/stdlib/*.c` or `src/stdlib_deps.c` should run it (and the same
+for toke-website, whose `make website` also links from `--emit-deps`).
+
 ## Publish (owner only — one step)
 
 The GitHub Actions workflow `.github/workflows/release.yml` triggers on any tag
