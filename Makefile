@@ -531,6 +531,16 @@ print-build-vars:
 	echo 'LDFLAGS="$(LDFLAGS)"'; \
 	echo "LIBS=\"$$libs\""
 
+# check-toke-candidate — story 121.76: build ooke, link and run its unit tests
+# and build an `ooke compile` app against a candidate toke tree (a toke branch
+# about to merge), in a temporary worktree of HEAD.  Not part of `make test`:
+# it needs a second toke.  See docs/RELEASING.md.
+#     make check-toke-candidate TOKE_CANDIDATE=/path/to/toke
+.PHONY: check-toke-candidate
+check-toke-candidate:
+	@test -n "$(TOKE_CANDIDATE)" || { echo "usage: make check-toke-candidate TOKE_CANDIDATE=/path/to/toke" >&2; exit 2; }
+	@sh scripts/check_toke_candidate.sh "$(TOKE_CANDIDATE)"
+
 # $(SRC)/_handlers.tk is generated from pages/ and is NOT tracked (story
 # 134.22, see .gitignore), so removing it here is correct: `make` regenerates it.
 clean:

@@ -46,7 +46,10 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   `ooke compile` app now take their stdlib and vendor C sources and link flags
   from `tkc --emit-deps` over the modules they link (`scripts/emit_deps.sh`),
   as toke-website does; `-framework` pairs stay paired and are Darwin-only.
-  `make print-build-vars` prints the derived lists. (121.76)
+  `make print-build-vars` prints the derived lists. New
+  `make check-toke-candidate TOKE_CANDIDATE=<toke>` builds ooke, its tests and
+  a compiled app against a candidate toke tree; see `docs/RELEASING.md`.
+  (121.76)
 - **`{! partial("…") !}` and `{! layout("…") !}` cannot leave `templates/`.**
   A name was joined straight into the path, so `partial("../secret")` rendered
   `templates/../secret.tkt` into the page. A name with a `..`, `.` or empty
