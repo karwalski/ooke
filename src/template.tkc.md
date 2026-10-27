@@ -1,6 +1,6 @@
 ---
 source_file: "template.tk"
-source_hash: "34b347669dd5d06209132b2dc0c191ea27f69473aa92836138384bbaffb1da50"
+source_hash: "2271a6f7c102de0ea6f7e990d79e1dc8bbfffe1c2e98b20110d04afb42dcce26"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -302,12 +302,17 @@ The HTML-text forms, kept for callers outside a render: `tplfilterctx` /
 
 #### `tpllex(src: $str): @$token!$tplerr`
 
-Loop over the remaining text: find the earliest of `{=`, `{!`, `{#`. None → the
-rest is one `raw` token. Otherwise emit a `raw` token for any text before it,
-find the matching close (`=}`, `!}`, `#}`) after the opener; if there is none
-the rest is `raw` (an unterminated tag is literal text); else emit an `expr`,
-`directive` or `comment` token with the inner text and continue after the
-close. The error arm is declared for signature compatibility; it never raises.
+Scan `src` by index from `pos`: find the earliest of `{=`, `{!`, `{#` at or
+after it (`str.indexfrom`; each opener's next position is cached and searched
+again only once `pos` has passed it). None → the rest is one `raw` token.
+Otherwise emit a `raw` token for any text before it, find the matching close
+(`=}`, `!}`, `#}`) after the opener; if there is none the rest from `pos` is
+`raw` (an unterminated tag is literal text -- and the text before the opener,
+already emitted, appears twice: 127.298); else emit an `expr`, `directive` or
+`comment` token with the inner text and continue after the close. Each token's
+text is the one slice it needs (127.257: the old loop re-sliced the whole
+unscanned tail twice per tag, 7.4 MB per lex of a 70 KB page). The error arm
+is declared for signature compatibility; it never raises.
 
 #### `tpldirectivename(content: $str): $str`
 
