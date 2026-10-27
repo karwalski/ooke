@@ -512,72 +512,83 @@ f=tplresolveexpr(expr:$str;ctx:@($str:$str)):$str{
 };
 
 f=tpllex(src:$str):@$token!$tplerr{
+  (* 127.257: scans src by index.  It used to keep the unscanned tail as a
+     string and re-slice it twice per tag (the text after the opener, then
+     the text after the closer), so every tag copied the rest of the
+     template: a 70 KB page with 104 tags allocated 7.4 MB per lex, and
+     nothing frees it.  Now each token's text is the one slice it needs, and
+     the next position of each opener is searched again only once the scan
+     has passed it.  The tokens produced are unchanged, including the
+     unclosed-tag case (127.271). *)
   let tokens=mut.@();
-  let remaining=mut.src;
+  let n=str.len(src);
+  let pos=mut.0;
 
   let rawkind=$tokenkind{raw:true;expr:false;directive:false;comment:false};
   let exprkind=$tokenkind{raw:false;expr:true;directive:false;comment:false};
   let dirkind=$tokenkind{raw:false;expr:false;directive:true;comment:false};
   let cmtkind=$tokenkind{raw:false;expr:false;directive:false;comment:true};
 
+  (* next opener at or after pos; -1 = none left.  -2 = not searched yet *)
+  let nexpr=mut.-2;
+  let ndir=mut.-2;
+  let ncmt=mut.-2;
+
   let running=mut.true;
   lp(let ii=0;running;ii=ii+1){
-    let rem=remaining;
-    let rlen=str.len(rem);
-    if(rlen==0){
+    if(pos>=n){
       running=false
     }el{
-      let posexpr=str.indexof(rem;"{=");
-      let posdir=str.indexof(rem;"{!");
-      let poscmt=str.indexof(rem;"{#");
+      if(nexpr==-2||(nexpr>=0&&nexpr<pos)){nexpr=str.indexfrom(src;"{=";pos)}el{};
+      if(ndir==-2||(ndir>=0&&ndir<pos)){ndir=str.indexfrom(src;"{!";pos)}el{};
+      if(ncmt==-2||(ncmt>=0&&ncmt<pos)){ncmt=str.indexfrom(src;"{#";pos)}el{};
 
       let bestpos=mut.-1;
       let besttype=mut."none";
 
-      if(!(posexpr<0)){
-        if(bestpos<0||posexpr<bestpos){
-          bestpos=posexpr;
+      if(!(nexpr<0)){
+        if(bestpos<0||nexpr<bestpos){
+          bestpos=nexpr;
           besttype="expr"
         }el{}
       }el{};
-      if(!(posdir<0)){
-        if(bestpos<0||posdir<bestpos){
-          bestpos=posdir;
+      if(!(ndir<0)){
+        if(bestpos<0||ndir<bestpos){
+          bestpos=ndir;
           besttype="dir"
         }el{}
       }el{};
-      if(!(poscmt<0)){
-        if(bestpos<0||poscmt<bestpos){
-          bestpos=poscmt;
+      if(!(ncmt<0)){
+        if(bestpos<0||ncmt<bestpos){
+          bestpos=ncmt;
           besttype="cmt"
         }el{}
       }el{};
 
       if(bestpos<0){
-        let tok=$token{kind:rawkind;content:rem};
+        let rest=mt str.slice(src;pos;n) {$ok:v v;$err:e ""};
+        let tok=$token{kind:rawkind;content:rest};
         tokens=tokens.append(tok);
-        remaining="";
+        pos=n;
         running=false
       }el{
-        if(bestpos>0){
-          let rawcontent=mt str.slice(rem;0;bestpos) {$ok:v v;$err:e ""};
+        if(bestpos>pos){
+          let rawcontent=mt str.slice(src;pos;bestpos) {$ok:v v;$err:e ""};
           let rawtok=$token{kind:rawkind;content:rawcontent};
           tokens=tokens.append(rawtok)
         }el{};
 
-        let afteropen=mt str.slice(rem;bestpos+2;rlen) {$ok:v v;$err:e ""};
-
         let closedelim=if(besttype=="expr"){"=}"}el if(besttype=="dir"){"!}"}el{"#}"};
 
-        let closepos=str.indexof(afteropen;closedelim);
+        let closepos=str.indexfrom(src;closedelim;bestpos+2);
         if(closepos<0){
-          let rawtok=$token{kind:rawkind;content:rem};
+          let rest=mt str.slice(src;pos;n) {$ok:v v;$err:e ""};
+          let rawtok=$token{kind:rawkind;content:rest};
           tokens=tokens.append(rawtok);
-          remaining="";
+          pos=n;
           running=false
         }el{
-          let inner=mt str.slice(afteropen;0;closepos) {$ok:v v;$err:e ""};
-          let afterclose=mt str.slice(afteropen;closepos+2;str.len(afteropen)) {$ok:v v;$err:e ""};
+          let inner=mt str.slice(src;bestpos+2;closepos) {$ok:v v;$err:e ""};
 
           if(besttype=="expr"){
             let tok=$token{kind:exprkind;content:inner};
@@ -592,7 +603,7 @@ f=tpllex(src:$str):@$token!$tplerr{
             }
           };
 
-          remaining=afterclose
+          pos=closepos+2
         }
       }
     }
