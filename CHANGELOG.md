@@ -309,8 +309,9 @@ breaks a 2.0.0-era consumer.
   `==` for equality and expression-oriented `if`; so must the `pages/*.tk` and
   modules in your project. 2.0.0-era sources do not compile.
 - **Templates escape by default** (toke ADR-0011). A template that relied on raw
-  interpolation now emits escaped text. Use `{{raw ...}}`. This changes output
-  rather than failing, so it will not announce itself.
+  interpolation now emits escaped text. Use the `raw` filter,
+  `{= key | raw =}`. This changes output rather than failing, so it will not
+  announce itself.
 - **A capability grant set is baked into the binary with `enforce = true`**
   (toke ADR-0010).
 - **The toke floor is a commit, not a version.** `ooke.toml [requires]` gained

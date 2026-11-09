@@ -236,7 +236,8 @@ pure-toke rebuild). Since then ooke has taken changes that break consumers:
 - migration to v0.4 syntax (`==`, expression-`if`) — **a project's own `pages/`
   sources must be v0.4 too**, so 2.0.0-era user code does not compile;
 - escape-by-default in the template engine (ADR-0011) — templates that relied on
-  raw interpolation now escape unless they use `{{raw ...}}`;
+  raw interpolation now escape unless they use the `raw` filter,
+  `{= key | raw =}`;
 - a baked capability grant set with `enforce = true` (ADR-0010);
 - the 134.8 build changes (static generation of the docs tree, explicit failure
   instead of RT005).
