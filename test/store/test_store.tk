@@ -195,14 +195,12 @@ f=testparsefrontnocolon():bool{
    such column: id", on a table without one) was read as "not found", so a
    second write of the same slug inserted a duplicate row. *)
 f=countslug(table:$str;slug:$str):$str{
-  let r=mt db.one(str.join("";@("SELECT COUNT(*) AS n FROM ";table;" WHERE slug=?"));@(slug)) {$ok:v v;$err:e 0};
-  if(r==0){<"ERR"}el{};
+  let r=mt db.one(str.join("";@("SELECT COUNT(*) AS n FROM ";table;" WHERE slug=?"));@(slug)) {$ok:v v;$err:e <"ERR"};
   <mt row.str(r;"n") {$ok:s s;$err:e "ERR"}
 };
 
 f=titleof(table:$str;slug:$str):$str{
-  let r=mt db.one(str.join("";@("SELECT title FROM ";table;" WHERE slug=?"));@(slug)) {$ok:v v;$err:e 0};
-  if(r==0){<"ERR"}el{};
+  let r=mt db.one(str.join("";@("SELECT title FROM ";table;" WHERE slug=?"));@(slug)) {$ok:v v;$err:e <"ERR"};
   <mt row.str(r;"title") {$ok:s s;$err:e "ERR"}
 };
 
