@@ -650,6 +650,12 @@ f=tpldirectivearg(content:$str):$str{
   }
 };
 
+(* 138.29: the directives tplrenderctx implements. Any other name is a
+   $tplerr there, not a silent no-op. *)
+f=tpldirectiveknown(name:$str):bool{
+  <name=="layout"||name=="block"||name=="end"||name=="var"||name=="yield"||name=="partial"||name=="island"
+};
+
 f=tplfindblock(blocks:@$block;name:$str):@$token{
   lp(let i=0;i<blocks.len;i=i+1){
     let b=blocks.get(i);
@@ -778,6 +784,21 @@ f=tplrenderctx(
     let tok=tokens.get(i);
     let isend=tok.kind.directive&&tpldirectivename(tok.content)=="end";
 
+    (* 138.29: a directive this engine does not know is an error, whether or
+       not it sits inside a block. It used to be dropped (the dispatch below
+       ended in `}el{}`), so a typo -- `{! endblock !}`, `{! frobnicate !}` --
+       rendered as nothing with $ok and no log. It is checked here, before
+       block collection, so a typo inside a block is reported even when no
+       layout yields that block. *)
+    if(tok.kind.directive){
+      let kname=tpldirectivename(tok.content);
+      if(!tpldirectiveknown(kname)){
+        let mu=str.join("";@("template: unknown directive \"";kname;"\" (known: layout, block, end, var, yield, partial, island)"));
+        (log.error(mu;@()));
+        <$tplerr{msg:mu}
+      }el{}
+    }el{};
+
     if(inblock&&!isend){
       (* inside a block: keep the tokens, render them where they are yielded *)
       blocktoks=blocktoks.append(tok)
@@ -810,7 +831,13 @@ f=tplrenderctx(
             inblock=false;
             blockname="";
             blocktoks=@()
-          }el{}
+          }el{
+            (* 138.29: an `end` with no open block was ignored, so a stray or
+               doubled `end` rendered with $ok and no log. *)
+            let me="template: {! end !} with no open block";
+            (log.error(me;@()));
+            <$tplerr{msg:me}
+          }
         }el if(dname=="var"){
           let vargot=ctx.get(darg);
           let varraw=mt vargot {$ok:v v;$err:e ""};
@@ -868,6 +895,15 @@ f=tplrenderctx(
       }el{}
     }
   };
+
+  (* 138.29: a block still open when the tokens run out was discarded with
+     everything collected into it, and the render answered $ok -- a missing
+     `{! end !}` shipped a page with a hole in it. *)
+  if(inblock){
+    let mb=str.join("";@("template: block \"";blockname;"\" is never closed with {! end !}"));
+    (log.error(mb;@()));
+    <$tplerr{msg:mb}
+  }el{};
 
   if(str.len(layoutname)>0){
     let layoutpath=tplnamepath(templatesdir;"layout";layoutname)!$tplerr;

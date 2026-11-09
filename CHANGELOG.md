@@ -18,6 +18,19 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
 
 ### Changed
 
+- **An unknown directive, a stray `{! end !}` and an unclosed block are
+  template errors.** Each rendered as `$ok` with nothing logged: a directive
+  the engine does not know (`{! frobnicate !}`, `{! endblock !}`) was dropped,
+  an `end` with no open block was ignored, and a block still open at the end
+  of the template was discarded with its content, so the page shipped with a
+  hole in it. Each is now a `$tplerr`, logged at error level where it is
+  raised ("template: unknown directive "NAME" (known: …)", "template:
+  {! end !} with no open block", "template: block "NAME" is never closed
+  with {! end !}"). An unknown directive inside a block is reported even if
+  no layout yields the block. **Behaviour change:** a template with any of
+  these now fails `ooke build` and answers 500 from `ooke serve` (121.59).
+  The known directives are `layout`, `block`, `end`, `var`, `yield`,
+  `partial` and `island`. (138.29, loke O-4)
 - **`{= x =}` is escaped for where it sits in the HTML, not only as HTML
   text** (121.58, a port of toke's 121.37 context tracker). A value at the
   start of `href`/`src`/`action` (and other URL attributes) with a scheme

@@ -1,6 +1,6 @@
 ---
 source_file: "template.tk"
-source_hash: "2271a6f7c102de0ea6f7e990d79e1dc8bbfffe1c2e98b20110d04afb42dcce26"
+source_hash: "d35afb2849fbc4a21e41d5e7517a7e3004db159a155a83aa3663df267917a87f"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -12,7 +12,8 @@ format_version: "1.0"
 
 The ooke `.tkt` template engine. It lexes template source into a token stream,
 resolves `{= expr =}` expressions (with an optional `| filter` pipe), executes
-`{! directive !}` directives (layout, block/end, var, yield, partial, island),
+`{! directive !}` directives (layout, block/end, var, yield, partial, island;
+any other name, a stray `end` or an unclosed block is a `$tplerr`, 138.29),
 strips `{# comment #}` regions, and renders the result to an HTML string.
 
 Values are escaped for the place in the HTML where they land (story 121.58), not
@@ -323,6 +324,11 @@ The trimmed text before `(`, or the whole trimmed text.
 The trimmed text between the first `(` and the next `)`, with one pair of
 surrounding double quotes removed; `""` when either paren is missing.
 
+#### `tpldirectiveknown(name: $str): bool`
+
+True for the directives `tplrenderctx` implements: `layout`, `block`, `end`,
+`var`, `yield`, `partial`, `island`. Any other name is an error there (138.29).
+
 #### `tplfindblock(blocks: @$block; name: $str): @$token`
 
 The `toks` of the first block with that name, or `@()`.
@@ -369,15 +375,21 @@ was rendered.
    too deep — a template that includes itself was unbounded recursion).
 2. State: a `str.builder`, `hc = hc0`, `hasislands`, block collection
    (`inblock`, `blockname`, `blocktoks`, `collectedblocks`), `layoutname`.
-3. For each token: inside a block, any token but `end` is kept in `blocktoks`.
-   Otherwise:
+3. For each token: a `directive` whose name fails `tpldirectiveknown` is
+   logged ("template: unknown directive "NAME" (known: layout, block, end,
+   var, yield, partial, island)") and returned as `$tplerr` -- checked before
+   block collection, so a typo inside a block is an error even if no layout
+   yields that block (138.29; it used to be dropped). Inside a block, any
+   token but `end` is kept in `blocktoks`. Otherwise:
    - `raw`: append; `hc = hcfeed(hc; text)`.
    - `expr`: `val = tplexprctx(content; ctx; hc)`; append and feed.
    - `comment`: nothing.
    - `directive`, by name:
      - `layout`: `layoutname = arg`.
      - `block`: start collecting under `arg`; `end`: store
-       `$block{name; toks}` in `collectedblocks`.
+       `$block{name; toks}` in `collectedblocks`. An `end` with no open block
+       is logged ("template: {! end !} with no open block") and returned as
+       `$tplerr` (138.29; it used to be ignored).
      - `var`: `ctxescape(hc; ctx.get(arg) or "")`; append and feed.
      - `yield`: the named block's tokens from `blocks`, if any, rendered with
        `tplrenderctx(…; @(); hc; depth+1)!`; append, take its `hc`, carry its
@@ -389,13 +401,17 @@ was rendered.
        with the current `hc` at `depth+1`, as for yield.
      - `island`: `tplislandparse`; append and feed
        `<div data-island="NAME" data-hydrate="HYDRATE"></div>`; `hasislands`.
-     - anything else: nothing.
-4. With a `layoutname`: `tplnamepath(…; "layout"; …)!`; a missing file
+     - anything else: unreachable (rejected above).
+4. A block still open when the tokens run out is logged ("template: block
+   "NAME" is never closed with {! end !}") and returned as `$tplerr` (138.29;
+   it used to be discarded with its content, `$ok`). `{! endblock !}` is an
+   unknown directive, so it is reported as one.
+5. With a `layoutname`: `tplnamepath(…; "layout"; …)!`; a missing file
    ("template: no layout template: <path>") or failed read is logged and
    returned as `$tplerr`. Lex it and render it from `hc0` (the layout's output
    replaces this template's, from the same start) with `collectedblocks` at
    `depth+1`; return its text and `hc`, islands from either.
-5. Otherwise return the built text, `hc`, `hasislands`.
+6. Otherwise return the built text, `hc`, `hasislands`.
 
 **Error handling:** Every failure is logged at error level where it is raised
 and propagated with `!$tplerr`.
