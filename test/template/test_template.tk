@@ -483,6 +483,70 @@ f=testcachedmissing():bool{
 };
 
 
+(* 138.29 (loke O-4): an unknown directive, a stray `end` and a block still
+ * open at the end of the template each rendered as $ok -- the directive or the
+ * block's content silently dropped, nothing logged. Each is now a $tplerr,
+ * logged where it is raised (the log lines are checked by
+ * test/template/directive_log.sh). The fixtures live in the 121.57 directory;
+ * z112base.tkt is a two-block layout. Controls: closed blocks under a layout,
+ * and every known directive, still render. *)
+f=dirsetup():bool{
+  let a0=trvsetup();
+  let w0=file.write("/tmp/test_ooke_12157/templates/z112base.tkt";"<title>{! yield(\"title\") !}</title><main>{! yield(\"body\") !}</main>");
+  let a1=mt w0 {$ok:v true;$err:e failret("could not write z112base.tkt")};
+  <a0&&a1
+};
+
+
+f=dirrender(src:$str):$str{
+  let toks=mt tpl.tpllex(src) {$ok:t t;$err:e @()};
+  let out=tpl.tplrender(toks;@("k":"v");"/tmp/test_ooke_12157/templates";@());
+  <mt out {$ok:s s;$err:e "<<ERR>>"}
+};
+
+
+f=testdirectiveunknown():bool{
+  let a0=dirsetup();
+  let a1=chk.eqstr(dirrender("A{! frobnicate(\"x\") !}B");"<<ERR>>";"an unknown directive with an argument is an error (O-4 unknown.tkt)");
+  let a2=chk.eqstr(dirrender("A{! z112nosuchdir !}B");"<<ERR>>";"a bare unknown directive is an error");
+  let a3=chk.eqstr(dirrender("{! layout(\"z112base\") !}{! block(\"body\") !}X{! end !}{! z112afterblock !}");"<<ERR>>";"an unknown directive after a closed block, under a layout, is an error (Z108 unknownbare.tkt)");
+  let a4=chk.eqstr(dirrender("{! block(\"unyielded\") !}x{! z112inblock !}{! end !}y");"<<ERR>>";"an unknown directive inside a block no layout yields is an error");
+  let a5=chk.eqstr(dirrender("{! layout(\"z112base\") !}{! block(\"title\") !}T1{! end !}{! block(\"body\") !}BODY{! endblock !}");"<<ERR>>";"{! endblock !} is an unknown directive, an error (O-4 endblock.tkt)");
+  <a0&&a1&&a2&&a3&&a4&&a5
+};
+
+
+f=testdirectivestrayend():bool{
+  let a0=dirsetup();
+  let a1=chk.eqstr(dirrender("A{! end !}B");"<<ERR>>";"an end with no open block is an error (Z108 strayend.tkt)");
+  let a2=chk.eqstr(dirrender("{! block(\"t\") !}x{! end !}{! end !}");"<<ERR>>";"a doubled end is an error");
+  <a0&&a1&&a2
+};
+
+
+f=testdirectiveunclosed():bool{
+  let a0=dirsetup();
+  let a1=chk.eqstr(dirrender("{! layout(\"z112base\") !}{! block(\"title\") !}T1{! end !}{! block(\"body\") !}BODY");"<<ERR>>";"a block open at the end of a template is an error (O-4 unclosed.tkt)");
+  let a2=chk.eqstr(dirrender("A{! block(\"t\") !}B");"<<ERR>>";"a block open at the end of a template with no layout is an error");
+  <a0&&a1&&a2
+};
+
+
+f=testdirectivecontrols():bool{
+  let a0=dirsetup();
+  let w0=file.write("/tmp/test_ooke_12157/templates/z112part.tkt";"[P]");
+  let a1=mt w0 {$ok:v true;$err:e failret("could not write z112part.tkt")};
+  let a2=chk.eqstr(dirrender("{! layout(\"z112base\") !}{! block(\"title\") !}T1{! end !}{! block(\"body\") !}BODY{! end !}");"<title>T1</title><main>BODY</main>";"control: closed blocks under a layout render (O-4 control.tkt)");
+  let a3=chk.eqstr(dirrender("A{! var(\"k\") !}B");"AvB";"control: var renders");
+  let a4=chk.eqstr(dirrender("A{! partial(\"z112part\") !}B");"A[P]B";"control: partial renders");
+  let a5=chk.eqstr(dirrender("A{! island(\"w\") !}B");"A<div data-island=\"w\" data-hydrate=\"load\"></div>B<script src=\"/static/ooke-islands.js\" defer></script>";"control: island renders");
+  let a6=chk.eqstr(dirrender("A{! block(\"t\") !}x{! end !}B");"AB";"control: a closed block with no layout renders as before");
+  let a7=chk.eqstr(dirrender("A{! yield(\"none\") !}B");"AB";"control: yield of a block nobody defined renders nothing, as before");
+  let a8=chk.eqstr(dirrender("A{= k =}B{# c #}C");"AvBC";"control: expressions and comments are unaffected");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8
+};
+
+
 f=main():i64{
   let r0=testrawpassthrough();
   let r1=testexprsimple();
@@ -514,7 +578,11 @@ f=main():i64{
   let r27=testpartialselfinclude();
   let r28=testpartialmissing();
   let r29=testcachedmissing();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21&&r22&&r23&&r24&&r25&&r26&&r27&&r28&&r29){
+  let r30=testdirectiveunknown();
+  let r31=testdirectivestrayend();
+  let r32=testdirectiveunclosed();
+  let r33=testdirectivecontrols();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21&&r22&&r23&&r24&&r25&&r26&&r27&&r28&&r29&&r30&&r31&&r32&&r33){
     <0
   }el{
     <1

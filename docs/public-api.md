@@ -49,8 +49,9 @@ validation models, `static/`. Described in `README.md` and
 `docs/extension-api.md`.
 
 **Template output is escaped by default** from 3.0.0 (ADR-0011). Raw
-interpolation needs `{{raw ...}}`. Any 2.0.0 template that relied on raw
-output changes meaning — silently producing escaped text rather than failing.
+interpolation needs the `raw` filter, `{= key | raw =}`. Any 2.0.0 template
+that relied on raw output changes meaning — silently producing escaped text
+rather than failing.
 
 ## 2. Internal — no compatibility promise
 

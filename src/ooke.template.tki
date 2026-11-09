@@ -39,6 +39,7 @@
     {"kind": "func", "name": "tpllex", "params": ["str"], "return": "[token]", "error": "tplerr"},
     {"kind": "func", "name": "tpldirectivename", "params": ["str"], "return": "str"},
     {"kind": "func", "name": "tpldirectivearg", "params": ["str"], "return": "str"},
+    {"kind": "func", "name": "tpldirectiveknown", "params": ["str"], "return": "bool"},
     {"kind": "func", "name": "tplfindblock", "params": ["[block]", "str"], "return": "[token]"},
     {"kind": "func", "name": "tplislandparse", "params": ["str"], "return": "[str:str]"},
     {"kind": "func", "name": "tplnameok", "params": ["str"], "return": "bool"},

@@ -83,7 +83,7 @@ OOKE_TKI := $(addprefix $(IFACE_DIR)/,$(addsuffix .tki,$(ALL_MODS)))
 MAIN_LL  := $(SRC)/main.ll
 
 # ── Rules ─────────────────────────────────────────────────────────────────
-.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir test-asset-copy test-notfound-write test-support-check print-build-vars
+.PHONY: all dev clean interfaces check test test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-tpldirective-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir test-asset-copy test-notfound-write test-support-check print-build-vars
 
 all:
 	@$(MAKE) --no-print-directory check-versions
@@ -353,7 +353,7 @@ check: test-support-check $(ASSERT_TKI) $(SRC)/_handlers.tk $(SRC)/_floor.tk $(P
 	[ "$$fail" = "0" ]
 
 # Test targets
-test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir test-asset-copy test-notfound-write
+test: check-versions check $(BIN) test-check test-run test-cwd test-serve-cwd test-serve-logs test-compile-app test-many-pages test-serve-host test-static-mount test-install-compile test-run-cli test-deps test-cli-contract test-own-pages test-serve-tls-workers test-tplerr test-api-json test-tplcache-log test-tpldirective-log test-companions test-repair-exit test-version-source test-gen-scaffold test-dynamic-outdir test-asset-copy test-notfound-write
 
 # test-cwd — story 134.25: `ooke build <path>` from a parent, a sibling and an
 # unrelated directory must write the same site, into the project, as a build
@@ -419,6 +419,12 @@ test-api-json: $(BIN)
 # its stderr.
 test-tplcache-log: test-support-check
 	@test/template/cached_log.sh
+
+# test-tpldirective-log — story 138.29 (loke O-4): an unknown directive, a
+# stray `end` and a block open at the end of a template are each a $tplerr,
+# logged at error level where raised; the known directives log none of it.
+test-tpldirective-log: test-support-check
+	@test/template/directive_log.sh
 
 # test-repair-exit — story 121.66 (g): `ooke repair` exits by tkc's verdict,
 # not by a count of stderr lines (256 diagnostics exited 0). Spawns tkc, so
