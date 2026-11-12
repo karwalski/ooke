@@ -10,7 +10,7 @@ Thanks for your interest in contributing to ooke.
 4. Run `make check` — it type-checks every `.tk` file in the repo from the
    repo root (`tkc --check -I src`). See `docs/checking.md`.
 5. Run `make test` and confirm all tests pass.
-5. Open a pull request with a clear description of your changes.
+6. Open a pull request with a clear description of your changes.
 
 ## Language Rule
 

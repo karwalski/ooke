@@ -10,13 +10,19 @@ were invisible in a working tree and fatal in a clone.
 | | |
 |---|---|
 | ooke | **3.0.0-rc.2** — release candidate, see `docs/release-notes-3.0.0.md` |
-| toke | **`3.1.0` or later**, declared in `ooke.toml [requires]` |
+| toke | commit **`db47d591` (2026-10-01) or later** — today toke `main`, newer than any release — declared in `ooke.toml [requires]` |
 
 **rc.2 (stories 138.7, 138.17):** toke `3.0.0` fails ooke's suite (the
 template cache never stores, toke 127.226) and lacks the host-binding serve
 functions `[server] host` uses (toke 138.1). toke `3.1.0` is the first toke
-release that contains both, so the floor is that version. The paragraph below
-is the rc.1 record.
+release that contains both, so the floor was that version.
+
+**Since rc.2 (story 121.59 (3), 2026-10-01):** ooke confines template reads with
+toke's `file.realpath` (toke 121.60) and links `os.write` from `os_glue.c`
+(toke 121.70). Both arrived in toke merge `db47d591`, which is in **no released
+toke**: 3.1.0 is necessary but not sufficient, and the floor is the commit. When
+toke releases a version containing `db47d591`, `mintoke` moves to it. The
+paragraph below is the rc.1 record.
 
 toke has **no released version that works**, and the pin is a commit you can
 clone, not merely one whose compiler is correct — see step 2. `toke/VERSION`
@@ -37,7 +43,7 @@ highest is the one declared.
 
     git clone https://github.com/karwalski/toke.git
     cd toke
-    git checkout v3.1.0           # or later; see ooke.toml [requires]
+    git checkout main             # db47d591 or later; no release has it yet (ooke.toml [requires])
     make
 
 **A plain clone is sufficient at `6cc9061` or later, and only there.** toke's
@@ -60,8 +66,8 @@ This leaves the compiler at `toke/toke` (with a `toke/tkc` symlink).
 
 ## 3. Build ooke
 
-    git clone https://github.com/karwalski/toke-ooke.git
-    cd toke-ooke
+    git clone https://github.com/karwalski/ooke.git
+    cd ooke
     make                          # assumes toke is checked out beside ooke
 
 `make` runs the floor gate first and refuses to build against a toke below

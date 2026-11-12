@@ -4,6 +4,10 @@ ooke is a web framework for building websites and web applications using the [to
 
 **toke on ooke** -- build light, ship fast.
 
+**Status: 3.0.0 release candidate, unreleased.** `VERSION` reads `3.0.0-rc.2`;
+[`CHANGELOG.md`](CHANGELOG.md) records rc.1, rc.2 and the work on `main` since
+(rc.3). Nothing in it has been published -- see [`docs/RELEASING.md`](docs/RELEASING.md).
+
 ## About toke
 
 > toke: a compiled language designed for LLM code generation, with a small grammar, one
@@ -27,12 +31,12 @@ and nowhere else.*
 ## Features
 
 - **File-based routing** -- drop a `.tk` file in `pages/` and it becomes a route. `pages/blog/[slug].tk` handles `/blog/:slug` automatically.
-- **Dynamic route handlers** -- define `http.get`, `http.post`, `http.put`, `http.delete`, and `http.patch` handlers with toke function pointers for full control over request/response.
+- **API route handlers** -- a page under `pages/api/` that defines `f=get(req:i64):i64` and/or `f=post(req:i64):i64` is compiled into a per-app serve binary by `ooke compile`.
 - **Template engine** -- `.tkt` templates with layout inheritance, blocks, partials, and filters. No separate template language to learn.
 - **Markdown CMS** -- write content in Markdown with YAML frontmatter. ooke renders it at build time or on request.
 - **JSON content** -- `.json` files alongside `.md` for structured content collections.
 - **Content validation** -- define TOML models in `models/` with field types and required flags. ooke validates content against them automatically.
-- **Island architecture** -- interactive client-side components with `{! island("name"; hydrate="visible") !}` directives and the `ooke-islands.js` hydration loader. Scaffold new islands with `ooke gen island <name>`.
+- **Island architecture** -- interactive client-side components with `{! island("name"; hydrate="visible") !}` directives and the `ooke-islands.js` hydration loader. Scaffold a new island module with `ooke gen island <name>`.
 - **Static site generation** -- `ooke build` renders your entire site to static HTML in `build/`. Deploy anywhere.
 - **HTTP and HTTPS serving** -- `ooke serve` serves plain HTTP, or HTTPS when `[tls]` names a certificate and key (see [TLS](#tls)).
 - **Worker scaling** -- set `workers = 0` for automatic CPU-count detection, or override at runtime with `TK_HTTP_WORKERS`.
@@ -55,6 +59,9 @@ ooke serve
 # Build static output
 ooke build
 
+# Build a per-app serve binary with the pages/api/ handlers compiled in
+ooke compile
+
 # Diagnose a broken file
 ooke repair pages/broken.tk
 
@@ -63,6 +70,9 @@ ooke gen island counter
 ```
 
 ## Project Structure
+
+`ooke new` scaffolds `ooke.toml`, `pages/index.tk`, `templates/base.tkt` and
+`templates/index.tkt`. A grown project looks like this:
 
 ```
 mysite/
@@ -90,7 +100,6 @@ mysite/
     images/
     ooke-islands.js  # island hydration loader
   extensions/        # custom extension modules
-  src/               # framework source (internal)
 ```
 
 ## Content Validation
@@ -152,7 +161,8 @@ Islands are interactive client-side components that hydrate on demand. The `hydr
 
 - `"visible"` -- hydrate when the element scrolls into view
 - `"idle"` -- hydrate during browser idle time
-- `"load"` -- hydrate immediately on page load
+- `"load"` -- hydrate immediately on page load (the default)
+- `"none"` -- render the markup and never hydrate
 
 Scaffold a new island:
 
@@ -160,7 +170,7 @@ Scaffold a new island:
 ooke gen island counter
 ```
 
-This creates the component skeleton in `islands/` and wires it into the `ooke-islands.js` hydration loader served from `static/`.
+This creates the module skeleton `islands/counter.tk`. The page's `{! island(...) !}` directive and the `ooke-islands.js` hydration loader served from `static/` do the wiring.
 
 ### Filters
 
@@ -171,24 +181,31 @@ This creates the component skeleton in `islands/` and wires it into the `ooke-is
 | `upper`  | Uppercase                           |
 | `lower`  | Lowercase                           |
 | `trim`   | Strip leading/trailing whitespace   |
+| `raw`    | No escaping -- only for HTML you produced yourself |
 
-## Dynamic Route Handlers
+## API Route Handlers
 
-For routes that need custom logic beyond templates, register handler functions directly:
+For routes that need custom logic beyond templates, put a toke module under
+`pages/api/` that defines `get` and/or `post`. This is ooke's own
+`pages/api/health.tk`, served at `/api/health`:
 
 ```toke
-http.get("/api/health"; fn(req; res) {
-    res.json({"status": "ok"})
-})
+m=ooke.apihealth;
+i=http:std.http;
 
-http.post("/api/items"; fn(req; res) {
-    let body = req.body()
-    (* validate and store *)
-    res.status(201).json(body)
-})
+f=apigetjson():$str{
+  <"{\"status\":\"ok\",\"service\":\"ooke\"}"
+};
+
+f=get(req:i64):i64{
+  <http.resjson(200;apigetjson())
+};
 ```
 
-Supported verbs: `http.get`, `http.post`, `http.put`, `http.delete`, `http.patch`.
+`scripts/gen_handlers.sh` registers every page that defines `f=get(` or `f=post(`;
+those are the two verbs it wires. `ooke compile` builds them into a per-app serve
+binary. `ooke build` does not render them: it reports `pages/api/` routes as
+excluded from the static build (see [`docs/public-api.md`](docs/public-api.md)).
 
 ### Security: what ooke does not do for you
 
@@ -237,6 +254,7 @@ accessformat = "combined"   # or "json"
 
 | Key       | Default | Description |
 |-----------|---------|-------------|
+| `host`    | `"127.0.0.1"` | Address `ooke serve` listens on. Loopback by default; a deployment that must be reachable from other machines sets `"0.0.0.0"`. `ooke new` writes it explicitly. See [docs/logging-and-tls.md](docs/logging-and-tls.md), "Bind address". |
 | `port`    | `3000`  | HTTP listen port. |
 | `workers` | `0`     | Worker thread count. `0` auto-detects CPU count. Override at runtime with `TK_HTTP_WORKERS` env var. |
 | `corsorigins` | `""` | CORS allow-origin sent by `ooke serve`. Empty disables CORS. Either exactly `"*"` (any site may read every response; serve warns) or a comma-separated list of origins, each `http://` or `https://` host with an optional port and no path. Anything else refuses to start. |
@@ -288,15 +306,19 @@ See [docs/extension-api.md](docs/extension-api.md) for the full API reference.
 
 ### Prerequisites
 
-- [toke compiler](https://github.com/karwalski/toke) (`tkc`) **3.1.0 or later** —
-  toke 3.0.0 is below ooke's floor (its template cache never stores, and it
-  lacks the host-binding serve functions). The floor is toke 3.1.0
-  (2026-09-30); it is declared in `ooke.toml [requires]` and enforced by
-  `make check-versions`, which `make` runs first. See
+- [toke compiler](https://github.com/karwalski/toke) (`tkc`) at toke commit
+  **`db47d591` (2026-10-01) or later**, which today means toke `main`: ooke
+  confines template reads with `file.realpath` and links `os.write` from
+  `os_glue.c`, and no released toke has either. toke 3.1.0 is necessary but no
+  longer sufficient, and toke 3.0.0 is below the floor (its template cache never
+  stores, and it lacks the host-binding serve functions). The floor is declared
+  in `ooke.toml [requires]` (`mintoke`, `mintokedate`, `mintokecommit`) and
+  enforced by `make check-versions`, which `make` runs first. See
   [`docs/versioning.md`](docs/versioning.md) for the evidence and for what a
   downstream project should wait for.
-- C compiler (clang)
-- OpenSSL development headers
+- C compiler (clang) and make
+- OpenSSL, SQLite and zlib development headers (per-platform commands in
+  [`docs/install.md`](docs/install.md))
 
 ### Build
 
@@ -304,7 +326,8 @@ See [docs/extension-api.md](docs/extension-api.md) for the full API reference.
 make
 ```
 
-This compiles all toke source to LLVM IR, links with the toke stdlib, and produces the `ooke-toke` binary.
+This compiles all toke source to LLVM IR, links with the toke stdlib, and produces the `ooke-toke` binary; rename it to `ooke` on your PATH
+([`docs/install.md`](docs/install.md)). `make test` runs the full suite; `make check` type-checks every `.tk` file (`docs/checking.md`).
 
 ## Related Projects
 
