@@ -263,6 +263,26 @@ f=teststoresqlcreatecolumns():bool{
   <a0&&a1&&a2&&a3&&a4&&a5&&a6
 };
 
+(* Story 132.148: YAML quotes are removed from a front-matter value, and the
+   key ends at the first ": ". toke docs/about/canonical.md has
+   `title: "Canonical facts: how toke is described"`; toke-website rendered
+   its <title> as `"Canonical facts`. *)
+f=testparsefrontquotes():bool{
+  let c=store.storetryparse("---\nslug: s\ntitle: \"Canonical facts: how toke is described\"\nsingle: 'It''s: here'\nesc: \"a \\\"b\\\" c\\\\d\"\nhalf: \"open\nmixed: \"x'\nurl: https://x.io:8080/p\nempty: \"\"\nbare:\n---\nbody\n");
+  let a0=chk.eqstr(c.title;"Canonical facts: how toke is described";"double-quoted title loses its quotes and keeps its colon");
+  let a1=chk.eqstr(c.meta.get("title");"Canonical facts: how toke is described";"meta title matches the parsed title");
+  let a2=chk.eqstr(c.meta.get("single");"It's: here";"single-quoted value loses its quotes; '' is a quote");
+  let a3=chk.eqstr(c.meta.get("esc");"a \"b\" c\\d";"double-quoted escapes \\\" and \\\\ are read");
+  let a4=chk.eqstr(c.meta.get("half");"\"open";"an unpaired quote is kept");
+  let a5=chk.eqstr(c.meta.get("mixed");"\"x'";"mismatched quotes are kept");
+  let a6=chk.eqstr(c.meta.get("url");"https://x.io:8080/p";"unquoted value with colons is whole");
+  let a7=chk.eqstr(c.meta.get("empty");"";"empty quoted value is empty");
+  let a8=chk.eqstr(c.meta.get("bare");"";"a key with no value reads empty");
+  (* control: a plain value is unchanged *)
+  let a9=chk.eqstr(c.slug;"s";"plain slug value unchanged");
+  <a0&&a1&&a2&&a3&&a4&&a5&&a6&&a7&&a8&&a9
+};
+
 f=main():i64{
   let r0=testdefault();
   let r1=testparsefront();
@@ -283,5 +303,6 @@ f=main():i64{
   let r16=testparsefrontnocolon();
   let r17=teststorewrite();
   let r18=teststoresqlcreatecolumns();
-  if(r18&&r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17){<0}el{<1}
+  let r19=testparsefrontquotes();
+  if(r19&&r18&&r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17){<0}el{<1}
 };

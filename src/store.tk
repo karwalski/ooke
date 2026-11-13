@@ -19,6 +19,31 @@ f=storedefault():$content{
   <$content{slug:"";type:"page";title:"";meta:@($str:$str);body:""}
 };
 
+(* Story 132.148. A front-matter value as YAML reads it: trimmed, and when
+   it is wrapped in a matching pair of double or single quotes, the quotes
+   removed. Inside double quotes \\ is a backslash and \" a quote; inside
+   single quotes '' is a quote. An unpaired quote is kept as written. *)
+f=storefrontvalue(raw:$str):$str{
+  let v=str.trim(raw);
+  let n=str.len(v);
+  let out=mut.v;
+  if(n>1){
+    if(str.startswith(v;"\"")&&str.endswith(v;"\"")){
+      let inner=mt str.slice(v;1;n-1) {$ok:x x;$err:e v};
+      let parts=str.split(inner;"\\\\");
+      let un=mut.@($str);
+      lp(let i=0;i<parts.len;i=i+1){un=un.append(str.replace(parts.get(i);"\\\"";"\""))};
+      out=str.join("\\";un)
+    }el{
+      if(str.startswith(v;"'")&&str.endswith(v;"'")){
+        let inner=mt str.slice(v;1;n-1) {$ok:x x;$err:e v};
+        out=str.replace(inner;"''";"'")
+      }el{}
+    }
+  }el{};
+  <out
+};
+
 f=storeparsefront(src:$str):$content!$storeerr{
   let opener="---\n";
   if(!str.startswith(src;opener)){
@@ -43,17 +68,24 @@ f=storeparsefront(src:$str):$content!$storeerr{
          `time: 12:30` read "12". The guard `!kv.len<2` parsed as
          `(!kv.len)<2`, which is always true, so a line with no ":" -- a
          blank line in the front matter -- read kv.get(1) past the end and
-         the process died with RT003. A key is now everything before the
-         FIRST ":" and the value everything after it; a line with no ":" is
-         skipped. *)
+         the process died with RT003. A line with no key is skipped.
+         Story 132.148. The key ends at the first ": " (or a ":" that ends
+         the line), as in YAML, and the value goes through storefrontvalue,
+         which drops YAML quotes: `title: "A: b"` read `"A: b"` with its
+         quotes, and an older build cut it at the first ":" as well, so
+         toke-website rendered a page titled `"Canonical facts`. *)
       lp(let i=0;i<lines.len;i=i+1){
         let line=str.trim(lines.get(i));
-        let kv=str.split(line;":");
-        if(kv.len>1){
-          let k=str.trim(kv.get(0));
-          let rest=mut.@($str);
-          lp(let j=1;j<kv.len;j=j+1){rest=rest.append(kv.get(j))};
-          let v=str.trim(str.join(":";rest));
+        let sep=str.indexof(line;": ");
+        let n=str.len(line);
+        let kend=mut.-1;
+        let vstart=mut.0;
+        if(!(sep<0)){kend=sep;vstart=sep+2}el{
+          if(n>0&&str.endswith(line;":")){kend=(n as i64)-1;vstart=n as i64}el{}
+        };
+        if(kend>0){
+          let k=str.trim(mt str.slice(line;0;kend as u64) {$ok:x x;$err:e ""});
+          let v=storefrontvalue(mt str.slice(line;vstart as u64;n) {$ok:x x;$err:e ""});
           if(k=="slug"){slug=v}el{};
           if(k=="type"){ctype=v}el{};
           if(k=="title"){ctitle=v}el{};
