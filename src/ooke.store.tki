@@ -6,6 +6,7 @@
     {"kind": "type", "name": "content", "fields": [{"name": "slug", "type": "str"}, {"name": "type", "type": "str"}, {"name": "title", "type": "str"}, {"name": "meta", "type": "[str:str]"}, {"name": "body", "type": "str"}]},
     {"kind": "type", "name": "storeerr", "fields": [{"name": "msg", "type": "str"}]},
     {"kind": "func", "name": "storedefault", "params": [], "return": "content"},
+    {"kind": "func", "name": "storefrontvalue", "params": ["str"], "return": "str"},
     {"kind": "func", "name": "storeparsefront", "params": ["str"], "return": "content", "error": "storeerr"},
     {"kind": "func", "name": "storetryparse", "params": ["str"], "return": "content"},
     {"kind": "func", "name": "storeparsejson", "params": ["str"], "return": "content", "error": "storeerr"},

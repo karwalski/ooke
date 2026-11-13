@@ -1,6 +1,6 @@
 ---
 source_file: "store.tk"
-source_hash: "b7f77c151b11c2da19b69e9d1a9b3bbbf659cd750627af590375582fd256f0d7"
+source_hash: "c3a507c53e6a9ac41c3a7aa72b2bbf5298ac1c2a5b985d42b4d57a5f4ac62a16"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -68,6 +68,27 @@ field values.
 
 **Error handling:** None.
 
+### `storefrontvalue(raw: $str): $str`
+
+**Purpose:** Read one front-matter value as YAML does (story 132.148).
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `raw` | `$str` | The text after the key's `": "`. |
+
+**Returns:** `$str` — the trimmed value, without its quotes when quoted.
+
+**Logic:** Trim `raw`. When it is at least two bytes long and starts and
+ends with `"`, take the text between the quotes, split it on `\\`, replace
+`\"` with `"` in each piece and re-join the pieces with `\`. When it starts
+and ends with `'`, take the text between the quotes and replace `''` with
+`'`. Any other value, including one with an unpaired or mismatched quote, is
+returned trimmed and otherwise as written.
+
+**Error handling:** A failed `str.slice` falls back to the trimmed value.
+
 ### `storeparsefront(src: $str): $content!$storeerr`
 
 **Purpose:** Parse a Markdown document with optional YAML-style `---` front
@@ -96,15 +117,21 @@ function never raises `$storeerr`; `str.slice` failures fall back to `""`.
    the body. Each slice is matched `{$ok:v v;$err:e ""}`.
 5. Split `fmraw` on `"\n"`. Initialise a mutable `meta` map, mutable
    `slug=""`, `ctype="page"`, `ctitle=""`.
-6. For each line (index `0` to `lines.len-1`): trim it and split it on
-   `":"`. A line with fewer than two pieces (no `":"` at all -- e.g. a blank
-   line) is skipped. Otherwise `k` is the trimmed first piece and `v` the
-   trimmed remainder: the other pieces re-joined with `":"`, so a value may
-   itself hold colons (`url: https://x.io`, `time: 12:30`). If `k` equals
-   `"slug"` / `"type"` / `"title"` assign the corresponding mutable; in all
-   cases `meta=meta.set(k;v)`. (Story 121.66: the guard was `!kv.len<2`,
-   i.e. `(!kv.len)<2`, always true, so a blank line read past the split and
-   died with RT003; and only the second piece was kept, truncating values.)
+6. For each line (index `0` to `lines.len-1`): trim it and find the first
+   `": "` with `str.indexof`. The key `k` is the trimmed text before it and
+   the value everything after it; a line that ends in `":"` with no `": "`
+   is a key with an empty value. A line with neither, or with an empty key
+   (a blank line, a stray word), is skipped. A value may itself hold colons
+   (`url: https://x.io`, `time: 12:30`). The value goes through
+   `storefrontvalue`, which removes YAML quotes. If `k` equals `"slug"` /
+   `"type"` / `"title"` assign the corresponding mutable; in all cases
+   `meta=meta.set(k;v)`. (Story 121.66: the guard was `!kv.len<2`, i.e.
+   `(!kv.len)<2`, always true, so a blank line read past the split and died
+   with RT003; and only the second piece was kept, truncating values. Story
+   132.148: a quoted value kept its quotes, so toke-website rendered
+   `title: "Canonical facts: how toke is described"` as a page titled
+   `"Canonical facts` -- with an older build that also cut at the first
+   `":"`.)
 7. Return `$content{slug;type:ctype;title:ctitle;meta;body:bodyraw}`.
 
 **Error handling:** Slice failures are absorbed to `""`. The `!$storeerr`
