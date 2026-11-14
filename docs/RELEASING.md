@@ -43,15 +43,35 @@ The GitHub Actions workflow `.github/workflows/release.yml` triggers on any tag
 matching `v*`. It builds on four platforms, runs the floor gate and the suite,
 and creates the GitHub release with checksums. So the single authorised step is:
 
-    git push origin <branch> && git push origin v3.0.0-rc.2
+    git push origin <branch> && git push origin v3.0.0
 
 after creating the tag:
 
-    git tag -a v3.0.0-rc.2 -m "ooke 3.0.0-rc.2"
+    git tag -a v3.0.0 -m "ooke 3.0.0"
 
 Pushing the tag **is** the publish. There is no separate upload.
 
-## Before tagging 3.0.0 rather than a candidate
+## Before tagging 3.0.0 (state on `release/3.0.0`, 2026-11-14)
+
+Done on the branch: `VERSION` reads `3.0.0`; `mintoke = "3.2.0"`; the
+CHANGELOG, release notes, versioning, install, public-api and README say
+3.0.0. Still to do, in this order:
+
+1. **toke's `v3.2.0` tag exists** (and is pushed before ooke's, since the
+   workflows clone toke from GitHub).
+2. **Point `mintokecommit`/`mintokedate` at toke's 3.2.0 version commit**
+   (the commit that sets toke's `VERSION` to 3.2.0, and its date) — or at the
+   tag name `v3.2.0`, which `git checkout` and the Makefile gate accept.
+   They name `db47d591` today, and CI and the release workflow `git checkout`
+   that commit, whose `VERSION` is 3.1.0: `check-versions` would refuse it.
+3. Re-run `make test` and `scripts/package_release.sh` against the tagged
+   toke, so the manifest names it; say "released" in `CHANGELOG.md` and the
+   release notes.
+4. Merge `release/3.0.0` to main, then tag `v3.0.0` on the merged commit.
+
+The checklist below is the rc-era record.
+
+## Before tagging 3.0.0 rather than a candidate (rc-era record)
 
 - **The toke release is 3.1.0** (toke story 138.17): the first toke release
   that contains `668caa6`, and the floor `ooke.toml [requires]` declares.

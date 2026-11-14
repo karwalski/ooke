@@ -11,15 +11,16 @@ not one:
 
 ```toml
 [requires]
-mintoke       = "3.1.0"
+mintoke       = "3.2.0"
 mintokedate   = "2026-10-01"
 mintokecommit = "db47d591"
 ```
 
 (Raised for rc.2 by story 138.7, set to toke's 3.1.0 release by story
-138.17, and raised past that release to an unreleased toke commit by story
-121.59 (3) — see "Two more floors", "The release floor" and "The realpath
-floor" below. The history
+138.17, raised past that release to an unreleased toke commit by story
+121.59 (3), and set to toke 3.2.0, the first release containing that commit,
+for ooke 3.0.0 — see "Two more floors", "The release floor", "The realpath
+floor" and "The 3.2.0 floor" below. The history
 that follows is the rc.1 record and is kept as evidence.)
 
 **A semver floor alone is meaningless for toke today.** `toke/VERSION` has read
@@ -195,6 +196,23 @@ no longer sufficient, and the commit/date pair is the enforceable floor again.
 Measured: ooke's `make test` passes against toke main containing `db47d591`.
 When toke releases a version containing `db47d591`, set `mintoke` to it.
 
+### The 3.2.0 floor (ooke 3.0.0, 2026-11-14)
+
+toke 3.2.0 is the first toke release that contains `db47d591`, so ooke 3.0.0
+declares `mintoke = "3.2.0"`, which is sufficient on its own: every toke
+labelled 3.2.0 or later has every floor above. Measured 2026-11-14: ooke
+`release/3.0.0` `make test` exits 0 against toke main `fffec674`, the commit
+toke's `release/3.2.0` was branched from, with that tree's `VERSION` set to
+3.2.0 as the release's version commit sets it (toke main itself reads 3.1.0,
+and the gate refuses it by version).
+
+`mintokecommit`/`mintokedate` still name `db47d591`, the commit ooke's code
+needs. CI and the release workflow clone toke **at `mintokecommit`**, and a
+clone of `db47d591` reads `VERSION` 3.1.0, which `mintoke = "3.2.0"` refuses.
+So before the `v3.0.0` tag is pushed, the pair must name toke's 3.2.0 version
+commit (or the `v3.2.0` tag), as `216965f` did for 3.1.0 — see
+`docs/RELEASING.md`, "Before tagging 3.0.0".
+
 ## 2. How the floor is enforced
 
 It used to be decorative: `Makefile: check-toke-version` existed but was not a
@@ -230,7 +248,7 @@ ERROR: toke 8c073a6 (2026-07-06) does not contain b66bd8e — ooke's floor.
 
 ## 3. ooke's own version
 
-`VERSION` is **3.0.0-rc.2** (rc.1 was prepared 2026-09-19, rc.2 on 2026-09-28). The last release was **2.0.0** (2026-06-21, the
+`VERSION` is **3.0.0** (prepared 2026-11-14, to ship with toke 3.2.0; rc.1 was prepared 2026-09-19, rc.2 on 2026-09-28, and neither was published). The last release was **2.0.0** (2026-06-21, the
 pure-toke rebuild). Since then ooke has taken changes that break consumers:
 
 - migration to v0.4 syntax (`==`, expression-`if`) — **a project's own `pages/`
@@ -258,6 +276,7 @@ Gate status as of 2026-09-19:
 | 134.24 `ooke build` aborts on API routes | fixed 2026-09-19, verified end to end |
 | 134.15 toke has never cut a v0.4 version | resolved — toke tagged `v3.0.0` (2026-09-23) |
 | 138.7 toke 3.0.0 fails ooke's suite (127.226) and lacks the host-binding serve functions (138.1) | resolved — toke 3.1.0 contains both; the floor is `mintoke = "3.1.0"` (138.17) |
+| 121.59 (3) the realpath floor `db47d591` is in no toke release | resolved — toke 3.2.0 contains it; the floor is `mintoke = "3.2.0"` (ooke 3.0.0, 2026-11-14) |
 
 **134.15 is why the artefact prepared by 134.10 is a release *candidate* and not
 a release**: ooke cannot express its one hard dependency as a version, only as a
@@ -283,8 +302,8 @@ For 3.0.0 onwards:
 
 ## 5. For downstream projects (loke, moke, toke-website)
 
-**Use toke 3.1.0 or later, and wait for ooke 3.0.0.** (Updated for rc.2,
-stories 138.7 and 138.17; the rest of this section is the rc.1 record.)
+**Use ooke 3.0.0 with toke 3.2.0 or later.** (Updated for 3.0.0,
+2026-11-14; the rest of this section is the rc.1 record.)
 
 The floor is `6cc9061`, not `b66bd8e`: 134.16 raised it to `c2aa278` once ooke's
 suite could be run against an older compiler, and 134.10 raised it again to

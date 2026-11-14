@@ -1,9 +1,52 @@
-# ooke 3.0.0-rc.2 — release notes
+# ooke 3.0.0 — release notes
 
-**Status: release candidate. Not published, not tagged.** rc.2 prepared by
-story 138.7 on 2026-09-28; rc.1 by story 134.10 on 2026-09-19. The rc.2
-section comes first; everything after it is the rc.1 notes, kept because
-rc.2 changes them only where the rc.2 section says so.
+**Status: prepared 2026-11-14 on `release/3.0.0`, not yet published or
+tagged; ships with toke 3.2.0.** 3.0.0 is rc.2 plus the work merged to main
+after it. Neither candidate was published. The 3.0.0 section comes first,
+then the rc.2 notes (prepared by story 138.7 on 2026-09-28), then the rc.1
+notes (story 134.10, 2026-09-19); each later section changes the earlier ones
+only where it says so. `CHANGELOG.md` has every change with its story and
+commit.
+
+## 3.0.0 — what changed since rc.2
+
+**The toke floor is toke 3.2.0.** ooke now resolves partial and layout paths
+with toke's `file.realpath` and links `os_glue.c` (toke 121.60, 121.70, both
+in toke `db47d591`). No toke before 3.2.0 has them: toke 3.1.0 does not link
+ooke 3.0.0. `mintoke = "3.2.0"` is sufficient on its own. (121.59, 138.17)
+
+**Read before upgrading — these change what a site does:**
+
+- **Template mistakes fail.** An unknown directive, a stray `{! end !}`, an
+  unclosed block, a missing partial, and a partial or layout name that would
+  leave `templates/` (`..`, absolute, backslash, or a symlink pointing
+  outside) are template errors. `ooke build` fails naming the template;
+  `ooke serve` answers 500 with a fixed body and logs the route, template and
+  error. They used to render as nothing, or as a page with a hole in it.
+  (121.57, 121.59, 138.29)
+- **`{= x =}` is escaped for where it sits.** URL attributes refuse
+  non-`http(s)`/`mailto` schemes (`#ZtokeZ`); values in `<script>`/`on*`
+  become JS strings; values in CSS are restricted. `<script>var
+  n={= n =};</script>` now renders `var n="3";`. (121.58)
+- **Configuration keys are read only from their table.** A top-level `port`,
+  `name`, `output`, `cert`, `maxlines`, `name`/`entry` (for `[package]`) no
+  longer configures anything; move it into its table. (121.67, 121.69)
+- **`ooke run` passes the program's stdout and stderr through** unchanged,
+  instead of wrapping them as JSON log records on stderr. (121.67, 121.69)
+- **Front matter**: a value keeps every `:` after the key, a line with no `:`
+  is skipped instead of crashing the build, and a quoted value loses its
+  quotes. (121.66, 132.148)
+- **`ooke build` fails, naming the file, when it cannot copy a static asset
+  or write `404.html`.** It exited 0. (121.67)
+
+**Also:** `ooke repair` exits by tkc's verdict (121.66); only `pages/api/`
+makes API routes (121.66); the API fallback body is valid JSON (121.63);
+ooke's link lists come from `tkc --emit-deps`, so a toke stdlib file split no
+longer breaks the link (121.76); the template lexer's peak memory on a 70 KB
+page fell from 184.2 MB to 13.0 MB over 20 renders (127.257).
+
+**Known, not changed:** an unclosed `{=`/`{!`/`{#` tag emits the text before
+it twice (toke 127.298, an open owner item, register 2.5).
 
 ## rc.2 — what changed, and why it is still a candidate
 

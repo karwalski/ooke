@@ -1,20 +1,38 @@
 # Changelog
 
 Dates are the dates the work was done, not publication dates. Nothing below has
-been published; see `docs/RELEASING.md`.
+been published; see `docs/RELEASING.md`. Story numbers are toke's tracker
+(`toke/docs/progress.md`), which tracks every repository.
 
-## 3.0.0-rc.3 — unreleased (main, after rc.2 was frozen at 3cc4998)
+## 3.0.0 — unreleased (prepared 2026-11-14 on `release/3.0.0`, to ship with toke 3.2.0)
 
-Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
+The first ooke release since 2.0.0. 3.0.0 is rc.2 plus everything below: the
+work merged to main after the rc.2 candidate was frozen at `3cc4998`, which
+was collected here as "rc.3" and never cut as a candidate of its own. Read
+this section, then the rc.2 and rc.1 sections (the rest of the change set
+since 2.0.0), then `docs/release-notes-3.0.0.md`, before adopting.
+
+**Why a final and not rc.3** (the owner approved an ooke release alongside
+toke 3.2.0 on 2026-11-14; register item 5.2 in toke
+`docs/owner-decisions-2026-11-12.md` left "3.0.0 or a new rc" open): the only thing that ever kept
+ooke a candidate was its toke dependency -- first no toke version for the v0.4
+break (134.15), then a floor commit no toke release contained. toke 3.2.0 is
+the first release that contains every floor ooke declares, so `mintoke`
+alone is sufficient again; neither rc was published, so a further candidate
+would be one more unpublished tag; and loke (138.7, 138.17) and the
+`homebrew-toke` formula (132.27, already written for `3.0.0`) are waiting on
+a release, not a candidate.
 
 ### Requirements
 
-- **The toke floor is raised past toke's last release**, to toke `db47d591`
+- **toke 3.2.0 or later** (`mintoke = "3.2.0"`). ooke needs toke `db47d591`
   (2026-10-01): `file.realpath` (toke 121.60), and `os.write`'s wrapper in
   `os_glue.c` (toke 121.70), which ooke now links -- without it ooke does not
-  link against current toke. No released toke contains `db47d591`; `mintoke`
-  stays `3.1.0` and the commit/date pair is the enforced floor. See
-  `docs/versioning.md`, "The realpath floor". (121.59)
+  link against current toke. toke 3.1.0 lacks both; toke 3.2.0 is the first
+  release that contains `db47d591`, so it is the floor, and every toke
+  labelled 3.2.0 or later satisfies it. `mintokecommit`/`mintokedate` still
+  name `db47d591`, the commit the code needs. See `docs/versioning.md`, "The
+  realpath floor" and "The 3.2.0 floor". (121.59, 138.17)
 
 ### Changed
 
@@ -137,7 +155,8 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   with no `:` -- a blank line, or a stray word -- read past the end of the
   split and the process died with RT003 (`ooke build` and `ooke serve` both
   parse content through it). The key is now what precedes the first `:` and
-  the value everything after it; a line with no `:` is skipped. (121.66)
+  the value everything after it; a line with no `:` is skipped. (121.66;
+  132.148 below moves the split to the first `: `)
 - `store.storewrite` no longer turns a failed existence check into an
   INSERT. Its `SELECT id … WHERE slug=?` was read as "not found" on any
   error, so on a table without an `id` column every write of an existing slug
@@ -232,6 +251,70 @@ Not in rc.2. Template safety work merged after the rc.2 candidate was frozen.
   when a build lost both. It returned after the first, so the asset summary
   was missing (the assets were still named in their own errors, and the build
   still failed). (121.69)
+- **A quoted front-matter value loses its quotes.** `title: "Canonical facts:
+  how toke is described"` rendered as a page titled `"Canonical facts` on
+  toke-website. A value wrapped in a matching
+  pair of double or single quotes is unquoted, reading the YAML escapes inside
+  them (`\\` and `\"` in double quotes, `''` in single), and the key now ends at
+  the first `: ` (or a `:` that ends the line), so `url: https://x.io` keeps
+  its scheme as before. **Behaviour change** for a site that relied on the
+  quotes appearing in its output. (132.148, `c13ed7d`)
+- A test, not ooke: `test_store`'s `countslug`/`titleof` leave from
+  `db.one`'s `$err` arm instead of comparing the `$ok` row with `0`, which
+  toke 138.33 (typed std-record payloads) makes E4031. Results unchanged.
+  (138.33, `23629b7`)
+
+### Performance
+
+- **The template lexer no longer copies the rest of the template per tag.**
+  `tpllex` re-sliced the unscanned tail twice per tag, and toke frees none of
+  it (toke 127.299). It scans by index now. 20 renders of a 70 KB page: peak
+  RSS 184.2 MB -> 13.0 MB (lex+render), output byte-identical. Tokens are
+  unchanged, including the unclosed-tag duplication (toke 127.298, an open
+  owner item, register 2.5). (127.257, `e2e3422`)
+
+### Project
+
+- `LICENSE` names the holder, Matthew Watt (licence audit 2026-11-09,
+  `95adaba`); the README states the rc status, the toke floor, a real API
+  handler and `[server] host`, and `docs/install.md` has the right clone URL
+  (docs review 2026-11-12, `eb05b08`); the unused `scripts/testmod.sh` is
+  archived (121.83, `815d704`).
+
+### Commits since rc.2
+
+44 commits on main after `v3.0.0-rc.2` (`c414e4d`), merges not counted, by
+story:
+
+- 121.57 partial/layout names stay in `templates/`: `4b96784`, `41387b9`
+- 121.58 context-aware `{= x =}` escaping: `442cdeb`, `362d3b8`
+- 121.59 template errors fail the build / answer 500; `file.realpath`
+  confinement; the `db47d591` floor: `8e317a7`, `90e8e3d`, `f0ac685`,
+  `b908a7d`, `e23ffb0`
+- 121.61 serve fallbacks, 404 template, companions: `0948dfb`, `29778a0`,
+  `64cb1e4`
+- 121.63 API fallback JSON, cached-render logging, companions gate:
+  `3a8f336`, `6f2eaeb`, `05f8d69`, `719e82b`
+- 121.66 front matter, store, repair, run/build logging, `VERSION` as the one
+  version, `gen`/`new` failures, `pages/api/` routing: `b095de7`, `caf92ce`,
+  `6a73220`, `212263c`, `fa1437b`, `b965373`, `a8b91f3`, `352f9c2`,
+  `956587b`, `ac56161`
+- 121.67 asset and 404 write failures, `storesqlcreate`, absent tables,
+  `ooke run` stdout: `3d575ac`, `4b44cee`, `77a33ca`, `b283b77`, `405918e`
+- 121.69 `[package]`, `ooke run` stderr, both build summaries: `b77a258`,
+  `04d5911`, `d17873b`
+- 121.76 link lists from `tkc --emit-deps`; `check-toke-candidate`:
+  `e2ef159`, `ff4b50a`
+- 121.83 archive `testmod.sh`: `815d704`
+- 127.257 template lexer by index: `e2e3422`
+- 138.29 unknown directive / stray `end` / unclosed block are `$tplerr`:
+  `26c8c16`
+- 138.30 changelog names the `raw` filter: `d4c9bcb`
+- 138.33 test_store under typed std-record payloads: `23629b7`
+- 132.148 front-matter quotes: `c13ed7d`
+- licence holder: `95adaba`; README/install review (R3): `eb05b08`
+- the release itself (VERSION 3.0.0, `mintoke = "3.2.0"`, these notes): on
+  `release/3.0.0`
 
 ## 3.0.0-rc.2 — unreleased (prepared 2026-09-28, story 138.7)
 
