@@ -1,7 +1,7 @@
 # ooke 3.0.0 — release notes
 
-**Status: prepared 2026-11-14 on `release/3.0.0`, not yet published or
-tagged; ships with toke 3.2.0.** 3.0.0 is rc.2 plus the work merged to main
+**Status: released 2026-11-15 (tag `v3.0.0`), on toke 3.2.0 (`v3.2.0`,
+`ea7ddf22`).** 3.0.0 is rc.2 plus the work merged to main
 after it. Neither candidate was published. The 3.0.0 section comes first,
 then the rc.2 notes (prepared by story 138.7 on 2026-09-28), then the rc.1
 notes (story 134.10, 2026-09-19); each later section changes the earlier ones

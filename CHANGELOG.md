@@ -4,7 +4,7 @@ Dates are the dates the work was done, not publication dates. Nothing below has
 been published; see `docs/RELEASING.md`. Story numbers are toke's tracker
 (`toke/docs/progress.md`), which tracks every repository.
 
-## 3.0.0 — unreleased (prepared 2026-11-14 on `release/3.0.0`, to ship with toke 3.2.0)
+## 3.0.0 — 2026-11-15, on toke 3.2.0
 
 The first ooke release since 2.0.0. 3.0.0 is rc.2 plus everything below: the
 work merged to main after the rc.2 candidate was frozen at `3cc4998`, which
@@ -30,8 +30,9 @@ a release, not a candidate.
   `os_glue.c` (toke 121.70), which ooke now links -- without it ooke does not
   link against current toke. toke 3.1.0 lacks both; toke 3.2.0 is the first
   release that contains `db47d591`, so it is the floor, and every toke
-  labelled 3.2.0 or later satisfies it. `mintokecommit`/`mintokedate` still
-  name `db47d591`, the commit the code needs. See `docs/versioning.md`, "The
+  labelled 3.2.0 or later satisfies it. `mintokecommit`/`mintokedate` name
+  `ea7ddf22`, the commit toke's `v3.2.0` tag points at, which CI and the
+  release workflow clone. See `docs/versioning.md`, "The
   realpath floor" and "The 3.2.0 floor". (121.59, 138.17)
 
 ### Changed
@@ -96,7 +97,7 @@ a release, not a candidate.
   the resolved path is what is read -- **behaviour change:** a symlinked
   partial or layout *file* whose target is inside `templates/` now renders
   (121.59 made it an error); one pointing outside is still refused.
-  **Needs toke `db47d591` or later (unreleased; see Requirements).**
+  **Needs toke `db47d591` or later, first released in toke 3.2.0.**
   (121.59)
 - A partial or layout that includes itself fails the render with an error
   after 32 levels instead of overflowing the stack. (121.58)

@@ -35,17 +35,15 @@ apiprefix = ""
 #                                                      file.realpath (121.60), and
 #                                                      os.write links os_glue.c
 #                                                      (121.70)
-#   release floor     3.2.0    2026-11-14  (138.17)  — the first toke RELEASE that
-#                                                      contains db47d591
+#   release floor     3.2.0    2026-11-15  (138.17)  — the first toke RELEASE that
+#                     ea7ddf22                         contains db47d591 (tag v3.2.0)
 #
-# The eighth (ooke 3.0.0, 2026-11-14): toke 3.2.0 is the first toke release
+# The eighth (ooke 3.0.0, 2026-11-15): toke 3.2.0 is the first toke release
 # that contains db47d591, so mintoke = "3.2.0" is sufficient on its own again,
-# and ooke 3.0.0 ships against it.  mintokecommit/mintokedate still name
-# db47d591, the commit ooke's code needs; CI and the release workflow clone
-# toke at mintokecommit, so before the v3.0.0 tag is pushed they must name
-# toke's 3.2.0 version commit (or the v3.2.0 tag), as 216965f did for 3.1.0 --
-# a clone of db47d591 reads VERSION 3.1.0 and fails the mintoke check.
-# docs/RELEASING.md, "Before tagging 3.0.0".
+# and ooke 3.0.0 ships against it.  mintokecommit/mintokedate name ea7ddf22,
+# the commit toke's v3.2.0 tag points at, because CI and the release workflow
+# clone toke at mintokecommit: a clone of db47d591 reads VERSION 3.1.0 and
+# fails the mintoke check, as 216965f replaced 668caa6 for 3.1.0.
 #
 # The seventh (story 121.59 (3), 2026-10-01): ooke confines partial/layout
 # reads to templates/ with toke's file.realpath, and links os_glue.c, where
@@ -105,5 +103,5 @@ apiprefix = ""
 # pair can be dropped.  Makefile: check-toke-version reads these three keys;
 # they are the single source of truth.  Evidence: docs/versioning.md.
 mintoke = "3.2.0"
-mintokedate = "2026-10-01"
-mintokecommit = "db47d591"
+mintokedate = "2026-11-15"
+mintokecommit = "ea7ddf22"

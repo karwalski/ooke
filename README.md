@@ -4,9 +4,9 @@ ooke is a web framework for building websites and web applications using the [to
 
 **toke on ooke** -- build light, ship fast.
 
-**Status: 3.0.0, prepared, not yet published.** `VERSION` reads `3.0.0`; it
-ships with toke 3.2.0. [`CHANGELOG.md`](CHANGELOG.md) records 3.0.0 and the two
-release candidates before it (rc.1, rc.2), none of them published -- see
+**Status: 3.0.0, released 2026-11-15** (tag `v3.0.0`), on toke 3.2.0 or later.
+[`CHANGELOG.md`](CHANGELOG.md) records 3.0.0 and the two release candidates
+before it (rc.1, rc.2), neither of them published -- see
 [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## About toke

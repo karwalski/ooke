@@ -51,7 +51,13 @@ after creating the tag:
 
 Pushing the tag **is** the publish. There is no separate upload.
 
-## Before tagging 3.0.0 (state on `release/3.0.0`, 2026-11-14)
+## Before tagging 3.0.0 (done 2026-11-15)
+
+All four steps below were done on 2026-11-15: toke `v3.2.0` was tagged at
+`ea7ddf22`, the pin moved to it, `make test` and `scripts/package_release.sh`
+ran against it, and `release/3.0.0` was merged and tagged `v3.0.0`.
+
+### The checklist as written (state on `release/3.0.0`, 2026-11-14)
 
 Done on the branch: `VERSION` reads `3.0.0`; `mintoke = "3.2.0"`; the
 CHANGELOG, release notes, versioning, install, public-api and README say

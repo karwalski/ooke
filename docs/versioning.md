@@ -12,8 +12,8 @@ not one:
 ```toml
 [requires]
 mintoke       = "3.2.0"
-mintokedate   = "2026-10-01"
-mintokecommit = "db47d591"
+mintokedate   = "2026-11-15"
+mintokecommit = "ea7ddf22"
 ```
 
 (Raised for rc.2 by story 138.7, set to toke's 3.1.0 release by story
@@ -206,12 +206,11 @@ toke's `release/3.2.0` was branched from, with that tree's `VERSION` set to
 3.2.0 as the release's version commit sets it (toke main itself reads 3.1.0,
 and the gate refuses it by version).
 
-`mintokecommit`/`mintokedate` still name `db47d591`, the commit ooke's code
-needs. CI and the release workflow clone toke **at `mintokecommit`**, and a
-clone of `db47d591` reads `VERSION` 3.1.0, which `mintoke = "3.2.0"` refuses.
-So before the `v3.0.0` tag is pushed, the pair must name toke's 3.2.0 version
-commit (or the `v3.2.0` tag), as `216965f` did for 3.1.0 — see
-`docs/RELEASING.md`, "Before tagging 3.0.0".
+`mintokecommit`/`mintokedate` name `ea7ddf22` (2026-11-15), the commit toke's
+`v3.2.0` tag points at. CI and the release workflow clone toke **at
+`mintokecommit`**, and a clone of `db47d591` reads `VERSION` 3.1.0, which
+`mintoke = "3.2.0"` refuses; so the pin moved to the release, as `216965f` did
+for 3.1.0. Measured 2026-11-15: `make test` exits 0 against toke `v3.2.0`.
 
 ## 2. How the floor is enforced
 
@@ -248,7 +247,7 @@ ERROR: toke 8c073a6 (2026-07-06) does not contain b66bd8e — ooke's floor.
 
 ## 3. ooke's own version
 
-`VERSION` is **3.0.0** (prepared 2026-11-14, to ship with toke 3.2.0; rc.1 was prepared 2026-09-19, rc.2 on 2026-09-28, and neither was published). The last release was **2.0.0** (2026-06-21, the
+`VERSION` is **3.0.0** (released 2026-11-15 on toke 3.2.0; rc.1 was prepared 2026-09-19, rc.2 on 2026-09-28, and neither was published). The last release was **2.0.0** (2026-06-21, the
 pure-toke rebuild). Since then ooke has taken changes that break consumers:
 
 - migration to v0.4 syntax (`==`, expression-`if`) — **a project's own `pages/`
