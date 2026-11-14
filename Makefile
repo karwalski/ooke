@@ -515,9 +515,14 @@ test-check: test-support-check $(ASSERT_TKI) $(SRC)/_floor.tk
 	echo "  $$pass passed, $$fail failed"; \
 	[ "$$fail" = "0" ]
 
+# 3.0.0: the suite runs with the toke under test first on PATH, as
+# test/repair/repair_exit.sh does: repair.tk and run.tk spawn `tkc` by name,
+# so test_repair passed only where some tkc happened to be on PATH (a
+# developer's machine) and failed on every CI runner, which has none.
 test-run: test-support-check $(BIN)
 	@echo "=== Run test suite ==="
-	@test/run_tests.sh
+	@[ -x "$(TOKE_ROOT)/tkc" ] || { echo "error: no tkc in $(TOKE_ROOT) (set TOKE_ROOT)" >&2; exit 2; }
+	@PATH="$(TOKE_ROOT):$$PATH" test/run_tests.sh
 
 # print-build-vars — the single source of truth for anything that has to link
 # against ooke (story 134.5). test/run_tests.sh consumes this rather than
