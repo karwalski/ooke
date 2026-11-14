@@ -9,8 +9,8 @@ were invisible in a working tree and fatal in a clone.
 
 | | |
 |---|---|
-| ooke | **3.0.0-rc.2** — release candidate, see `docs/release-notes-3.0.0.md` |
-| toke | commit **`db47d591` (2026-10-01) or later** — today toke `main`, newer than any release — declared in `ooke.toml [requires]` |
+| ooke | **3.0.0** — see `docs/release-notes-3.0.0.md` |
+| toke | **3.2.0 or later** — the first toke release containing `db47d591` (2026-10-01) — declared in `ooke.toml [requires]` |
 
 **rc.2 (stories 138.7, 138.17):** toke `3.0.0` fails ooke's suite (the
 template cache never stores, toke 127.226) and lacks the host-binding serve
@@ -20,9 +20,11 @@ release that contains both, so the floor was that version.
 **Since rc.2 (story 121.59 (3), 2026-10-01):** ooke confines template reads with
 toke's `file.realpath` (toke 121.60) and links `os.write` from `os_glue.c`
 (toke 121.70). Both arrived in toke merge `db47d591`, which is in **no released
-toke**: 3.1.0 is necessary but not sufficient, and the floor is the commit. When
-toke releases a version containing `db47d591`, `mintoke` moves to it. The
-paragraph below is the rc.1 record.
+toke** before 3.2.0.
+
+**3.0.0 (2026-11-14):** toke 3.2.0 is the first release containing `db47d591`,
+so `mintoke = "3.2.0"` and a release is enough again. The paragraph below is
+the rc.1 record.
 
 toke has **no released version that works**, and the pin is a commit you can
 clone, not merely one whose compiler is correct — see step 2. `toke/VERSION`
@@ -43,7 +45,7 @@ highest is the one declared.
 
     git clone https://github.com/karwalski/toke.git
     cd toke
-    git checkout main             # db47d591 or later; no release has it yet (ooke.toml [requires])
+    git checkout v3.2.0           # or later; toke 3.2.0 is ooke 3.0.0's floor (ooke.toml [requires])
     make
 
 **A plain clone is sufficient at `6cc9061` or later, and only there.** toke's
@@ -85,7 +87,7 @@ The product is `./ooke-toke`. Rename it to `ooke` on your PATH.
 ## 4. Check the install
 
     make test                     # 12/12, 187 live assertions
-    ./ooke-toke --version         # ooke 3.0.0-rc.2
+    ./ooke-toke --version         # ooke 3.0.0
     ./ooke-toke new demosite      # scaffolds ooke.toml, pages/index.tk, templates/base.tkt
 
 `make test` is not decoration: until story 134.5 (2026-09-19) the suite had
@@ -101,15 +103,22 @@ end-to-end proof that your install works.
 
 ## 5. From a release tarball instead
 
-    tar xzf ooke-3.0.0-rc.2-darwin-arm64.tar.gz
-    cd ooke-3.0.0-rc.2-darwin-arm64
+    tar xzf ooke-v3.0.0-macos-arm64.tar.gz
+    cd ooke-v3.0.0-macos-arm64
     ./ooke --version
 
+(That is the GitHub release name, from `.github/workflows/release.yml`:
+`ooke-<tag>-<macos|linux>-<arm64|x86_64>.tar.gz`. A tarball made locally by
+`scripts/package_release.sh` is named `ooke-3.0.0-<uname -s>-<uname -m>`,
+e.g. `ooke-3.0.0-darwin-arm64.tar.gz`.)
+
 The binary is self-contained: no runtime, and it does not read anything out of
-ooke's own source tree. Verify it against `SHA256SUMS`. The accompanying
-`*.manifest.txt` records the ooke commit, the toke commit and the **sha256 of
-the exact compiler** the binary was produced with — check that against your own
-toke if you need to reproduce the build.
+ooke's own source tree. Verify it against `checksums.txt` on the GitHub
+release (`SHA256SUMS` for a local `package_release.sh` build). The
+`MANIFEST.txt` inside the tarball records the ooke commit and the toke commit
+and `VERSION` it was built with; a local build's `*.manifest.txt` also records
+the **sha256 of the exact compiler** — check that against your own toke if you
+need to reproduce the build.
 
 The source tarball (`-src.tar.gz`) is a `git archive` of the tagged commit: it
 contains the tracked files and nothing else, which is deliberately the same set

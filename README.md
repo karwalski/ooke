@@ -4,9 +4,10 @@ ooke is a web framework for building websites and web applications using the [to
 
 **toke on ooke** -- build light, ship fast.
 
-**Status: 3.0.0 release candidate, unreleased.** `VERSION` reads `3.0.0-rc.2`;
-[`CHANGELOG.md`](CHANGELOG.md) records rc.1, rc.2 and the work on `main` since
-(rc.3). Nothing in it has been published -- see [`docs/RELEASING.md`](docs/RELEASING.md).
+**Status: 3.0.0, released 2026-11-15** (tag `v3.0.0`), on toke 3.2.0 or later.
+[`CHANGELOG.md`](CHANGELOG.md) records 3.0.0 and the two release candidates
+before it (rc.1, rc.2), neither of them published -- see
+[`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## About toke
 
@@ -306,12 +307,12 @@ See [docs/extension-api.md](docs/extension-api.md) for the full API reference.
 
 ### Prerequisites
 
-- [toke compiler](https://github.com/karwalski/toke) (`tkc`) at toke commit
-  **`db47d591` (2026-10-01) or later**, which today means toke `main`: ooke
-  confines template reads with `file.realpath` and links `os.write` from
-  `os_glue.c`, and no released toke has either. toke 3.1.0 is necessary but no
-  longer sufficient, and toke 3.0.0 is below the floor (its template cache never
-  stores, and it lacks the host-binding serve functions). The floor is declared
+- [toke compiler](https://github.com/karwalski/toke) (`tkc`) **3.2.0 or
+  later**: ooke confines template reads with `file.realpath` and links
+  `os.write` from `os_glue.c`, which arrived in toke `db47d591` (2026-10-01);
+  toke 3.2.0 is the first release that has them. toke 3.1.0 is below the floor,
+  and so is toke 3.0.0 (its template cache never stores, and it lacks the
+  host-binding serve functions). The floor is declared
   in `ooke.toml [requires]` (`mintoke`, `mintokedate`, `mintokecommit`) and
   enforced by `make check-versions`, which `make` runs first. See
   [`docs/versioning.md`](docs/versioning.md) for the evidence and for what a
