@@ -574,7 +574,10 @@ check-versions: check-toke-version check-ooke-version
 # 2026-06-21, and the v0.4 syntax break (Epic 116) plus the ADR-0010 capability
 # model (Epic 124) both shipped under that same string. A semver compare alone
 # therefore cannot express ooke's real floor. See docs/versioning.md.
-check-toke-version:
+# Its ERROR line splices $(OOKE_VERSION), so the VERSION format gate runs first
+# (134.48): a VERSION holding `"` otherwise failed here as a bare shell syntax
+# error, before check-ooke-version-format could name it.
+check-toke-version: check-ooke-version-format
 	@set -e; \
 	if [ ! -f $(TOKE_ROOT)/VERSION ]; then \
 		echo "ERROR: no toke checkout at $(TOKE_ROOT) (no VERSION file)"; exit 1; \
