@@ -1,6 +1,6 @@
 ---
 source_file: "run.tk"
-source_hash: "24d5c7a51c2fd834ef623b4a213878a8446ff2186831c93efe74f92a4514a943"
+source_hash: "a3f29ddd405581317b67a055916358fb2ce0bd7f5cabf9674891eda51eb4a8a9"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -175,8 +175,9 @@ stderr write without an added newline (`io.eprintln` appends one).
 
 **Purpose:** Write all of `s` to descriptor `fd`, adding nothing.
 
-**Logic:** While `s` has bytes left, `n = os.write(fd; rest)` (one `write(2)`,
-returning the bytes written or 0 on error). `n <= 0` returns `false`;
+**Logic:** While `s` has bytes left, `n` is `os.write(fd; rest)` (one
+`write(2)`), matched -- `os.write` returns `i64!oserr` -- to the bytes written,
+or 0 on an error. `n <= 0` returns `false`;
 otherwise `rest` becomes `str.slice(rest; n; str.len(rest))`, so a short
 write is continued where it stopped. Returns `true` once everything is
 written (at once for an empty `s`).

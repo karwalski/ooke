@@ -108,7 +108,7 @@ f=runexec(binpath:$str;passargs:@$str):i64{
 f=runwriteraw(fd:i64;s:$str):bool{
   let rest=mut.s;
   lp(let k=0;str.len(rest)>0;k=k+1){
-    let n=os.write(fd;rest);
+    let n=mt os.write(fd;rest){$ok:v v;$err:e 0};
     if(n<=0){<false}el{};
     rest=mt str.slice(rest;n as u64;str.len(rest)) {$ok:v v;$err:e ""}
   };
