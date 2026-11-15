@@ -51,6 +51,11 @@ after creating the tag:
 
 Pushing the tag **is** the publish. There is no separate upload.
 
+The workflow ships `docs/release-notes-<VERSION>.md` and refuses to package
+without it, so write that file before tagging. The release body is generated
+from the tag and `ooke.toml`'s `mintoke`; it states the platform floors
+(macOS 15, glibc 2.38), which come from the runner images (story 134.49).
+
 ## Before tagging 3.0.0 (done 2026-11-15)
 
 All four steps below were done on 2026-11-15: toke `v3.2.0` was tagged at

@@ -147,8 +147,12 @@ jobs:
           # files copied out of this repo.  Ship the binary and the documents
           # you need to use and pin it.
           cp VERSION LICENSE README.md CHANGELOG.md "${STAGING}/"
+          # Story 134.49: the release notes follow VERSION. This used to copy
+          # release-notes-3.0.0.md whatever the version was.
+          NOTES="docs/release-notes-$(cat VERSION).md"
+          [ -f "${NOTES}" ] || { echo "error: ${NOTES} is missing; every release ships its notes" >&2; exit 1; }
           cp docs/install.md docs/versioning.md docs/public-api.md \
-             docs/release-notes-3.0.0.md "${STAGING}/"
+             "${NOTES}" "${STAGING}/"
 
           # The pin, recorded in the artefact rather than only in the log.
           {
@@ -192,46 +196,75 @@ jobs:
         working-directory: release-artifacts
         run: sha256sum ooke-*.tar.gz > checksums.txt
 
+      # Story 134.49: the body used to be rc-era text ("toke has no released
+      # version that works", "`ooke build` currently aborts", a hard-coded
+      # release-notes-3.0.0.md) and named no platform floor. It is now written
+      # from the tag and ooke.toml. The floors are the build images': the
+      # macOS legs build on macos-15 (minos 15.0) and the Linux binaries need
+      # GLIBC_2.38 (measured on the v3.0.0 archives, 2026-11-15); re-measure
+      # them when a runner image changes.
+      - name: Write release body
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          MINTOKE="$(sed -n 's/^mintoke *= *"\(.*\)"/\1/p' ooke.toml)"
+          [ -n "${MINTOKE}" ] || { echo "error: no mintoke in ooke.toml" >&2; exit 1; }
+          cat > release-body.md <<'EOF'
+          ## ooke @TAG@
+
+          ooke @VER@ requires toke @MINTOKE@ or later (`ooke.toml` `[requires]`). Each tarball's `release-notes-@VER@.md` lists what changed and the known open defects; `CHANGELOG.md` has every change with its story.
+
+          ### Requirements
+
+          - **macOS 15 (Sequoia) or later.** The macOS binaries are built on GitHub's macos-15 images (minimum OS 15.0).
+          - **Linux: glibc 2.38 or later** (Ubuntu 24.04+, Debian 13+, Fedora 39+). On an older system, build from source: `install.md` covers building toke and ooke.
+
+          ### Install
+
+          Homebrew (macOS 15+):
+
+          ```sh
+          brew install karwalski/toke/ooke
+          ```
+
+          Or from a tarball:
+
+          ```sh
+          tar xzf ooke-@TAG@-linux-x86_64.tar.gz
+          cd ooke-@TAG@-linux-x86_64
+          ./ooke serve
+          ```
+
+          ### Platform binaries
+
+          | File | Platform |
+          |------|----------|
+          | `ooke-@TAG@-linux-x86_64.tar.gz` | Linux x86-64 |
+          | `ooke-@TAG@-linux-arm64.tar.gz` | Linux ARM64 |
+          | `ooke-@TAG@-macos-arm64.tar.gz` | macOS ARM64 (Apple Silicon) |
+          | `ooke-@TAG@-macos-x86_64.tar.gz` | macOS x86-64 (Intel) |
+          | `checksums.txt` | SHA-256 checksums for all tarballs |
+
+          ### Each tarball contains
+
+          - `ooke`, the ooke binary
+          - `Makefile`, `scripts/`, `src/`: the installation tree `ooke compile` uses
+          - `MANIFEST.txt`: the ooke commit and the toke commit it was built at
+          - `install.md`, `versioning.md`, `public-api.md`, `release-notes-@VER@.md`
+          - `CHANGELOG.md`, `README.md`, `VERSION`, `LICENSE`
+
+          ### Verifying a download
+
+          ```sh
+          shasum -a 256 -c checksums.txt --ignore-missing
+          ```
+          EOF
+          sed -i -e "s/@TAG@/${GITHUB_REF_NAME}/g" -e "s/@VER@/${VER}/g" -e "s/@MINTOKE@/${MINTOKE}/g" release-body.md
+          cat release-body.md
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             release-artifacts/ooke-*.tar.gz
             release-artifacts/checksums.txt
-          body: |
-            ## ooke ${{ github.ref_name }}
-
-            ### Platform binaries
-
-            | File | Platform |
-            |------|----------|
-            | `ooke-${{ github.ref_name }}-linux-x86_64.tar.gz` | Linux x86-64 |
-            | `ooke-${{ github.ref_name }}-linux-arm64.tar.gz` | Linux ARM64 |
-            | `ooke-${{ github.ref_name }}-macos-arm64.tar.gz` | macOS ARM64 (Apple Silicon) |
-            | `ooke-${{ github.ref_name }}-macos-x86_64.tar.gz` | macOS x86-64 (Intel) |
-            | `checksums.txt` | SHA-256 checksums for all tarballs |
-
-            ### Install
-
-            ```sh
-            tar xzf ooke-${{ github.ref_name }}-linux-x86_64.tar.gz
-            cd ooke-${{ github.ref_name }}-linux-x86_64
-            ./ooke serve
-            ```
-
-            ### Each tarball contains
-
-            - `ooke` -- the ooke binary, self-contained
-            - `MANIFEST.txt` -- the ooke commit and the **toke commit** it was built at
-            - `install.md` -- how to build toke at the pinned commit and ooke against it
-            - `versioning.md` -- the evidence for the toke floor, build and behaviour
-            - `public-api.md` -- what is stable and what is internal
-            - `release-notes-3.0.0.md` -- **known open defects, including a P0**
-            - `CHANGELOG.md`, `README.md`, `VERSION`, `LICENSE`
-
-            ### Before you adopt this
-
-            toke has no released version that works: pin the **commit** named in
-            `MANIFEST.txt`. And read `release-notes-3.0.0.md` -- `ooke build`
-            currently aborts on any project containing an API route, which is
-            every project `ooke new` creates (story 134.24).
+          body_path: release-body.md
