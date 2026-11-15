@@ -20,10 +20,17 @@ t=$ookecfg{
   tlskey:$str;
   apiprefix:$str
 };
-(* 16 fields (serverhost made it 16, story 138.7). Keep it at 16 or fewer: toke's code generator drops every struct
-   field past the 16th (TKC_MAX_PARAMS in toke's src/llvm.c StructInfo) --
-   `tkc --check` passes and the build fails with E4025 "no field". Measured with
-   a 17-field struct during story 134.40. *)
+(* 16 fields (serverhost made it 16, story 138.7). toke no longer holds a struct
+   to 16 fields: the cap this comment used to cite (the code generator dropped
+   every field past the 16th, measured in story 134.40) was fixed by toke
+   127.190, before 3.1.0. Measured on toke 3.2.0, ooke's floor (story 134.50,
+   2026-11-15): a 20-field struct built in one module and read in another keeps
+   fields 17-20, through a .tki and in a one-command build.
+   Adding a field still breaks every literal of this record, because toke 3.2.0
+   requires a struct literal to give every field (E4077). ooke's own literals
+   (configload below, cfgdefault in cli.tk) fail its build; a downstream that
+   builds $ookecfg as a literal (loke's lokedefaultcfg does) breaks only when it
+   upgrades, so a new field goes in the release notes. *)
 
 t=$configerr{msg:$str};
 

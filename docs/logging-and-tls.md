@@ -64,7 +64,8 @@ key = "certs/key.pem"
   A cert that exists but does not load stops the server with an error and a
   non-zero exit. Before this change it exited 0.
 - **The one limit this design hits:** `$ookecfg` is now at 15 fields. toke's
-  code generator drops every struct field past the 16th (see below).
+  code generator drops every struct field past the 16th (see below; fixed
+  since by toke 127.190, story 134.50).
 
 ## Rotation: `maxlines` and `maxagedays` are removed, not wired
 
@@ -167,7 +168,9 @@ keeps the auto-detection. `test/serve/serve_tls_workers.sh`
   `--emit-llvm` fails with `E4025 struct 'X' has no field 'f16'`, tagged
   `stage: type_check`. The cause is `StructInfo.field_names[TKC_MAX_PARAMS]`
   in `src/llvm.c`, where `TKC_MAX_PARAMS` is 16. `--check` and the build
-  disagree, and the message names a field that exists.
+  disagree, and the message names a field that exists. *Fixed by toke 127.190
+  (before toke 3.1.0); story 134.50 re-measured it on toke 3.2.0, where a
+  20-field struct built in one module and read in another keeps every field.*
 - **toke std.log:** the two rotation defects above. Also, `accessformat`
   ignores an unknown value without a message.
 - **toke std.http:** `servetls` has no worker-count parameter.
