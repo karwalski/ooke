@@ -574,7 +574,10 @@ check-versions: check-toke-version check-ooke-version
 # 2026-06-21, and the v0.4 syntax break (Epic 116) plus the ADR-0010 capability
 # model (Epic 124) both shipped under that same string. A semver compare alone
 # therefore cannot express ooke's real floor. See docs/versioning.md.
-check-toke-version:
+# Its ERROR line splices $(OOKE_VERSION), so the VERSION format gate runs first
+# (134.48): a VERSION holding `"` otherwise failed here as a bare shell syntax
+# error, before check-ooke-version-format could name it.
+check-toke-version: check-ooke-version-format
 	@set -e; \
 	if [ ! -f $(TOKE_ROOT)/VERSION ]; then \
 		echo "ERROR: no toke checkout at $(TOKE_ROOT) (no VERSION file)"; exit 1; \
@@ -620,8 +623,16 @@ check-ooke-version: check-ooke-version-format
 	fi; \
 	echo "ooke $(OOKE_VERSION) declared once (VERSION -> src/_floor.tk ookeversion() -> ooke --version) OK"
 
+# Story 134.48: this gate exists to reject a VERSION that is unsafe to splice,
+# so it must not splice VERSION itself. It reads the value from an exported
+# variable, so a `"` (or `'`, `$`, `(`...) cannot break the recipe's shell
+# quoting. Splicing $(OOKE_VERSION) here turned a VERSION holding `"` into a
+# shell syntax error (exit 2) before this ERROR was printed -- on every shell.
+# macOS's bash echoes the broken source line, which contains "VERSION is", so
+# test-version-source passed there; Linux's dash does not, so CI failed.
 .PHONY: check-ooke-version-format
+check-ooke-version-format: export OOKE_VERSION_UNCHECKED := $(OOKE_VERSION)
 check-ooke-version-format:
-	@if ! printf '%s' "$(OOKE_VERSION)" | grep -Eq '^[0-9][0-9A-Za-z.+-]*$$'; then \
-		echo "ERROR: VERSION is '$(OOKE_VERSION)': want one line of [0-9][0-9A-Za-z.+-]* (it is spliced into a toke string in src/_floor.tk)" >&2; exit 1; \
+	@if ! printf '%s' "$$OOKE_VERSION_UNCHECKED" | grep -Eq '^[0-9][0-9A-Za-z.+-]*$$'; then \
+		printf "ERROR: VERSION is '%s': want one line of [0-9][0-9A-Za-z.+-]* (it is spliced into a toke string in src/_floor.tk)\n" "$$OOKE_VERSION_UNCHECKED" >&2; exit 1; \
 	fi

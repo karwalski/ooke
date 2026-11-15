@@ -12,10 +12,22 @@
 #   bump      make ooke-toke, then --version prints the new VERSION
 #   gate      make check-ooke-version passes on the bumped copy
 #   quote     a VERSION that cannot be spliced into a toke string (it holds a
-#             `"`) fails check-ooke-version, naming VERSION (control)
+#             `"`) fails check-ooke-version with the gate's own message,
+#             naming VERSION and the value, and no shell syntax error (control)
+#   quote-versions  the same VERSION fails check-versions (what `make test`
+#             runs first) the same way: check-toke-version, which also
+#             splices VERSION, runs after the gate (134.48)
 #
 # Negative control (2026-10-01): on e71a4ee the bumped copy's binary printed
 # "ooke 3.0.0-rc.2" and check-ooke-version failed.
+#
+# Story 134.48 (2026-11-15): `quote` used to grep the output for "VERSION is"
+# anywhere. The gate spliced VERSION into its own shell source, so the `"` made
+# the recipe a syntax error and its message never printed; macOS's bash echoed
+# the broken source line (which holds "VERSION is"), so `quote` passed there and
+# failed on Linux's dash. It now wants the message at the start of a line, with
+# the value intact, and no syntax error. Negative control: with the splicing
+# recipe restored, `quote` fails under both bash and dash.
 #
 # Usage: test/cli/version_source.sh   (run by `make test`; needs TOKE_ROOT,
 # and TKC if not $TOKE_ROOT/toke)
@@ -59,9 +71,21 @@ else bad "gate: check-ooke-version fails: $(tail -1 "$tmp/chk.out" | cut -c1-200
 printf '9.9"x\n' >"$tree/VERSION"
 if (cd "$tree" && make --no-print-directory TOKE_ROOT="$TOKE_ROOT" check-ooke-version) >"$tmp/chk.out" 2>&1
 then bad "quote: check-ooke-version accepted a VERSION holding a quote"
-elif grep -q 'VERSION is' "$tmp/chk.out"
+elif grep -qi 'syntax error' "$tmp/chk.out"
+then bad "quote: the gate's recipe broke on the quote: $(grep -i 'syntax error' "$tmp/chk.out" | head -1 | cut -c1-200)"
+elif grep -q "^ERROR: VERSION is '9\.9\"x':" "$tmp/chk.out"
 then ok "quote: a VERSION holding a quote fails check-ooke-version, naming VERSION"
 else bad "quote: failed without naming VERSION: $(tail -1 "$tmp/chk.out" | cut -c1-200)"; fi
+
+# check-versions, which `make test` runs first, reaches the same verdict:
+# check-toke-version also splices VERSION, so it must run after the gate.
+if (cd "$tree" && make --no-print-directory TOKE_ROOT="$TOKE_ROOT" check-versions) >"$tmp/chk.out" 2>&1
+then bad "quote-versions: check-versions accepted a VERSION holding a quote"
+elif grep -qi 'syntax error' "$tmp/chk.out"
+then bad "quote-versions: a recipe broke on the quote: $(grep -i 'syntax error' "$tmp/chk.out" | head -1 | cut -c1-200)"
+elif grep -q "^ERROR: VERSION is '9\.9\"x':" "$tmp/chk.out"
+then ok "quote-versions: check-versions fails on it too, naming VERSION"
+else bad "quote-versions: failed without naming VERSION: $(tail -1 "$tmp/chk.out" | cut -c1-200)"; fi
 
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
