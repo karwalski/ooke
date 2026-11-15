@@ -154,7 +154,7 @@ f=storesqlcreate(modelname:$str;fields:@($str:$str)):$str!$storeerr{
   let ks=fields.keys();
   lp(let i=0;i<ks.len;i=i+1){
     let k=ks.get(i);
-    let ft=fields.get(k);
+    let ft=mt fields.get(k){$ok:v v;$err:e ""};
     let coltype=mut."TEXT";
     if(str.eq(ft;"bool")){coltype="INTEGER"}el{};
     if(str.eq(ft;"int")){coltype="INTEGER"}el{};
@@ -269,8 +269,7 @@ f=storeslug(col:@$content;slug:$str):$content!$storeerr{
 f=storefind(col:@$content;key:$str;val:$str):$content!$storeerr{
   lp(let i=0;i<col.len;i=i+1){
     let item=col.get(i);
-    let mv=item.meta.get(key);
-    if(str.eq(mv;val)){<item}el{}
+    if(mt item.meta.get(key){$ok:v str.eq(v;val);$err:e false}){<item}el{}
   };
   (* Story 127.127: explicit not-found error, as in storeslug. *)
   <$storeerr{msg:str.join("";@("no content with ";key;" = ";val))}

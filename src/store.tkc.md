@@ -1,6 +1,6 @@
 ---
 source_file: "store.tk"
-source_hash: "c3a507c53e6a9ac41c3a7aa72b2bbf5298ac1c2a5b985d42b4d57a5f4ac62a16"
+source_hash: "3a666212e2738d1195b7f066165696dfbc5ec5c09fb3f356bcad7335fa8d24b6"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -235,7 +235,8 @@ identifier.
    `title` and `type` are always made, because `storewrite` writes them and
    `storeallsql` reads them (121.67: they were made only when the model
    declared them, so `storewrite` failed on every other model).
-3. For each key `k` of `fields.keys()` (map order): `ft=fields.get(k)`; the
+3. For each key `k` of `fields.keys()` (map order): `ft` is `fields.get(k)`,
+   matched (the key is the map's own, so it is always present); the
    column type is `INTEGER` when `ft` is `"bool"` or `"int"`, else `TEXT`;
    `col=storeident(k)!$storeerr`. If `str.lower(col)` is `id`, `slug`,
    `title`, `type` or `body` -- a column step 2 made -- skip it (SQLite
@@ -392,9 +393,9 @@ Notes).
 **Returns:** `$content!$storeerr` — the first match, or
 `$storeerr{msg:"no content with <key> = <val>"}`.
 
-**Logic:** Loop over `col`; for each `item`, `mv = item.meta.get(key)` (the
-raw value, not a result) and return `item` when `str.eq(mv;val)`. After the
-loop, return the not-found error.
+**Logic:** Loop over `col`; for each `item`, match `item.meta.get(key)` and
+return `item` when the stored value `str.eq`s `val`; a missing key does not
+match. After the loop, return the not-found error.
 
 **Error handling:** Not-found is an explicit `$storeerr` (story 127.127).
 
@@ -417,9 +418,10 @@ wrappers.
 ## Notes
 
 - **Canonical result form.** All match arms use `$ok`/`$err`.
-- **Map values returned by `map.get` are raw, not results.** `m.get(k)` yields
-  the stored value directly; `storesqlcreate` and `storefind` use it as such.
-  (An earlier build matched it with `$ok`/`$err` arms and crashed.)
+- **A map lookup is a result.** `m.get(k)` is `V!$err` (toke 127.244), and
+  toke 3.3.0 rejects it passed straight to `str.eq` (127.323), so
+  `storesqlcreate` and `storefind` match it with `$ok`/`$err` arms, a form
+  toke 3.2.0 accepts too (ooke 3.0.1).
 - **Identifiers are checked, values are bound** (story 121.25). Every table
   and column name reaching SQL text passes `storeident`; every value goes
   through a `?` parameter.
