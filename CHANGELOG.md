@@ -4,6 +4,40 @@ Dates are the dates the work was done, not publication dates. Nothing below has
 been published; see `docs/RELEASING.md`. Story numbers are toke's tracker
 (`toke/docs/progress.md`), which tracks every repository.
 
+## 3.0.1 — unreleased, on toke 3.2.0
+
+A patch release that ships **before toke 3.3.0** (owner answer R1,
+2026-11-15, toke `docs/owner-decisions-2026-11-12.md`). toke 3.3.0 judges a
+std call whose interface declares `T!E` as the error union it is, and rejects
+an error union read as its value in a condition, `!`, an interpolation, a
+std-call argument and an assignment to a `mut` binding (toke 127.319,
+127.323; E4031). ooke 3.0.0 has four such reads, so it does not build on
+3.3.0. 3.0.1 rewrites them in spellings toke 3.2.0 already accepts, so the
+same source builds on both. No behaviour changes.
+
+### Requirements
+
+- Unchanged: **toke 3.2.0 or later** (`mintoke = "3.2.0"`). 3.0.1 also
+  builds on toke 3.3.0.
+
+### Changed
+
+- `src/run.tk` (`runwriteraw`): `os.write` returns `i64!oserr`; its result
+  is matched (`mt os.write(fd;rest){$ok:v v;$err:e 0}`) before the `n<=0`
+  test. A failed write still returns `false`, as it did. (127.319)
+- `src/store.tk`: two map lookups passed to `str.eq` are matched first;
+  `m.get(k)` is `V!$err` since toke 127.244, and toke 3.3.0 rejects it as a
+  std-call argument. In the table-schema loop the key comes from the map's
+  own `keys()`, so the lookup always hits. In `storefind` a miss is `false`
+  in the match itself (`mt item.meta.get(key){$ok:v str.eq(v;val);$err:e
+  false}`), exactly as `str.eq` on the missing value was: an empty-string
+  default would have matched an item without the key when `val` is `""`.
+  (127.323)
+- `src/build.tk`, named with `run.tk` in answer R1, has no such read: every
+  `.tk` in the repository passes `make check` on toke 3.2.0 and on the 3.3.0
+  checker (toke branch `fix/127.319-std-errunion`), and `make test` passes
+  on both.
+
 ## 3.0.0 — 2026-11-15, on toke 3.2.0
 
 The first ooke release since 2.0.0. 3.0.0 is rc.2 plus everything below: the
