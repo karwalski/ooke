@@ -518,8 +518,8 @@ f=tpllex(src:$str):@$token!$tplerr{
      template: a 70 KB page with 104 tags allocated 7.4 MB per lex, and
      nothing frees it.  Now each token's text is the one slice it needs, and
      the next position of each opener is searched again only once the scan
-     has passed it.  The tokens produced are unchanged, including the
-     unclosed-tag case (127.271). *)
+     has passed it.  An unclosed tag is literal text from its opener on;
+     the text before it is emitted once (127.298). *)
   let tokens=mut.@();
   let n=str.len(src);
   let pos=mut.0;
@@ -582,7 +582,9 @@ f=tpllex(src:$str):@$token!$tplerr{
 
         let closepos=str.indexfrom(src;closedelim;bestpos+2);
         if(closepos<0){
-          let rest=mt str.slice(src;pos;n) {$ok:v v;$err:e ""};
+          (* 127.298: an unclosed tag is literal text from its opener on;
+             the text before the opener is already a raw token above. *)
+          let rest=mt str.slice(src;bestpos;n) {$ok:v v;$err:e ""};
           let rawtok=$token{kind:rawkind;content:rest};
           tokens=tokens.append(rawtok);
           pos=n;

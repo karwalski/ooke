@@ -547,6 +547,28 @@ f=testdirectivecontrols():bool{
 };
 
 
+(* 127.298: an unclosed {= / {! / {# is literal text from its opener on, and
+   the text before it is emitted once (it used to be emitted twice). *)
+f=unclrender(src:$str):$str{
+  let toks=mt tpl.tpllex(src) {$ok:t t;$err:e @()};
+  let ctx=@("x":"X");
+  <mt tpl.tplrender(toks;ctx;"/tmp";@()) {$ok:s s;$err:e "<<ERR>>"}
+};
+
+
+f=testlexunclosedtag():bool{
+  let a1=chk.eqstr(unclrender("abc {= x");"abc {= x";"an unclosed expr tag keeps the text before it once");
+  let a2=chk.eqstr(unclrender("abc {! x");"abc {! x";"an unclosed directive tag keeps the text before it once");
+  let a3=chk.eqstr(unclrender("abc {# x");"abc {# x";"an unclosed comment tag keeps the text before it once");
+  let a4=chk.eqstr(unclrender("a{= x =}b {= y");"aXb {= y";"an unclosed tag after a closed one keeps its prefix once");
+  let a5=chk.eqstr(unclrender("{= y");"{= y";"an unclosed tag at the start is literal text");
+  let toks=mt tpl.tpllex("abc {= x") {$ok:t t;$err:e @()};
+  let a6=chk.equint(toks.len;2;"an unclosed tag lexes to the prefix and the tag text");
+  let a7=chk.eqstr(unclrender("abc {= x =}");"abc X";"control: a closed tag renders");
+  <a1&&a2&&a3&&a4&&a5&&a6&&a7
+};
+
+
 f=main():i64{
   let r0=testrawpassthrough();
   let r1=testexprsimple();
@@ -582,7 +604,8 @@ f=main():i64{
   let r31=testdirectivestrayend();
   let r32=testdirectiveunclosed();
   let r33=testdirectivecontrols();
-  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21&&r22&&r23&&r24&&r25&&r26&&r27&&r28&&r29&&r30&&r31&&r32&&r33){
+  let r34=testlexunclosedtag();
+  if(r0&&r1&&r2&&r3&&r4&&r5&&r6&&r7&&r8&&r9&&r10&&r11&&r12&&r13&&r14&&r15&&r16&&r17&&r18&&r19&&r20&&r21&&r22&&r23&&r24&&r25&&r26&&r27&&r28&&r29&&r30&&r31&&r32&&r33&&r34){
     <0
   }el{
     <1
