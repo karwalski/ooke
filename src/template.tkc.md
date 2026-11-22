@@ -1,6 +1,6 @@
 ---
 source_file: "template.tk"
-source_hash: "d35afb2849fbc4a21e41d5e7517a7e3004db159a155a83aa3663df267917a87f"
+source_hash: "fd4db22f7589a4f462d1083ad7072040fb713ce6d70b2a622ec2a9f0db8a05d9"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
