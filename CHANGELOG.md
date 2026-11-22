@@ -4,6 +4,19 @@ Dates are the dates the work was done, not publication dates. Nothing below has
 been published; see `docs/RELEASING.md`. Story numbers are toke's tracker
 (`toke/docs/progress.md`), which tracks every repository.
 
+## Unreleased
+
+### Fixed
+
+- **An unclosed `{=`, `{!` or `{#` no longer repeats the text before it.**
+  `tpllex` emitted the text before an unclosed opener as a raw token, then
+  emitted everything from the previous position on as a second raw token, so
+  `abc {= x` rendered as `abc abc {= x`. The unclosed tag is now literal text
+  from its opener on and the prefix appears once (`abc {= x`). Whether an
+  unclosed tag should instead be a `$tplerr`, like an unclosed block (138.29),
+  is still an open owner item (register 2.5); this keeps it literal text.
+  (toke 127.298)
+
 ## 3.0.1 — unreleased, on toke 3.2.0
 
 A patch release that ships **before toke 3.3.0** (owner answer R1,

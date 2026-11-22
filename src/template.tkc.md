@@ -307,9 +307,9 @@ Scan `src` by index from `pos`: find the earliest of `{=`, `{!`, `{#` at or
 after it (`str.indexfrom`; each opener's next position is cached and searched
 again only once `pos` has passed it). None → the rest is one `raw` token.
 Otherwise emit a `raw` token for any text before it, find the matching close
-(`=}`, `!}`, `#}`) after the opener; if there is none the rest from `pos` is
-`raw` (an unterminated tag is literal text -- and the text before the opener,
-already emitted, appears twice: 127.298); else emit an `expr`, `directive` or
+(`=}`, `!}`, `#}`) after the opener; if there is none the rest from the
+opener is `raw` (an unterminated tag is literal text; the text before the
+opener was already emitted, once: 127.298); else emit an `expr`, `directive` or
 `comment` token with the inner text and continue after the close. Each token's
 text is the one slice it needs (127.257: the old loop re-sliced the whole
 unscanned tail twice per tag, 7.4 MB per lex of a 70 KB page). The error arm
