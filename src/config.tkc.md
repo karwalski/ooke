@@ -1,6 +1,6 @@
 ---
 source_file: "config.tk"
-source_hash: "fa140ea58fc6ba84dca131d75f4143c3e3efa5c2111d9ab251d7d1f7a495a3e6"
+source_hash: "159ac050c04c05eb8de7228a29bddde0e6b2b3977fb83805940dd2d89a76ba56"
 compiler_version: "3.0.0"
 generated_at: "2026-10-01T00:00:00Z"
 format_version: "1.0"
@@ -27,10 +27,16 @@ that `ooke serve` must report on: the unwired `[log]` rotation keys
 ### `$ookecfg`
 
 The complete ooke site configuration, flattened (TOML sections are hoisted into
-prefixed field names; there is no nested config type). It has 16 fields and
-must stay at 16 or fewer: toke's code generator drops every struct field past
-the 16th (`TKC_MAX_PARAMS`), so `tkc --check` passes and the build fails with
-E4025 "no field" (measured in story 134.40).
+prefixed field names; there is no nested config type). It has 16 fields.
+
+toke no longer holds a struct to 16 fields: the cap measured in story 134.40
+was fixed by toke 127.190, and on toke 3.2.0 a 20-field struct built in one
+module and read in another keeps every field (story 134.50). Adding a field
+breaks every `$ookecfg{...}` literal, which toke 3.2.0 refuses unless it gives
+every field (E4077): ooke's own (`configload`, and `cfgdefault` in cli.tk) fail
+its build, but a downstream that builds the record as a literal (loke's
+`lokedefaultcfg`) breaks only when it upgrades, so a new field goes in the
+release notes.
 
 | Field | Type | Description |
 |-------|------|-------------|
