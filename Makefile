@@ -287,7 +287,7 @@ ASSERT_INC := test/support
 # `make: *** No rule to make target 'test/support/ookeassert.tk'` before a
 # single test ran — a message that names the file but not the cause or the
 # cure.  Stop here instead, by name.  Cheap enough to run every time.
-TEST_SUPPORT_FILES := $(ASSERT_SRC)
+TEST_SUPPORT_FILES := $(ASSERT_SRC) test/support/freeport.sh
 
 test-support-check:
 	@missing=""; \

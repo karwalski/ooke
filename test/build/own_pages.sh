@@ -23,6 +23,7 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
+. "$ROOT/test/support/freeport.sh"   # story 127.560: ports are checked free, not derived from $$
 [ -n "${TOKE_ROOT:-}" ] || { echo "error: TOKE_ROOT is required" >&2; exit 2; }
 TKC=${TKC:-$TOKE_ROOT/toke}
 command -v curl >/dev/null 2>&1 || { echo "error: curl is required" >&2; exit 2; }
@@ -56,7 +57,7 @@ else
   grep -E 'E[0-9]{4}|Error|error:' "$tmp/make.out" | grep -v 'warning' | head -4 | cut -c1-240 | sed 's/^/       /'
 fi
 
-port=$(( 20000 + (($$ + 3001) % 20000) ))
+port=$(freeport) || exit 2
 proj=$tmp/proj
 cp -R "$ROOT/testproj" "$proj" && rm -rf "$proj/build" || exit 2
 awk -v port="$port" '/^port = / { print "port = " port; next } /^workers = / { print "workers = 1"; next } { print }' \

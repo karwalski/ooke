@@ -28,6 +28,7 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
+. "$ROOT/test/support/freeport.sh"   # story 127.560: ports are checked free, not derived from $$
 BIN=${1:-$ROOT/ooke-toke}
 NPAGES=${2:-40}
 case $BIN in /*) ;; *) BIN=$ROOT/$BIN ;; esac
@@ -43,7 +44,7 @@ pass=0; fail=0
 ok()  { echo "  PASS $1"; pass=$((pass+1)); }
 bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 
-port=$(( 20000 + (($$ + 7919) % 20000) ))
+port=$(freeport) || exit 2
 
 # mkapp DIR N : an app with N pages, pages/pNN.tk answering GET /pNN with "pageNN"
 mkapp() {

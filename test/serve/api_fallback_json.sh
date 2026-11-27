@@ -16,6 +16,7 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
+. "$ROOT/test/support/freeport.sh"   # story 127.560: ports are checked free, not derived from $$
 BIN=${1:-$ROOT/ooke-toke}
 case $BIN in /*) ;; *) BIN=$ROOT/$BIN ;; esac
 [ -x "$BIN" ] || { echo "error: no ooke binary at $BIN (run make first)" >&2; exit 2; }
@@ -31,7 +32,7 @@ pass=0; fail=0
 ok()  { printf "  PASS %s\n" "$1"; pass=$((pass+1)); }
 bad() { printf "  FAIL %s\n" "$1"; fail=$((fail+1)); }
 
-port=$(( 20000 + (($$ + 7919) % 20000) ))
+port=$(freeport) || exit 2
 
 P=$tmp/proj
 mkdir -p "$P/pages/api" "$P/templates" "$P/content" || exit 2

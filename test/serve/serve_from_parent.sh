@@ -20,6 +20,7 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
+. "$ROOT/test/support/freeport.sh"   # story 127.560: ports are checked free, not derived from $$
 BIN=${1:-$ROOT/ooke-toke}
 case $BIN in /*) ;; *) BIN=$ROOT/$BIN ;; esac
 [ -x "$BIN" ] || { echo "error: no ooke binary at $BIN (run make first)" >&2; exit 2; }
@@ -36,8 +37,8 @@ bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 
 # The marker is text that exists only in testproj/templates/index.tkt.
 MARKER="ooke is running"
-# A port per run, so a leftover server or a parallel run cannot answer for us.
-base=$(( 20000 + ($$ % 20000) ))
+# A free port per serve (freeport, story 127.560), so a leftover server, a
+# parallel run or an unrelated listener cannot answer for us.
 
 W=$tmp/w
 mkdir "$W" || exit 2
@@ -74,9 +75,9 @@ serve() { # name cwd arg project port
 
 echo "=== ooke serve from outside the project (134.37) ==="
 
-serve ref      "$W/ref"  ""        "$W/ref"  $base
-serve parent   "$W"      site      "$W/site" $((base+1))
-serve absolute /         "$W/site4" "$W/site4" $((base+2))
+serve ref      "$W/ref"  ""        "$W/ref"  "$(freeport)"
+serve parent   "$W"      site      "$W/site" "$(freeport)"
+serve absolute /         "$W/site4" "$W/site4" "$(freeport)"
 
 for n in parent absolute; do
   if [ -f "$tmp/ref.html" ] && [ -f "$tmp/$n.html" ] && cmp -s "$tmp/ref.html" "$tmp/$n.html"; then

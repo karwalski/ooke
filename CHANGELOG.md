@@ -16,6 +16,16 @@ been published; see `docs/RELEASING.md`. Story numbers are toke's tracker
   unclosed tag should instead be a `$tplerr`, like an unclosed block (138.29),
   is still an open owner item (register 2.5); this keeps it literal text.
   (toke 127.298)
+- **Server tests no longer fail when something else holds their port.** The
+  shell tests that start a server picked a port by arithmetic on the shell's
+  PID (`20000 + $$ % 20000`) and never checked it was free. On 2026-11-28 the
+  `ooke compile` test run by `make check-toke-candidate` failed 11/12 because a
+  VS Code helper was listening on the port it derived. A new helper,
+  `test/support/freeport.sh`, binds port 0 and reads the free port back, and
+  the eleven tests that derived a port use it. The compiled-binary test also
+  retries a start that fails with "Address already in use", and its bind cases
+  use a port the test's own listener holds instead of the derived port plus
+  one. (toke 127.560)
 
 ## 3.0.1 — unreleased, on toke 3.2.0
 
