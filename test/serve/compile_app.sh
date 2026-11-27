@@ -18,6 +18,13 @@
 #             compiled binary exit non-zero and say so (134.40's $serveerr on a
 #             failed listen; no test covered it), with 1 worker and with 4
 #
+# Ports (story 127.560). The serve port comes from freeport
+# (test/support/freeport.sh), chosen just before the binary starts, and a
+# start that fails with "Address already in use" is retried on a new port; the
+# bind port is one the test's own holder bound (port 0, read back). Both used
+# to be 20000 + $$ % 20000 and that plus one, never checked: on 2026-11-28 a
+# VS Code helper listening on the serve port failed "serves" (11/12).
+#
 # Usage: test/serve/compile_app.sh [path/to/ooke-toke]   (run by `make test`)
 set -u
 
@@ -28,6 +35,7 @@ case $BIN in /*) ;; *) BIN=$ROOT/$BIN ;; esac
 [ -x "$BIN" ] || { echo "error: no ooke binary at $BIN (run make first)" >&2; exit 2; }
 command -v curl >/dev/null 2>&1 || { echo "error: curl is required" >&2; exit 2; }
 command -v python3 >/dev/null 2>&1 || { echo "error: python3 is required (it holds the port for the bind test)" >&2; exit 2; }
+. "$ROOT/test/support/freeport.sh"
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/ooke-compile.XXXXXX") || exit 2
 pid=""; holder=""
@@ -44,7 +52,7 @@ bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 
 MARKER="ooke is running"
 UA="ooke-134-44-probe"
-port=$(( 20000 + ($$ % 20000) ))
+port=$(freeport) || exit 2
 
 # setport FILE PORT WORKERS
 setport() {
@@ -85,15 +93,26 @@ else bad "compile: the generated main is not the runserve path"; fi
 
 # ── serves ──────────────────────────────────────────────────────────────────
 if [ -x "$app" ]; then
-  (cd "$proj" && exec "$app" .) >"$tmp/app.out" 2>"$tmp/app.err" &
-  pid=$!
-  i=0; up=1
-  while [ $i -lt 50 ]; do
-    kill -0 "$pid" 2>/dev/null || { up=0; break; }
-    curl -s --max-time 2 -o /dev/null "http://127.0.0.1:$port/" 2>/dev/null && break
-    sleep 0.2; i=$((i+1))
+  # Up to 3 starts, each on a port freeport found free a moment before; only
+  # a start that died saying "Address already in use" is retried.
+  try=0
+  while :; do
+    try=$((try+1))
+    port=$(freeport) || exit 2
+    setport "$proj/ooke.toml" "$port" 1
+    (cd "$proj" && exec "$app" .) >"$tmp/app.out" 2>"$tmp/app.err" &
+    pid=$!
+    i=0; up=1
+    while [ $i -lt 50 ]; do
+      kill -0 "$pid" 2>/dev/null || { up=0; break; }
+      curl -s --max-time 2 -o /dev/null "http://127.0.0.1:$port/" 2>/dev/null && break
+      sleep 0.2; i=$((i+1))
+    done
+    [ $i -ge 50 ] && up=0
+    [ $up -eq 0 ] && [ $try -lt 3 ] && grep -q "Address already in use" "$tmp/app.err" 2>/dev/null || break
+    echo "  (port $port was taken before the binary bound it; retrying on another)"
+    wait "$pid" 2>/dev/null; pid=""
   done
-  [ $i -ge 50 ] && up=0
   if [ $up -eq 1 ]; then
     body=$(curl -s --max-time 2 -A "$UA" "http://127.0.0.1:$port/")
     case $body in *"$MARKER"*) ok "serves: GET / renders the app's index page" ;;
@@ -161,15 +180,19 @@ else bad "locate: missing script gave rc=$rc"; tail -3 "$tmp/loc.out" | sed 's/^
 # port once ooke moved to loopback: on macOS a socket bound to 127.0.0.1:P is
 # allowed beside a wildcard listener on *:P (both set SO_REUSEADDR), so the
 # server started and the three bind cases failed as "kept running".
-bport=$((port + 1))
+#
+# Story 127.560: the holder binds port 0 and reports the port the kernel gave
+# it, so the port is one this test holds -- not a fixed number (it was
+# $port + 1) that some other program may or may not have.
 python3 -c "
 import socket, time
 s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-s.bind(('127.0.0.1', $bport)); s.listen(); print('held', flush=True); time.sleep(120)
+s.bind(('127.0.0.1', 0)); s.listen(); print('held', s.getsockname()[1], flush=True); time.sleep(120)
 " >"$tmp/holder.out" 2>&1 &
 holder=$!
 i=0; while [ $i -lt 50 ] && ! grep -q held "$tmp/holder.out" 2>/dev/null; do sleep 0.1; i=$((i+1)); done
-grep -q held "$tmp/holder.out" || bad "bind: could not hold port $bport for the test"
+bport=$(sed -n 's/^held \([0-9][0-9]*\)$/\1/p' "$tmp/holder.out")
+[ -n "$bport" ] || { bad "bind: could not hold a port for the test"; bport=0; }
 
 # bindfails LABEL WORKERS CMD... -> must exit non-zero within 10s, naming the port
 bindfails() {
