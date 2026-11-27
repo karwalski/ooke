@@ -22,6 +22,7 @@ unset TK_HTTP_WORKERS
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
+. "$ROOT/test/support/freeport.sh"   # story 127.560: ports are checked free, not derived from $$
 BIN=${1:-$ROOT/ooke-toke}
 case $BIN in /*) ;; *) BIN=$ROOT/$BIN ;; esac
 [ -x "$BIN" ] || { echo "error: no ooke binary at $BIN (run make first)" >&2; exit 2; }
@@ -38,7 +39,6 @@ pass=0; fail=0
 ok()  { echo "  PASS $1"; pass=$((pass+1)); }
 bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 
-base=$(( 20000 + (($$ + 5003) % 20000) ))
 n=0
 
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
@@ -47,7 +47,7 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
 
 # mkproj NAME WORKERS TLS(0|1) -> $tmp/NAME, with its own port in $port
 mkproj() {
-  n=$((n+1)); port=$((base+n)); proj=$tmp/$1
+  n=$((n+1)); port=$(freeport) || return 1; proj=$tmp/$1
   cp -R "$ROOT/testproj" "$proj" && rm -rf "$proj/build" || return 1
   awk -v port="$port" -v w="$2" -v tls="$3" -v cert="$tmp/cert.pem" -v key="$tmp/key.pem" '
     /^\[tls\]/    { skip=1; next }

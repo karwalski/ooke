@@ -13,6 +13,7 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
+. "$ROOT/test/support/freeport.sh"   # story 127.560: ports are checked free, not derived from $$
 BIN=${1:-$ROOT/ooke-toke}
 case $BIN in /*) ;; *) BIN=$ROOT/$BIN ;; esac
 [ -x "$BIN" ] || { echo "error: no ooke binary at $BIN (run make first)" >&2; exit 2; }
@@ -81,7 +82,7 @@ grep -q "ooke.toml could not be read or is not valid TOML" "$tmp/s.log" \
 # it and say nothing.
 A=$tmp/adminproj
 cp -R "$ROOT/testproj" "$A" && rm -rf "$A/build" || exit 2
-aport=$(( 20000 + (($$ + 6151) % 20000) ))
+aport=$(freeport) || exit 2
 awk -v port="$aport" '
   /^\[server\]/ { print; print "admin = true"; next }
   /^port = /    { print "port = " port; next }

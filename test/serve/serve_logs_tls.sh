@@ -22,6 +22,7 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
+. "$ROOT/test/support/freeport.sh"   # story 127.560: ports are checked free, not derived from $$
 BIN=${1:-$ROOT/ooke-toke}
 case $BIN in /*) ;; *) BIN=$ROOT/$BIN ;; esac
 [ -x "$BIN" ] || { echo "error: no ooke binary at $BIN (run make first)" >&2; exit 2; }
@@ -38,12 +39,11 @@ bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 
 MARKER="ooke is running"
 UA="ooke-134-40-probe"
-base=$(( 20000 + ($$ % 20000) ))
 n=0
 
 # mkproj NAME LOGBLOCK [TLSBLOCK] -> $tmp/NAME, with its own port in $port
 mkproj() {
-  n=$((n+1)); port=$((base+n)); proj=$tmp/$1
+  n=$((n+1)); port=$(freeport) || return 1; proj=$tmp/$1
   cp -R "$ROOT/testproj" "$proj" && rm -rf "$proj/build" || return 1
   # Blocks go through the environment: BSD awk rejects a newline in -v.
   LOGBLOCK=$2 TLSBLOCK=${3:-} awk -v port="$port" '

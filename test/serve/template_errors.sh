@@ -31,6 +31,7 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
+. "$ROOT/test/support/freeport.sh"   # story 127.560: ports are checked free, not derived from $$
 BIN=${1:-$ROOT/ooke-toke}
 case $BIN in /*) ;; *) BIN=$ROOT/$BIN ;; esac
 [ -x "$BIN" ] || { echo "error: no ooke binary at $BIN (run make first)" >&2; exit 2; }
@@ -45,7 +46,7 @@ pass=0; fail=0
 ok()  { echo "  PASS $1"; pass=$((pass+1)); }
 bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 
-port=$(( 20000 + ($$ % 20000) ))
+port=$(freeport) || exit 2
 
 # leaks BODY -> 0 when the body names a template, a path or the error
 leaks() {
@@ -157,7 +158,7 @@ grep '"level":"error"' "$tmp/serve.log" | grep -q "errors/404.tkt" \
 
 # ── serve: broken 404 template, empty-template fallback (121.61) ───────────
 echo "=== serve logs a broken 404 template as an error; the fallback page escapes its path (121.61) ==="
-port2=$((port + 1))
+port2=$(freeport) || exit 2
 F=$tmp/fallback
 mkproj "$F" "$port2" || exit 2
 mkdir -p "$F/templates/errors"
