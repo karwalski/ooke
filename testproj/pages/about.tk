@@ -1,0 +1,8 @@
+m=page.about;
+i=http:std.http;
+i=tpl:ooke.template;
+
+f=get(req:i64):i64{
+  let html=mt tpl.tplrenderfile("templates/about.tkt";@("page.title":"About testproj");"templates") {$ok:h h;$err:e ""};
+  <http.resok(html)
+};

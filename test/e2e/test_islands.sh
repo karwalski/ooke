@@ -10,14 +10,23 @@
 # found free on 127.0.0.1, or $OOKE_E2E_PORT if set, and curls 127.0.0.1 on
 # that port only after checking the server it started is the one answering.
 #
+# Story 127.564: the project served is testproj/, the fixture ooke's other
+# serve tests use. It used to be this repository's root, which has no
+# pages/index.tk, so '/' answered 404 and the homepage check could only skip,
+# and whose static/islands/hello.js was a test stub in the framework's own
+# tree (it now lives in testproj/static/islands/). testproj's homepage renders
+# an island("hello") directive, so the page must carry the loader's script tag.
+# testproj/static/ooke-islands.js is a copy of ooke's static/ooke-islands.js,
+# as a real project's would be; the test fails if the two differ.
+#
 # Usage: test/e2e/test_islands.sh [path/to/ooke-toke]
-#   OOKE_DIR       project to serve (default: this repository)
+#   OOKE_DIR       project to serve (default: testproj/)
 #   OOKE_E2E_PORT  port to use instead of a free one
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
 . "$ROOT/test/support/freeport.sh"
-OOKE_DIR=${OOKE_DIR:-$ROOT}
+OOKE_DIR=${OOKE_DIR:-$ROOT/testproj}
 OOKE=${1:-$ROOT/ooke-toke}
 case $OOKE in /*) ;; *) OOKE=$ROOT/$OOKE ;; esac
 PORT=
@@ -80,6 +89,17 @@ elif [ -f "$OOKE_DIR/ooke-islands.js" ]; then
 else
   echo "SKIP: ooke-islands.js loader not found"
   SKIP=$((SKIP + 1))
+fi
+
+# --- The default fixture's loader is ooke's, byte for byte (127.564) ---
+if [ "$OOKE_DIR" = "$ROOT/testproj" ]; then
+  if cmp -s "$ROOT/static/ooke-islands.js" "$OOKE_DIR/static/ooke-islands.js"; then
+    echo "PASS: testproj/static/ooke-islands.js is ooke's static/ooke-islands.js"
+    PASS=$((PASS + 1))
+  else
+    echo "FAIL: testproj/static/ooke-islands.js differs from ooke's static/ooke-islands.js (copy it again)"
+    FAIL=$((FAIL + 1))
+  fi
 fi
 
 # --- If no island infrastructure, skip server tests ---

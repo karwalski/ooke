@@ -10,14 +10,21 @@
 # found free on 127.0.0.1, or $OOKE_E2E_PORT if set, and curls 127.0.0.1 on
 # that port only after checking the server it started is the one answering.
 #
+# Story 127.564: the project served is testproj/, the fixture ooke's other
+# serve tests use. It used to be this repository's root, whose pages/about.tk
+# and pages/testpage.tk were module-line stubs with no templates/about.tkt or
+# templates/testpage.tkt, so /about and /testpage answered 500 and this test
+# failed 2 of 6. testproj has both pages and their templates; /api/health is
+# ooke's own handler, compiled into the binary, so any project answers it.
+#
 # Usage: test/e2e/test_router_live.sh [path/to/ooke-toke]
-#   OOKE_DIR       project to serve (default: this repository)
+#   OOKE_DIR       project to serve (default: testproj/)
 #   OOKE_E2E_PORT  port to use instead of a free one
 
 cd "$(dirname "$0")/../.." || exit 2
 ROOT=$(pwd)
 . "$ROOT/test/support/freeport.sh"
-OOKE_DIR=${OOKE_DIR:-$ROOT}
+OOKE_DIR=${OOKE_DIR:-$ROOT/testproj}
 OOKE=${1:-$ROOT/ooke-toke}
 case $OOKE in /*) ;; *) OOKE=$ROOT/$OOKE ;; esac
 PORT=${OOKE_E2E_PORT:-$(freeport)} || exit 2

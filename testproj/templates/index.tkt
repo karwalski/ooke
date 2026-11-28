@@ -22,11 +22,25 @@
   ooke.toml        # site configuration
   pages/
     index.tk       # this page (route handler)
+    about.tk       # /about
+    testpage.tk    # /testpage
+    api/hello.tk   # POST /api/hello (echo)
   templates/
     base.tkt       # HTML shell
     index.tkt      # page template
+    about.tkt      # /about's template
+    testpage.tkt   # /testpage's template
   content/         # markdown content
-  static/          # CSS, JS, images</pre>
+  static/          # CSS, JS, images (the island loader, islands/hello.js)</pre>
+
+  <h2 style="font-size:1.2em">Pages</h2>
+  <ul>
+    <li><a href="/about">About</a></li>
+    <li><a href="/testpage">Test page</a></li>
+  </ul>
+
+  <h2 style="font-size:1.2em">Island</h2>
+  {! island("hello") !}
 
   <h2 style="font-size:1.2em">Links</h2>
   <ul>
