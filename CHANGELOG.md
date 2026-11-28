@@ -26,6 +26,20 @@ been published; see `docs/RELEASING.md`. Story numbers are toke's tracker
   retries a start that fails with "Address already in use", and its bind cases
   use a port the test's own listener holds instead of the derived port plus
   one. (toke 127.560)
+- **The manual e2e scripts no longer test whatever holds a fixed port.**
+  `test/e2e/test_router_live.sh` and `test_islands.sh` served on port 3000 and
+  curled `localhost:3000`, `test_serve.sh` compiled its server with
+  `http.serve(3099)`, and `run_playwright.sh` set `PORT=3099` for a server that
+  ignores it (`ooke serve` reads only `[server] port`, so it bound 3000 while the
+  script and `playwright.config.js` waited on 3099). With another listener on
+  those ports they failed, or passed against it. Each now takes a port from
+  `test/support/freeport.sh` (or `OOKE_E2E_PORT`), refuses one that already
+  answers, serves a temporary copy of the project with `[server] port` set to
+  it (or compiles it into the test server), and talks to `127.0.0.1` on it.
+  `playwright.config.js` and `ooke.spec.js` take the port from `OOKE_E2E_PORT`
+  and refuse to run without it. `test/verify_parity.sh` (56.8.3), which
+  compared against the C ooke binary whose sources were removed in 67c502b, is
+  retired to the workspace archive. (toke 127.562)
 
 ## 3.0.1 — unreleased, on toke 3.2.0
 
