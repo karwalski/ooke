@@ -56,6 +56,19 @@ been published; see `docs/RELEASING.md`. Story numbers are toke's tracker
   "content-type", so `X-Content-Type-Options` could satisfy it; it now
   requires exactly one `Content-Type` header whose media type is `text/html`.
   (toke 127.563)
+- **The router, islands and Playwright e2e checks serve the `testproj/`
+  fixture and pass.** They served this repository's root, which has no
+  `pages/index.tk` and whose `pages/about.tk` and `pages/testpage.tk` were
+  module-line stubs with no templates: `/about` and `/testpage` answered 500
+  and `/` answered 404 with no Content-Type, so `test_router_live.sh` failed
+  2 of 6 and 11 of the 17 Playwright specs failed. `test_router_live.sh`,
+  `test_islands.sh` and `run_playwright.sh` now serve `testproj/` (still
+  overridable with `OOKE_DIR`), which gains `/about` and `/testpage` pages
+  and templates, homepage links to them, an `island("hello")` on the homepage,
+  `static/islands/hello.js` (moved out of ooke's own `static/`) and a copy of
+  `static/ooke-islands.js` that `test_islands.sh` checks is byte-identical to
+  ooke's. The two stub pages are removed from the repository root.
+  (toke 127.564)
 
 ## 3.0.1 — unreleased, on toke 3.2.0
 
