@@ -1,6 +1,7 @@
 #!/bin/bash
 # Run Playwright browser tests against an ooke dev server
 # Usage: ./run_playwright.sh
+#   OOKE_DIR       project to serve (default: testproj/)
 #   OOKE_E2E_PORT  port to use instead of a free one
 #
 # Story 127.562: no fixed port. This used to start `PORT=3099 ooke-toke serve`
@@ -11,12 +12,20 @@
 # (test/support/freeport.sh) found free on 127.0.0.1, or $OOKE_E2E_PORT if
 # set, and exports OOKE_E2E_PORT, which playwright.config.js and ooke.spec.js
 # read (they refuse to run without it).
+#
+# Story 127.564: the project served is testproj/, the fixture ooke's other
+# serve tests use, as test_router_live.sh and test_islands.sh do. It used to be
+# this repository's root, which has no pages/index.tk and whose pages/about.tk
+# and pages/testpage.tk were stubs with no templates, so '/' answered 404 with
+# no Content-Type and /about and /testpage answered 500: "HTML pages serve as
+# text/html" and every spec that renders '/', /about or /testpage failed.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 . "$PROJECT_DIR/test/support/freeport.sh"
 OOKE="$PROJECT_DIR/ooke-toke"
+OOKE_DIR=${OOKE_DIR:-$PROJECT_DIR/testproj}
 SERVER_PID=""
 TMP=""
 
@@ -53,15 +62,15 @@ TMP=$(mktemp -d "${TMPDIR:-/tmp}/ooke-e2e-playwright.XXXXXX")
 SITE=$TMP/site
 mkdir "$SITE"
 for d in pages templates static models content islands; do
-  if [ -e "$PROJECT_DIR/$d" ]; then cp -R "$PROJECT_DIR/$d" "$SITE/"; fi
+  if [ -e "$OOKE_DIR/$d" ]; then cp -R "$OOKE_DIR/$d" "$SITE/"; fi
 done
 awk -v port="$PORT" '
   /^\[/ { sec = $0 }
   sec == "[server]" && /^port[ \t]*=/ { print "port = " port; next }
   { print }
-' "$PROJECT_DIR/ooke.toml" >"$SITE/ooke.toml"
+' "$OOKE_DIR/ooke.toml" >"$SITE/ooke.toml"
 if ! grep -q "^port = $PORT\$" "$SITE/ooke.toml"; then
-  echo "ABORT: could not set [server] port in a copy of $PROJECT_DIR/ooke.toml"
+  echo "ABORT: could not set [server] port in a copy of $OOKE_DIR/ooke.toml"
   exit 1
 fi
 # Nothing may already listen on $PORT (an $OOKE_E2E_PORT someone else holds):

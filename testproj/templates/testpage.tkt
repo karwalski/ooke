@@ -1,0 +1,11 @@
+{! layout("base") !}
+{! block("title") !}testproj test page{! end !}
+{! block("content") !}
+
+<div style="max-width:640px;margin:40px auto;font-family:system-ui,sans-serif;padding:0 20px">
+  <h1>Test page</h1>
+  <p>This page is the static route <code>/testpage</code>: <code>pages/testpage.tk</code> rendering <code>templates/testpage.tkt</code>. The end-to-end router checks request it.</p>
+  <p><a href="/">Back to the home page</a></p>
+</div>
+
+{! end !}

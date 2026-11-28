@@ -1,0 +1,11 @@
+{! layout("base") !}
+{! block("title") !}About testproj{! end !}
+{! block("content") !}
+
+<div style="max-width:640px;margin:40px auto;font-family:system-ui,sans-serif;padding:0 20px">
+  <h1>About testproj</h1>
+  <p>testproj is the example project ooke's own tests build, serve and compile. This page is the static route <code>/about</code>: <code>pages/about.tk</code> rendering <code>templates/about.tkt</code>.</p>
+  <p><a href="/">Back to the home page</a></p>
+</div>
+
+{! end !}
