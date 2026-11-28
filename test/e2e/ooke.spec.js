@@ -1,6 +1,11 @@
 const { test, expect } = require('@playwright/test');
 
-const BASE = 'http://localhost:3099';
+// Story 127.562: the port run_playwright.sh chose (see playwright.config.js).
+const PORT = process.env.OOKE_E2E_PORT;
+if (!/^[0-9]+$/.test(PORT || '')) {
+  throw new Error('OOKE_E2E_PORT is not set: run test/e2e/run_playwright.sh');
+}
+const BASE = 'http://127.0.0.1:' + PORT;
 
 test.describe('Homepage', () => {
   test('loads and contains toke', async ({ page }) => {
@@ -139,7 +144,7 @@ test.describe('Link integrity', () => {
       const href = await internalLinks.first().getAttribute('href');
       await page.click(`a[href="${href}"]`);
       await page.waitForLoadState();
-      expect(page.url()).toContain('localhost:3099');
+      expect(page.url()).toContain(BASE);
     }
   });
 });
