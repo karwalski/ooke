@@ -9,9 +9,29 @@
 # test program before it is compiled. The program, its IR and its binary go in
 # a temporary directory, not fixed names under /tmp.
 #
+# Story 127.563: three defects that made this script fail on every run.
+#  1. It linked the server with a hand-kept clang line naming toke's stdlib C
+#     files, which stopped linking against toke main (CoreGraphics/ImageIO
+#     symbols, tk_infer_stream_cleanup), so it always said "could not build
+#     test server" -- the defect scripts/testmod.sh was retired for (121.83).
+#     The compiler, flags, C sources and link flags now come from
+#     `make print-build-vars` with the test program as DEPS_EXTRA_TK, i.e.
+#     from `tkc --emit-deps` (121.76), as test/run_tests.sh gets them.
+#  2. It ran `ooke build` in the real site and then served the site's build/,
+#     which ooke does not write: toke-website's [build] output is build-docs/
+#     (its build/ is assembled by its own scripts and has no index.html, the
+#     homepage being a route since toke 134.8), so "/" was a 404. It now builds
+#     a temporary copy of the site, with any previous output removed, and
+#     serves the directory that copy's ooke.toml names in [build] output --
+#     what `ooke build` just wrote -- so the site checkout is never written to.
+#  3. The Content-Type check grepped for "content-type" anywhere in the
+#     headers, so X-Content-Type-Options satisfied it. It now requires exactly
+#     one Content-Type header whose media type is text/html.
+#
 # Usage: test/e2e/test_serve.sh
-#   WEBSITE_DIR    site to build and serve (default: ~/tk/toke-website;
-#                  `ooke-toke build` writes its build output there)
+#   WEBSITE_DIR    site to build and serve (default: ~/tk/toke-website; only
+#                  read -- its pages/ templates/ static/ models/ content/
+#                  islands/ and ooke.toml are copied to a temporary directory)
 #   OOKE           ooke binary (default: this repository's ooke-toke)
 #   TOKE_ROOT      toke tree with a built compiler (default: ~/tk/toke)
 #   OOKE_E2E_PORT  port to use instead of a free one
@@ -23,12 +43,10 @@ PASS=0; FAIL=0
 WEBSITE_DIR=${WEBSITE_DIR:-$HOME/tk/toke-website}
 OOKE=${OOKE:-$ROOT/ooke-toke}
 TOKE_ROOT=${TOKE_ROOT:-$HOME/tk/toke}
-TOKE=$TOKE_ROOT/toke
-STDLIB=$TOKE_ROOT/src/stdlib
-VENDOR=$TOKE_ROOT/stdlib/vendor
 PORT=${OOKE_E2E_PORT:-$(freeport)} || exit 2
 SERVER_PID=
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/ooke-e2e-serve.XXXXXX") || exit 2
+SITE=$TMP/site
 
 cleanup() {
   if [ -n "$SERVER_PID" ]; then
@@ -39,36 +57,72 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Build content
-cd "$WEBSITE_DIR" || { echo "FAIL: no website at $WEBSITE_DIR"; exit 1; }
-"$OOKE" build 2>/dev/null
+[ -x "$OOKE" ] || { echo "FAIL: no ooke binary at $OOKE"; exit 1; }
+[ -f "$WEBSITE_DIR/ooke.toml" ] || { echo "FAIL: no ooke site at $WEBSITE_DIR"; exit 1; }
 
-# Build a test server binary listening on $PORT
-cat << 'TKEOF' | sed "s/@PORT@/$PORT/" > "$TMP/test_serve.tk"
+# Build a temporary copy of the site (the staging test_router_live.sh uses)
+mkdir "$SITE" || exit 2
+for d in pages templates static models content islands; do
+  [ -e "$WEBSITE_DIR/$d" ] && cp -R "$WEBSITE_DIR/$d" "$SITE/"
+done
+cp "$WEBSITE_DIR/ooke.toml" "$SITE/" || exit 2
+# [build] output, as ooke reads it (default build/), without the trailing slash
+OUT=$(awk '
+  /^\[/ { sec = $0; next }
+  sec == "[build]" && /^output[ \t]*=/ {
+    v = $0; sub(/^[^=]*=[ \t]*"/, "", v); sub(/".*$/, "", v); print v; exit
+  }' "$SITE/ooke.toml")
+OUT=${OUT:-build/}
+OUT=${OUT%/}
+case $OUT in
+  ''|/*|*..*|*[!A-Za-z0-9._/-]*) echo "FAIL: unusable [build] output '$OUT' in $WEBSITE_DIR/ooke.toml"; exit 1 ;;
+esac
+rm -rf "${SITE:?}/$OUT"
+if ! (cd "$SITE" && "$OOKE" build) >"$TMP/build.log" 2>&1; then
+  echo "FAIL: ooke build failed for a copy of $WEBSITE_DIR; its log:"
+  tail -20 "$TMP/build.log"
+  exit 1
+fi
+[ -d "$SITE/$OUT" ] || { echo "FAIL: ooke build wrote no $OUT/"; exit 1; }
+
+# Build a test server binary listening on $PORT, serving $OUT (relative to $SITE)
+cat << 'TKEOF' | sed -e "s/@PORT@/$PORT/" -e "s|@DIR@|$OUT|" > "$TMP/test_serve.tk"
 m=testserve;
 i=http:std.http;
 f=main():i64{
   http.getstatic("/health"; "{\"ok\":true}");
-  http.servedir("/";"build");
+  http.servedir("/";"@DIR@");
   http.serve(@PORT@);
   <0;
 };
 TKEOF
 grep -q "http.serve($PORT);" "$TMP/test_serve.tk" || { echo "FAIL: could not write port $PORT into the test server"; exit 1; }
 
-"$TOKE" --emit-llvm --out "$TMP/test_serve.ll" "$TMP/test_serve.tk" 2>/dev/null
-clang -std=c99 -D_GNU_SOURCE -O1 -iquote $STDLIB \
-  -I$VENDOR/cmark/src -I$VENDOR/tomlc99 -Wno-pedantic -DTK_HAVE_OPENSSL \
-  -I/opt/homebrew/include -L/opt/homebrew/lib \
-  -x ir "$TMP/test_serve.ll" \
-  -x c $(find $STDLIB -name "*.c" | grep -v llm_tool | grep -v secure_mem | grep -v infer_stream | tr "\n" " ") \
-  $(find $VENDOR/cmark/src -name "*.c" | grep -v main.c | tr "\n" " ") \
-  $VENDOR/tomlc99/toml.c \
-  -o "$TMP/test_serve_bin" -lssl -lcrypto -lz -lm -lsqlite3 -lpthread \
-  -framework Security -framework CoreFoundation 2>/dev/null
+# Capability grant (ADR-0010), as scripts/gen_app_makefile.sh writes one for an
+# app's serve binary: without it the server exits with CAP001 on its first
+# read. It reads $OUT and listens; it writes and spawns nothing.
+cat > "$TMP/test_serve.tkc.toml" << 'CAPS'
+[capabilities]
+fs_read = true
+net = true
+enforce = true
+CAPS
 
-if [ ! -f "$TMP/test_serve_bin" ]; then
-  echo "FAIL: could not build test server"
+# Compiler, flags, stdlib/vendor C sources and link flags: from the Makefile,
+# which asks tkc --emit-deps (121.76) -- nothing about the link is kept here.
+vars=$(make -s --no-print-directory print-build-vars TOKE_ROOT="$TOKE_ROOT" \
+         DEPS_EXTRA_TK="$TMP/test_serve.tk" 2>"$TMP/deps.log") || {
+  echo "FAIL: 'make print-build-vars' could not derive the test server's link set:"
+  cat "$TMP/deps.log"
+  exit 1
+}
+eval "$vars"
+if ! "$TKC" --config="$TMP/test_serve.tkc.toml" --emit-llvm --out "$TMP/test_serve.ll" "$TMP/test_serve.tk" >"$TMP/cc.log" 2>&1 ||
+   ! clang $CFLAGS $LDFLAGS -x ir "$TMP/test_serve.ll" -x c $STDLIB_SRCS $VENDOR_SRCS \
+       -o "$TMP/test_serve_bin" $LIBS >>"$TMP/cc.log" 2>&1 ||
+   [ ! -x "$TMP/test_serve_bin" ]; then
+  echo "FAIL: could not build test server; compiler output:"
+  grep -v -e 'warning' -e '^ *[0-9]* |' -e '^ *|' "$TMP/cc.log" | tail -20
   exit 1
 fi
 
@@ -81,7 +135,7 @@ if [ $? -ne 7 ]; then
 fi
 
 # Start server and wait until it answers, failing if it exits first
-"$TMP/test_serve_bin" >"$TMP/serve.log" 2>&1 &
+(cd "$SITE" && exec "$TMP/test_serve_bin") >"$TMP/serve.log" 2>&1 &
 SERVER_PID=$!
 TRIES=0
 until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 1 "http://127.0.0.1:$PORT/health")" = "200" ]; do
@@ -118,13 +172,15 @@ check "docs page" "$BASE/docs/" "200"
 check "CSS" "$BASE/static/css/style.css" "200"
 check "nonexistent" "$BASE/nonexistent-page" "404"
 
-# Check content-type
-CT=$(curl -sI --max-time 5 "$BASE/" | grep -i "content-type" | tr -d '\r')
-if echo "$CT" | grep -qi "text/html"; then
+# Check content-type: exactly one Content-Type header (matched by name, so
+# X-Content-Type-Options does not count) whose media type is text/html.
+CT=$(curl -s -D - -o /dev/null --max-time 5 "$BASE/" | tr -d '\r' | grep -i '^content-type:')
+if [ "$(printf '%s\n' "$CT" | grep -c .)" = 1 ] &&
+   printf '%s\n' "$CT" | grep -Eiq '^content-type:[[:space:]]*text/html[[:space:]]*(;.*)?$'; then
   echo "PASS: homepage Content-Type is text/html"
   PASS=$((PASS+1))
 else
-  echo "FAIL: homepage Content-Type wrong: $CT"
+  echo "FAIL: homepage Content-Type wrong: ${CT:-<none>}"
   FAIL=$((FAIL+1))
 fi
 

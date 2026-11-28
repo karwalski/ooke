@@ -40,6 +40,22 @@ been published; see `docs/RELEASING.md`. Story numbers are toke's tracker
   and refuse to run without it. `test/verify_parity.sh` (56.8.3), which
   compared against the C ooke binary whose sources were removed in 67c502b, is
   retired to the workspace archive. (toke 127.562)
+- **`test/e2e/test_serve.sh` builds its server and passes again.** It linked
+  the test server with a hand-kept clang line naming toke's stdlib C files,
+  which no longer linked against toke main (undefined CoreGraphics/ImageIO
+  symbols and `tk_infer_stream_cleanup`), so every run said "could not build
+  test server". The compiler, flags, C sources and link flags now come from
+  `make print-build-vars` with the test program added, i.e. from
+  `tkc --emit-deps` (121.76), and the server is compiled with a capability
+  grant (`fs_read`, `net`) like an app's serve binary. It used to run
+  `ooke build` inside the site checkout and then serve the site's `build/`,
+  which ooke does not write (toke-website's `[build] output` is `build-docs/`),
+  so the homepage was a 404; it now builds a temporary copy of the site and
+  serves the directory its `[build] output` names, and never writes to the
+  checkout. The Content-Type check matched any header containing
+  "content-type", so `X-Content-Type-Options` could satisfy it; it now
+  requires exactly one `Content-Type` header whose media type is `text/html`.
+  (toke 127.563)
 
 ## 3.0.1 — unreleased, on toke 3.2.0
 
