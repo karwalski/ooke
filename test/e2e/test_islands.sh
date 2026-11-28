@@ -1,20 +1,38 @@
 #!/bin/bash
 # 89.2.5 - Island hydration test stub
 # Checks island infrastructure and verifies island script tags are served.
+#
+# Story 127.562: no fixed port. `ooke serve` takes its port only from
+# [server] port in ooke.toml, and this test used to serve the project in place
+# (port 3000, a common dev-server port) and curl localhost:3000, so another
+# dev server on 3000 could answer for ooke. It now serves a temporary copy of
+# the project whose [server] port is a port freeport (test/support/freeport.sh)
+# found free on 127.0.0.1, or $OOKE_E2E_PORT if set, and curls 127.0.0.1 on
+# that port only after checking the server it started is the one answering.
+#
+# Usage: test/e2e/test_islands.sh [path/to/ooke-toke]
+#   OOKE_DIR       project to serve (default: this repository)
+#   OOKE_E2E_PORT  port to use instead of a free one
 
-OOKE_DIR=/Users/matthew.watt/tk/toke-ooke
-OOKE="$OOKE_DIR/ooke-toke"
-PORT=3000
+cd "$(dirname "$0")/../.." || exit 2
+ROOT=$(pwd)
+. "$ROOT/test/support/freeport.sh"
+OOKE_DIR=${OOKE_DIR:-$ROOT}
+OOKE=${1:-$ROOT/ooke-toke}
+case $OOKE in /*) ;; *) OOKE=$ROOT/$OOKE ;; esac
+PORT=
 PASS=0
 FAIL=0
 SKIP=0
 SERVER_PID=
+TMP=
 
 cleanup() {
   if [ -n "$SERVER_PID" ]; then
     kill "$SERVER_PID" 2>/dev/null
     wait "$SERVER_PID" 2>/dev/null
   fi
+  [ -n "$TMP" ] && rm -rf "$TMP"
 }
 trap cleanup EXIT
 
@@ -74,22 +92,73 @@ if [ "$ISLANDS_FOUND" = false ] && [ "$LOADER_FOUND" = false ]; then
   exit 0
 fi
 
-# --- Start server and test island delivery ---
-cd "$OOKE_DIR"
-"$OOKE" serve &
-SERVER_PID=$!
-sleep 3
+# --- Stage a copy of the project that listens on $PORT ---
+if [ ! -f "$OOKE_DIR/ooke.toml" ]; then
+  echo "ABORT: ooke.toml missing at $OOKE_DIR"
+  exit 1
+fi
+PORT=${OOKE_E2E_PORT:-$(freeport)} || exit 2
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/ooke-e2e-islands.XXXXXX") || exit 2
+SITE=$TMP/site
+mkdir "$SITE" || exit 2
+for d in pages templates static models content islands; do
+  [ -e "$OOKE_DIR/$d" ] && cp -R "$OOKE_DIR/$d" "$SITE/"
+done
+[ -f "$OOKE_DIR/ooke-islands.js" ] && cp "$OOKE_DIR/ooke-islands.js" "$SITE/"
+awk -v port="$PORT" '
+  /^\[/ { sec = $0 }
+  sec == "[server]" && /^port[ \t]*=/ { print "port = " port; next }
+  { print }
+' "$OOKE_DIR/ooke.toml" >"$SITE/ooke.toml"
+if ! grep -q "^port = $PORT\$" "$SITE/ooke.toml"; then
+  echo "ABORT: could not set [server] port in a copy of $OOKE_DIR/ooke.toml"
+  exit 1
+fi
+echo "Port:   $PORT"
 
-if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-  echo "FAIL: ooke-toke serve failed to start"
+# --- Start server and test island delivery ---
+# Nothing may already listen on $PORT (an $OOKE_E2E_PORT someone else holds):
+# curl must be refused (exit 7) before our server starts.
+curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$PORT/" 2>/dev/null
+if [ $? -ne 7 ]; then
+  echo "FAIL: something is already listening on 127.0.0.1:$PORT"
+  FAIL=$((FAIL + 1))
+  echo ""
+  echo "=== Island Tests: $PASS passed, $FAIL failed, $SKIP skipped ==="
+  exit $FAIL
+fi
+"$OOKE" serve "$SITE" >"$TMP/serve.log" 2>&1 &
+SERVER_PID=$!
+
+# Wait for our server: it must still be running and answering /api/health.
+TRIES=0
+STARTED=false
+while [ "$TRIES" -lt 50 ]; do
+  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    SERVER_PID=
+    break
+  fi
+  if [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 1 "http://127.0.0.1:$PORT/api/health")" = "200" ]; then
+    STARTED=true
+    break
+  fi
+  TRIES=$((TRIES + 1))
+  sleep 0.2
+done
+
+if [ "$STARTED" = false ]; then
+  echo "FAIL: ooke-toke serve failed to start on port $PORT; its log:"
+  cat "$TMP/serve.log"
   FAIL=$((FAIL + 1))
   echo ""
   echo "=== Island Tests: $PASS passed, $FAIL failed, $SKIP skipped ==="
   exit $FAIL
 fi
 
+BASE="http://127.0.0.1:$PORT"
+
 # --- Test: ooke-islands.js is served ---
-LOADER_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://localhost:$PORT/static/ooke-islands.js")
+LOADER_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$BASE/static/ooke-islands.js")
 if [ "$LOADER_CODE" = "200" ]; then
   echo "PASS: /static/ooke-islands.js returns 200"
   PASS=$((PASS + 1))
@@ -103,7 +172,7 @@ if [ -n "$ISLANDS_DIR" ]; then
   FIRST_ISLAND=$(find "$ISLANDS_DIR" -name "*.js" 2>/dev/null | head -1)
   if [ -n "$FIRST_ISLAND" ]; then
     ISLAND_NAME=$(basename "$FIRST_ISLAND")
-    ISLAND_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://localhost:$PORT/static/islands/$ISLAND_NAME")
+    ISLAND_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$BASE/static/islands/$ISLAND_NAME")
     if [ "$ISLAND_CODE" = "200" ]; then
       echo "PASS: /static/islands/$ISLAND_NAME returns 200"
       PASS=$((PASS + 1))
@@ -115,7 +184,7 @@ if [ -n "$ISLANDS_DIR" ]; then
 fi
 
 # --- Test: homepage includes island script tag ---
-HOMEPAGE=$(curl -s --max-time 5 "http://localhost:$PORT/")
+HOMEPAGE=$(curl -s --max-time 5 "$BASE/")
 if echo "$HOMEPAGE" | grep -q "ooke-islands"; then
   echo "PASS: homepage includes ooke-islands script reference"
   PASS=$((PASS + 1))

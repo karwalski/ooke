@@ -1,13 +1,24 @@
 #!/bin/bash
 # Run Playwright browser tests against an ooke dev server
 # Usage: ./run_playwright.sh
+#   OOKE_E2E_PORT  port to use instead of a free one
+#
+# Story 127.562: no fixed port. This used to start `PORT=3099 ooke-toke serve`
+# and poll localhost:3099, but ooke serve takes its port only from [server]
+# port in ooke.toml (3000 here), so the server and the poll disagreed and
+# whatever else listened on 3099 was what the tests reached. It now serves a
+# temporary copy of the project whose [server] port is a port freeport
+# (test/support/freeport.sh) found free on 127.0.0.1, or $OOKE_E2E_PORT if
+# set, and exports OOKE_E2E_PORT, which playwright.config.js and ooke.spec.js
+# read (they refuse to run without it).
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-PORT=3099
+. "$PROJECT_DIR/test/support/freeport.sh"
 OOKE="$PROJECT_DIR/ooke-toke"
 SERVER_PID=""
+TMP=""
 
 cleanup() {
   if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -15,6 +26,7 @@ cleanup() {
     kill "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
   fi
+  if [ -n "$TMP" ]; then rm -rf "$TMP"; fi
 }
 trap cleanup EXIT
 
@@ -35,16 +47,46 @@ if [ ! -x "$OOKE" ]; then
 fi
 
 # --- Step 3: Start ooke dev server on port $PORT ---
+PORT=${OOKE_E2E_PORT:-$(freeport)}
+export OOKE_E2E_PORT=$PORT
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/ooke-e2e-playwright.XXXXXX")
+SITE=$TMP/site
+mkdir "$SITE"
+for d in pages templates static models content islands; do
+  if [ -e "$PROJECT_DIR/$d" ]; then cp -R "$PROJECT_DIR/$d" "$SITE/"; fi
+done
+awk -v port="$PORT" '
+  /^\[/ { sec = $0 }
+  sec == "[server]" && /^port[ \t]*=/ { print "port = " port; next }
+  { print }
+' "$PROJECT_DIR/ooke.toml" >"$SITE/ooke.toml"
+if ! grep -q "^port = $PORT\$" "$SITE/ooke.toml"; then
+  echo "ABORT: could not set [server] port in a copy of $PROJECT_DIR/ooke.toml"
+  exit 1
+fi
+# Nothing may already listen on $PORT (an $OOKE_E2E_PORT someone else holds):
+# curl must be refused (exit 7) before our server starts.
+CURL_RC=0
+curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$PORT/" || CURL_RC=$?
+if [ "$CURL_RC" -ne 7 ]; then
+  echo "ABORT: something is already listening on 127.0.0.1:$PORT"
+  exit 1
+fi
+
 echo "=== Starting ooke dev server on port $PORT ==="
-cd "$PROJECT_DIR"
-PORT=$PORT $OOKE serve &
+"$OOKE" serve "$SITE" &
 SERVER_PID=$!
 
-# Wait for server to become ready
+# Wait for our server to become ready (and fail if it exits instead)
 echo "Waiting for server..."
 TRIES=0
 MAX_TRIES=30
-while ! curl -s "http://localhost:$PORT/api/health" > /dev/null 2>&1; do
+while ! curl -sf -o /dev/null --max-time 1 "http://127.0.0.1:$PORT/api/health"; do
+  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "ABORT: ooke server exited before answering on port $PORT"
+    SERVER_PID=""
+    exit 1
+  fi
   TRIES=$((TRIES + 1))
   if [ "$TRIES" -ge "$MAX_TRIES" ]; then
     echo "ABORT: Server did not start within ${MAX_TRIES}s"
